@@ -33,6 +33,7 @@ Main project:
 
 ```bash
 gcloud services enable \
+  calendar-json.googleapis.com \
   cloudbuild.googleapis.com \
   cloudfunctions.googleapis.com \
   iam.googleapis.com \

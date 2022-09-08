@@ -140,7 +140,7 @@ docker build .
 
 You need to add ``--no-cov`` to your `Run/Debug` settings.
 Below are the instructions on how to do it.
-Tested with `PyCharm 2022.1.2 (Professional Edition)` for macOS.
+Tested with `PyCharm 2022.2.1 (Professional Edition)` for macOS.
 
 ### Menu `Run` click on `Edit Configurations...`:
 

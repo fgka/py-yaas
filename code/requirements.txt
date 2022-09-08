@@ -1,0 +1,7 @@
+aenum>=3.1.11
+attrs>=22.1.0
+cachetools>=5.2.0
+click>=8.1.2
+Flask>=2.2.2
+google-cloud-core>=2.3.2
+google-cloud-error-reporting>=1.6.1

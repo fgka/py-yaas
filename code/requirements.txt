@@ -9,4 +9,5 @@ google-auth-httplib2>=0.1.0
 google-auth-oauthlib>=0.5.2
 google-cloud-core>=2.3.2
 google-cloud-error-reporting>=1.6.1
+google-cloud-secret-manager>=2.12.6
 oauth2client>=4.1.3

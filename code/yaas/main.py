@@ -7,21 +7,29 @@ GCP CloudFunction mandatory entry point:
 * https://cloud.google.com/functions/docs/tutorials/pubsub
 """
 # pylint: enable=line-too-long
+from datetime import datetime
+import io
+import pathlib
 from typing import Optional
 
 # From: https://cloud.google.com/logging/docs/setup/python
-import google.cloud.logging
 
-try:
-    client = google.cloud.logging.Client()
-    client.get_default_handler()
-    client.setup_logging()
-except Exception as log_err:  # pylint: disable=broad-except
-    print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
+if False:  # pylint: disable=using-constant-test
+    import google.cloud.logging
+
+    try:
+        client = google.cloud.logging.Client()
+        client.get_default_handler()
+        client.setup_logging()
+    except Exception as log_err:  # pylint: disable=broad-except
+        print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
 
 import click  # pylint: disable=wrong-import-position
 
+from googleapiclient import errors  # pylint: disable=wrong-import-position
+
 from yaas import logger  # pylint: disable=wrong-import-position
+from yaas import google_cal  # pylint: disable=wrong-import-position
 
 
 _LOGGER = logger.get(__name__)
@@ -35,30 +43,51 @@ def cli() -> None:
     """
 
 
-@cli.command(help="A command")
-@click.option("--arg-a-long", "-a", required=True, type=str, help="Mandatory argument")
+@cli.command(help="List upcoming events")
+@click.option("--calendar-id", required=True, type=str, help="Which calendar to read.")
 @click.option(
-    "--arg-b-long",
-    "-b",
-    default="",
-    required=False,
-    type=str,
-    help="An optional argument.",
+    "--json-creds", required=False, type=click.File("r"), help="JSON credentials file"
 )
-def some_cmd(arg_a_long: str, arg_b_long: Optional[str] = None) -> None:
+@click.option(
+    "--start-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
+)
+def list_events(
+    calendar_id: str,
+    json_creds: Optional[io.TextIOWrapper] = None,
+    start_day: Optional[str] = None,
+):
     """
-    A command with 2 arguments
+    List calendar events.
+
     Args:
-        arg_a_long:
-        arg_b_long:
+        calendar_id:
+        json_creds:
+        start_day:
 
     Returns:
 
     """
-    _LOGGER.info("Arguments: %s", locals())
-    print(
-        f"Arguments: <{arg_a_long}>({type(arg_a_long)}) and <{arg_b_long}>({type(arg_b_long)})"
-    )
+    try:
+        credentials_json = None
+        if json_creds:
+            credentials_json = pathlib.Path(json_creds.name).absolute()
+        if start_day:
+            start = datetime.fromisoformat(start_day)
+        events = google_cal.list_upcoming_events(
+            calendar_id=calendar_id, credentials_json=credentials_json, start=start
+        )
+
+        if not events:
+            print("No upcoming events found.")
+            return
+
+        # Prints the start and name of the next 10 events
+        for event in events:
+            start = event["start"].get("dateTime", event["start"].get("date"))
+            print(start, event["summary"])
+
+    except errors.HttpError as error:
+        print(f"An error occurred: {error}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: ai:sw=4:ts=4:sta:et:fo=croql
 #
 """
 Setup for this package

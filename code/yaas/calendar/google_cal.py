@@ -1,3 +1,4 @@
+# vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=line-too-long
 """
 Source: https://developers.google.com/calendar/api/quickstart/python
@@ -13,9 +14,9 @@ from typing import Any, Dict, List, Optional
 import cachetools
 
 from googleapiclient import discovery
+from google.auth.transport import requests
 from google_auth_oauthlib import flow
 from google.oauth2 import credentials
-from google.auth.transport import requests
 
 from yaas.gcp import secrets
 from yaas import logger
@@ -79,7 +80,7 @@ def list_upcoming_events(
             'created': '2022-10-17T13:54:04.000Z',
             'updated': '2022-10-17T13:59:25.067Z',
             'summary': 'Event repeat daily',
-            'description': 'Description event repeat daily',
+            'description': '<html-blob><u></u>Description event repeat daily<br>&nbsp;target: projects/src-bq/locations/europe-west3/services/hello = 10<br>&nbsp;target : projects/src-bq/locations/europe-west3/services/hello = 10<u></u><br><u></u>target:projects/src-bq/locations/europe-west3/services/hello=10<br>&nbsp; &nbsp; target:&nbsp; &nbsp; projects/src-bq/locations/europe-west3/services/hello =&nbsp; &nbsp; &nbsp; 10&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<br>target :CloudRun / hello@&nbsp; src-bq/europe-west3= 10&nbsp; &nbsp; &nbsp;<u></u><br><u></u>target:CloudRun/hello@src-bq/europe-west3=10</html-blob><br><html-blob><br></html-blob><br><html-blob><u></u>&nbsp; target : CloudRun / hello&nbsp; &nbsp;@&nbsp; src-bq/europe-west3&nbsp; =&nbsp; 10&nbsp; &nbsp; &nbsp;&nbsp;<br><u></u><br><u></u>target : CloudRun / hello&nbsp; &nbsp;@&nbsp; src-bq/europe-west3&nbsp; &nbsp;=&nbsp; 10<br><u></u></html-blob>',
             'creator': {
                 'email': 'ds.env.poc.error@gmail.com'
             },
@@ -157,12 +158,13 @@ def _list_all_events(
 ) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
     # pagination/while trick
-    next_page_token = True
-    while next_page_token and len(result) < amount:
+    while len(result) < amount:
         events_result = service.events().list(**list_kwargs).execute()
-        result = events_result.get("items", [])
+        result.extend(events_result.get("items", []))
         # next page token
         next_page_token = events_result.get("nextPageToken")
+        if not next_page_token:
+            break
         # update kwargs only AFTER retrieving items AND getting the next page token
         list_kwargs["pageToken"] = next_page_token
     return result[0:amount]

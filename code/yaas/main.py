@@ -29,7 +29,7 @@ import click  # pylint: disable=wrong-import-position
 from googleapiclient import errors  # pylint: disable=wrong-import-position
 
 from yaas import logger  # pylint: disable=wrong-import-position
-from yaas.calendar import google_cal  # pylint: disable=wrong-import-position
+from yaas.calendar import google_cal, parser  # pylint: disable=wrong-import-position
 
 
 _LOGGER = logger.get(__name__)
@@ -83,8 +83,8 @@ def list_events(
 
         # Prints the start and name of the next 10 events
         for event in events:
-            start = event["start"].get("dateTime", event["start"].get("date"))
-            print(start, event)
+            scaling_targets = parser.to_scaling(event)
+            print(f"Event has: {scaling_targets}")
 
     except errors.HttpError as error:
         print(f"An error occurred: {error}")

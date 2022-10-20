@@ -13,10 +13,10 @@ from typing import Any, Dict, List, Optional
 
 import cachetools
 
-from googleapiclient import discovery
 from google.auth.transport import requests
-from google_auth_oauthlib import flow
 from google.oauth2 import credentials
+from googleapiclient import discovery
+from google_auth_oauthlib import flow
 
 from yaas.gcp import secrets
 from yaas import logger
@@ -40,7 +40,7 @@ def list_upcoming_events(
     Returns a list of events in the format::
     result = [
         {
-            'kind': 'calendar#event',
+            'kind': 'cal#event',
             'etag': '"3325291402132000"',
             'id': '135ovu6ls85i7006std2kb9adk',
             'status': 'confirmed',
@@ -52,7 +52,7 @@ def list_upcoming_events(
                 'email': 'ds.env.poc.error@gmail.com'
             },
             'organizer': {
-                'email': 'ajbefo4rt4j8mtd808pi4gi5uc@group.calendar.google.com',
+                'email': 'ajbefo4rt4j8mtd808pi4gi5uc@group.cal.google.com',
                 'displayName': 'YAAS',
                 'self': True
             },
@@ -72,7 +72,7 @@ def list_upcoming_events(
             'eventType': 'default'
         },
         {
-            'kind': 'calendar#event',
+            'kind': 'cal#event',
             'etag': '"3332030328331000"',
             'id': '3johpi0lpma4f08f9p2n4vleu4_20221018T140000Z',
             'status': 'confirmed',
@@ -85,7 +85,7 @@ def list_upcoming_events(
                 'email': 'ds.env.poc.error@gmail.com'
             },
             'organizer': {
-                'email': 'ajbefo4rt4j8mtd808pi4gi5uc@group.calendar.google.com',
+                'email': 'ajbefo4rt4j8mtd808pi4gi5uc@group.cal.google.com',
                 'displayName': 'YAAS',
                 'self': True
             },
@@ -112,8 +112,8 @@ def list_upcoming_events(
     ]
 
     Args:
-        calendar_id: which calendar to list.
-        credentials_json: calendar JSON credentials, if existing.
+        calendar_id: which cal to list.
+        credentials_json: cal JSON credentials, if existing.
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
 
@@ -185,12 +185,12 @@ def _calendar_service(
     result: discovery.Resource = None
     if isinstance(cal_creds, credentials.Credentials):
         _LOGGER.debug(
-            "Creating calendar credentials service for client ID %s",
+            "Creating cal credentials service for client ID %s",
             cal_creds.client_id,
         )
-        result = discovery.build("calendar", "v3", credentials=cal_creds)
+        result = discovery.build("cal", "v3", credentials=cal_creds)
         _LOGGER.info(
-            "Created calendar credentials service for client ID %s", cal_creds.client_id
+            "Created cal credentials service for client ID %s", cal_creds.client_id
         )
     else:
         _LOGGER.warning(
@@ -225,7 +225,7 @@ def _calendar_credentials(
         result = _json_credentials(credentials_json)
     if not result:
         raise RuntimeError(
-            "Could not find credentials for calendar access."
+            "Could not find credentials for cal access."
             f" Tried pickle file <{credentials_pickle}>"
             f", cloud secrets <{secret_name}>"
             f", and JSON file <{credentials_json}>"
@@ -261,13 +261,13 @@ def _pickle_credentials(
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
-        "Retrieving calendar credentials from pickle file: <%s>(%s)", value, type(value)
+        "Retrieving cal credentials from pickle file: <%s>(%s)", value, type(value)
     )
     value = _pickle_filepath(value)
     if value.exists():
         with open(value, "rb") as in_file:
             result = pickle.load(in_file)
-        _LOGGER.info("Retrieved calendar credentials from pickle file %s", value)
+        _LOGGER.info("Retrieved cal credentials from pickle file %s", value)
     else:
         _LOGGER.info("Pickle file %s does not exist, ignoring", value)
     return result
@@ -279,7 +279,7 @@ def _persist_credentials_pickle(
 ) -> bool:
     result = False
     _LOGGER.debug(
-        "Persisting calendar credentials into pickle file: <%s>(%s)",
+        "Persisting cal credentials into pickle file: <%s>(%s)",
         credentials_pickle,
         type(credentials_pickle),
     )
@@ -294,7 +294,7 @@ def _persist_credentials_pickle(
             pickle.dump(value, out_file)
             result = True
         _LOGGER.info(
-            "Persisted calendar credentials with client ID %s into pickle file: %s",
+            "Persisted cal credentials with client ID %s into pickle file: %s",
             value.client_id,
             credentials_pickle,
         )
@@ -307,7 +307,7 @@ _CREDENTIALS_SECRET_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_SECRET_NAME"
 def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
-        "Retrieving calendar credentials from cloud secret name: <%s>(%s)",
+        "Retrieving cal credentials from cloud secret name: <%s>(%s)",
         value,
         type(value),
     )
@@ -316,7 +316,7 @@ def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
     if value:
         result = secrets.get(value)
         _LOGGER.info(
-            "Retrieved calendar credentials from cloud secret name: <%s>(%s)",
+            "Retrieved cal credentials from cloud secret name: <%s>(%s)",
             value,
             type(value),
         )
@@ -332,13 +332,9 @@ def _refresh_credentials_if_needed(
         and value.expired
         and value.refresh_token
     ):
-        _LOGGER.debug(
-            "Refreshing calendar credentials for client ID: %s", value.client_id
-        )
+        _LOGGER.debug("Refreshing cal credentials for client ID: %s", value.client_id)
         value.refresh(requests.Request())
-        _LOGGER.info(
-            "Refreshed calendar credentials for client ID: %s", value.client_id
-        )
+        _LOGGER.info("Refreshed cal credentials for client ID: %s", value.client_id)
     return value
 
 
@@ -354,7 +350,7 @@ def _json_credentials(
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
-        "Retrieving calendar credentials from JSON file: <%s>(%s)", value, type(value)
+        "Retrieving cal credentials from JSON file: <%s>(%s)", value, type(value)
     )
     value = _json_filepath(value)
     if value.exists():
@@ -362,7 +358,7 @@ def _json_credentials(
             value, _CALENDAR_SCOPES
         )
         result = app_flow.run_local_server(port=0)
-        _LOGGER.info("Retrieved calendar credentials from JSON file %s", value)
+        _LOGGER.info("Retrieved cal credentials from JSON file %s", value)
         _refresh_credentials_if_needed(result)
     else:
         _LOGGER.info("JSON file %s does not exist, ignoring", value)

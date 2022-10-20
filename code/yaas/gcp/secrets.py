@@ -7,11 +7,14 @@ GCP `Secret Manager`_ entry point
 """
 # pylint: enable=line-too-long
 from typing import Optional
-import logging
 
 import cachetools
 
 from google.cloud import secretmanager
+
+from yaas import logger
+
+_LOGGER = logger.get(__name__)
 
 _GCP_SECRET_NAME_TMPL: str = (
     "projects/{project_id}/secrets/{secret_id}/versions/{version}"
@@ -56,12 +59,12 @@ def get(secret_name: str) -> str:
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     client = _secret_client()
-    logging.info("Retrieving secret <%s>", secret_name)
+    _LOGGER.info("Retrieving secret <%s>", secret_name)
     try:
         response = client.access_secret_version(request={"name": secret_name})
     except Exception as err:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
-        logging.critical(msg)
+        _LOGGER.critical(msg)
         raise SecretManagerAccessError(msg) from err
     return response.payload.data.decode("UTF-8")
 

@@ -4,15 +4,13 @@
 # pylint: disable=protected-access,redefined-outer-name,no-self-use,using-constant-test
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods, redefined-builtin
 # type: ignore
-import base64
 from datetime import datetime
-import json
 import pytz
 from typing import Any, Dict, Tuple
 
 import pytest
 
-from yaas.calendar import parser, scaling_target
+from yaas.cal import parser, scaling_target
 
 _TEST_EVENT_CLOUD_RUN_START_TIME: str = "2022-10-18T16:00:00+02:00"
 _TEST_EVENT_CLOUD_RUN_SERVICE_NAME: str = "hello"
@@ -23,7 +21,7 @@ _TEST_EVENT_CLOUD_RUN_SIMPLE_RESOURCE_NAME: str = f"CloudRun / {_TEST_EVENT_CLOU
 _TEST_EVENT_CLOUD_RUN_TARGET_VALUE: int = 10
 _TEST_EVENT_CLOUD_RUN_DESCRIPTION_TMPL: str = "Description event repeat daily<br>%s<br>"
 _TEST_EVENT_CLOUD_RUN: Dict[str, Any] = {
-    "kind": "calendar#event",
+    "kind": "cal#event",
     "etag": '"3332030328331000"',
     "id": "3johpi0lpma4f08f9p2n4vleu4_20221018T140000Z",
     "status": "confirmed",
@@ -34,7 +32,7 @@ _TEST_EVENT_CLOUD_RUN: Dict[str, Any] = {
     "description": "",
     "creator": {"email": "ds.env.poc.error@gmail.com"},
     "organizer": {
-        "email": "ajbefo4rt4j8mtd808pi4gi5uc@group.calendar.google.com",
+        "email": "ajbefo4rt4j8mtd808pi4gi5uc@group.cal.google.com",
         "displayName": "YAAS",
         "self": True,
     },

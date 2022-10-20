@@ -2,11 +2,11 @@
 """
 DTOs to encode a command coming from the Cloud Function.
 """
-import attrs
 from datetime import datetime
 import enum
-import re
 from typing import List, Optional
+
+import attrs
 
 from yaas import const
 from yaas import logger
@@ -49,6 +49,7 @@ class BaseScalingTarget:  # pylint: disable=too-few-public-methods
 class CloudRunScalingTarget(
     BaseScalingTarget
 ):  # pylint: disable=too-few-public-methods
+    # pylint: disable=line-too-long
     """
     To understand the `scaling_param` value, it corresponds to the _path_ in the API:
         `UpdateServiceRequest`_.`Service`_.`RevisionTemplate`_.`RevisionScaling`_
@@ -58,20 +59,18 @@ class CloudRunScalingTarget(
     .. _RevisionTemplate: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.RevisionTemplate
     .. _RevisionScaling: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.RevisionScaling
     """
+    # pylint: enable=line-too-long
 
     def __attrs_post_init__(self):
         # workaround for frozen objects
         object.__setattr__(
-            self, "scaling_param", "service.template.scaling.min_instance_count"
+            self, "scaling_param", const.CLOUD_RUN_UPDATE_REQUEST_SCALING_TARGET_PARAM
         )
         object.__setattr__(self, "type", ScalingTargetType.CLOUD_RUN)
         # validate name
         _validate_cloud_run_resource_name(self.name, raise_if_invalid=True)
 
 
-_CLOUD_RUN_NAME_REGEX: re.Pattern = re.compile(
-    "^projects/([^/]+)/locations/([^/]+)/services/([^/]+)$"
-)
 _CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG: str = (
     "projects/{{project}}/locations/{{location}}/services/{{service_id}}"
 )
@@ -87,7 +86,7 @@ def _validate_cloud_run_resource_name(
         )
     else:
         # validate format
-        matched = _CLOUD_RUN_NAME_REGEX.match(value)
+        matched = const.CLOUD_RUN_NAME_REGEX.match(value)
         if matched is None:
             result.append(
                 f"Name must obey the format: '{_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}'. Got <{value}>"
@@ -96,15 +95,18 @@ def _validate_cloud_run_resource_name(
         # validate individual tokens
         if not project:
             result.append(
-                f"Could not find project ID in <{value}> assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
+                f"Could not find project ID in <{value}> "
+                f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
             )
         if not location:
             result.append(
-                f"Could not find location in <{value}> assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
+                f"Could not find location in <{value}> "
+                f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
             )
         if not service_id:
             result.append(
-                f"Could not find service ID in <{value}> assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
+                f"Could not find service ID in <{value}> "
+                f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
             )
     if result and raise_if_invalid:
         raise ValueError(
@@ -131,6 +133,7 @@ def from_arguments(
         result = CloudRunScalingTarget(name=name, scaling_value=value, start=start)
     else:
         raise ValueError(
-            f"Could not parse resource <{name}>({type(name)} into a valid {BaseScalingTarget.__name__}"
+            f"Could not parse resource <{name}>({type(name)} "
+            f"into a valid {BaseScalingTarget.__name__}"
         )
     return result

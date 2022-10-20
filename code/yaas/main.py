@@ -29,7 +29,7 @@ import click  # pylint: disable=wrong-import-position
 from googleapiclient import errors  # pylint: disable=wrong-import-position
 
 from yaas import logger  # pylint: disable=wrong-import-position
-from yaas.calendar import google_cal, parser  # pylint: disable=wrong-import-position
+from yaas.cal import google_cal, parser  # pylint: disable=wrong-import-position
 
 
 _LOGGER = logger.get(__name__)
@@ -44,7 +44,7 @@ def cli() -> None:
 
 
 @cli.command(help="List upcoming events")
-@click.option("--calendar-id", required=True, type=str, help="Which calendar to read.")
+@click.option("--cal-id", required=True, type=str, help="Which cal to read.")
 @click.option(
     "--json-creds", required=False, type=click.File("r"), help="JSON credentials file"
 )
@@ -57,7 +57,7 @@ def list_events(
     start_day: Optional[str] = None,
 ):
     """
-    List calendar events.
+    List cal events.
 
     Args:
         calendar_id:

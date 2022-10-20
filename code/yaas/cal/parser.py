@@ -8,13 +8,13 @@ Events are expected to come out of `list API`_.
 """
 # pylint: enable=line-too-long
 from datetime import datetime
-import pytz
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import bs4
+import pytz
 
-from yaas.calendar import scaling_target
+from yaas.cal import scaling_target
 from yaas import logger
 
 _LOGGER = logger.get(__name__)
@@ -27,12 +27,14 @@ _GOOGLE_CALENDAR_EVENT_DESCRIPTION_TARGET_PREFIX: str = "target"
 # The, apparently superfluous, pattern '\.?' is added
 # to account for Google Calendar behaviour to add a period ('.') after words
 # if you add more than 1 space after a word.
+# pylint: disable=anomalous-backslash-in-string
 _GOOGLE_CALENDAR_EVENT_DESCRIPTION_TARGET_SPEC_REGEX: re.Pattern = re.compile(
     pattern=r"^\s*?"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_TARGET_PREFIX
     + "\.?\s*:\.?\s*([^=]+\.?)=\.?\s*(\d+)\.?\s*$",
     flags=re.IGNORECASE | re.MULTILINE,
 )
+# pylint: enable=anomalous-backslash-in-string
 """
 Groups on matching are::
     resource, value = _GOOGLE_CALENDAR_EVENT_DESCRIPTION_TARGET_SPEC_REGEX.match(line).groups()
@@ -45,10 +47,12 @@ _FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
 Groups on matching are::
     project, location, service = _FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX.match(line).groups()
 """
+# pylint: disable=line-too-long
 _SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
     pattern=r"\.?\s*CloudRun\.?\s*/\.?\s*([^@\s]+)\.?\s*@\.?\s*([^/\s]+)\.?\s*/\.?\s*([^\s]+)\.?\s*",
     flags=re.IGNORECASE,
 )
+# pylint: enable=line-too-long
 """
 Groups on matching are::
     service, project, location = _SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX.match(line).groups()
@@ -125,6 +129,7 @@ def _parse_start_to_utc(value: Dict[str, str]) -> datetime:
 def _parse_event_description(
     value: str, start: datetime
 ) -> List[scaling_target.BaseScalingTarget]:
+    # pylint: disable=line-too-long
     """
     Description field example::
         'Description event repeat daily<br>name: projects/src-bq/locations/europe-west3/services/hello<br>value: 10<br>project: src-bq<br>location:&nbsp;<span style="background-color: var(--textfield-surface); color: var(--on-surface);">europe-west3</span><br><span style="background-color: var(--textfield-surface); color: var(--on-surface);">type: CloudRun</span><br><span style="background-color: var(--textfield-surface); color: var(--on-surface);">service: hello</span>'
@@ -132,6 +137,7 @@ def _parse_event_description(
     Returns:
 
     """
+    # pylint: enable=line-too-long
     result = []
     for line in _extract_text_from_html(value).split("\n"):
         item_name, item_value = _parse_description_target_line(line)
@@ -141,7 +147,7 @@ def _parse_event_description(
 
 
 def _extract_text_from_html(value: str) -> str:
-    soup = bs4.BeautifulSoup(value)
+    soup = bs4.BeautifulSoup(markup=value, features="html.parser")
     return soup.get_text(separator="\n", strip=True)
 
 
@@ -213,7 +219,9 @@ def _parse_cloud_run_name_from_desc_spec(value: str) -> Optional[str]:
             )
     # build result
     # Why the construct below?
+    # pylint: disable=line-too-long
     # https://stackoverflow.com/questions/42360956/what-is-the-most-pythonic-way-to-check-if-multiple-variables-are-not-none
+    # pylint: enable=line-too-long
     if not [x for x in (project, location, service) if x is None]:
         result = _CLOUD_RUN_RESOURCE_NAME_TMPL.format(project, location, service)
     return result

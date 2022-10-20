@@ -11,7 +11,7 @@ from yaas.cal import scaling_target
 from yaas.gcp import cloud_run
 
 
-def apply(value: scaling_target.BaseScalingTarget) -> None:
+def apply(value: scaling_target.BaseScalingTarget) -> Any:
     """
 
     Args:
@@ -26,11 +26,12 @@ def apply(value: scaling_target.BaseScalingTarget) -> None:
     # apply scaling
     match value.type:
         case scaling_target.ScalingTargetType.CLOUD_RUN:
-            _apply_cloud_run(value)
+            result = _apply_cloud_run(value)
         case _:
             raise ValueError(
                 f"Scaling target of type {value.type} is not supported. Full request: {value}"
             )
+    return result
 
 
 def _apply_cloud_run(value: scaling_target.CloudRunScalingTarget) -> Any:

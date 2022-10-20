@@ -47,7 +47,7 @@ def test__apply_cloud_run_ok(monkeypatch):
     assert len(update_args) == 3
     name, path, value = update_args
     assert name == _TEST_CLOUD_RUN_RESOURCE_NAME
-    assert path == const.CLOUD_RUN_UPDATE_REQUEST_SCALING_TARGET_PARAM
+    assert path == const.CLOUD_RUN_SERVICE_SCALING_TARGET_PARAM
     assert value == _TEST_CLOUD_RUN_TARGET_VALUE
 
 

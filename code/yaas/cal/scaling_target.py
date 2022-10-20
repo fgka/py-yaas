@@ -64,11 +64,11 @@ class CloudRunScalingTarget(
     def __attrs_post_init__(self):
         # workaround for frozen objects
         object.__setattr__(
-            self, "scaling_param", const.CLOUD_RUN_UPDATE_REQUEST_SCALING_TARGET_PARAM
+            self, "scaling_param", const.CLOUD_RUN_SERVICE_SCALING_TARGET_PARAM
         )
         object.__setattr__(self, "type", ScalingTargetType.CLOUD_RUN)
         # validate name
-        _validate_cloud_run_resource_name(self.name, raise_if_invalid=True)
+        validate_cloud_run_resource_name(self.name, raise_if_invalid=True)
 
 
 _CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG: str = (
@@ -76,9 +76,19 @@ _CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG: str = (
 )
 
 
-def _validate_cloud_run_resource_name(
+def validate_cloud_run_resource_name(
     value: str, *, raise_if_invalid: bool = True
 ) -> List[str]:
+    """
+    Validates the `value` against the pattern:
+        "projects/my-project-123/locations/my-location-123/services/my-service-123"
+    Args:
+        value:
+        raise_if_invalid:
+
+    Returns:
+
+    """
     result = []
     if not isinstance(value, str):
         result.append(
@@ -128,7 +138,7 @@ def from_arguments(
     Returns:
 
     """
-    if not _validate_cloud_run_resource_name(name, raise_if_invalid=False):
+    if not validate_cloud_run_resource_name(name, raise_if_invalid=False):
         # no errors
         result = CloudRunScalingTarget(name=name, scaling_value=value, start=start)
     else:

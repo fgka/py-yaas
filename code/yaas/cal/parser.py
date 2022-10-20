@@ -64,6 +64,8 @@ def to_scaling(
     event: Optional[Dict[str, Any]] = None
 ) -> List[scaling_target.BaseScalingTarget]:
     """
+    Parses the event for scaling targets. It uses `start` for the start time
+        and `description` to get the resources and values to be scaled.
 
     Args:
         event:
@@ -152,14 +154,6 @@ def _extract_text_from_html(value: str) -> str:
 
 
 def _parse_description_target_line(value: str) -> Optional[Tuple[str, int]]:
-    """
-
-    Args:
-        value:
-
-    Returns:
-
-    """
     item_name, item_value = None, None
     value = value.strip()
     if value.startswith(_GOOGLE_CALENDAR_EVENT_DESCRIPTION_TARGET_PREFIX):
@@ -180,28 +174,12 @@ def _parse_description_target_line(value: str) -> Optional[Tuple[str, int]]:
 
 
 def _parse_resource_name_from_desc_spec(value: str) -> str:
-    """
-
-    Args:
-        value:
-
-    Returns:
-
-    """
     # CloudRun
     result = _parse_cloud_run_name_from_desc_spec(value)
     return result
 
 
 def _parse_cloud_run_name_from_desc_spec(value: str) -> Optional[str]:
-    """
-
-    Args:
-        value:
-
-    Returns:
-
-    """
     result = None
     project, location, service = None, None, None
     # FQN match

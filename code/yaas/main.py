@@ -29,7 +29,13 @@ import click  # pylint: disable=wrong-import-position
 from googleapiclient import errors  # pylint: disable=wrong-import-position
 
 from yaas import logger  # pylint: disable=wrong-import-position
-from yaas.cal import google_cal, parser  # pylint: disable=wrong-import-position
+from yaas.cal import (
+    google_cal,
+    parser,
+    scaling_target,
+)  # pylint: disable=wrong-import-position
+from yaas.control import scaler
+from yaas.gcp import cloud_run
 
 
 _LOGGER = logger.get(__name__)
@@ -88,6 +94,48 @@ def list_events(
 
     except errors.HttpError as error:
         print(f"An error occurred: {error}")
+
+
+@cli.command(help="Set Cloud Run min instances")
+@click.option(
+    "--name", required=True, type=str, help="Cloud Run service full resource name"
+)
+@click.option(
+    "--value", required=True, type=int, help="Value to be set to minimum instances"
+)
+def scale_cloud_run(name: str, value: int):
+    """
+
+    Args:
+        name:
+        value:
+
+    Returns:
+
+    """
+    target = scaling_target.CloudRunScalingTarget(
+        name=name, scaling_value=value, start=datetime.now()
+    )
+    scaler.apply(target)
+    print(f"Scaling target {target}")
+
+
+@cli.command(help="Set Cloud Run min instances")
+@click.option(
+    "--name", required=True, type=str, help="Cloud Run service full resource name"
+)
+def get_cloud_run(name: str):
+    """
+
+    Args:
+        name:
+        value:
+
+    Returns:
+
+    """
+    result = cloud_run.get_service(name)
+    print(f"Service {name} resulted in {result}")
 
 
 if __name__ == "__main__":

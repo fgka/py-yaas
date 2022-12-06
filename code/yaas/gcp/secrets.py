@@ -30,6 +30,7 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
     """
     Build a canonical secret path in the format::
        projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>
+
     Args:
         project_id:
         secret_id:
@@ -48,6 +49,7 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
 def get(secret_name: str) -> str:
     """
     Retrieves a secret, by name.
+
     Args:
         secret_name: a secret name in the format:
             `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`

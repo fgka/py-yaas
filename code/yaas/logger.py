@@ -1,10 +1,9 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=line-too-long
 """
-GCP CloudFunction mandatory entry point:
-* https://cloud.google.com/functions/docs/writing#functions-writing-file-structuring-python
-* https://cloud.google.com/functions/docs/writing/http
-* https://cloud.google.com/functions/docs/tutorials/pubsub
+Logger definition, get all loggers from this module::
+    from todo_module_name_todo import logger
+    _LOGGER = logger.get(__name__)
 """
 # pylint: enable=line-too-long
 import logging
@@ -24,9 +23,13 @@ def get(name: str, *, level: Optional[Union[str, int]] = None) -> logging.Logger
     - argument `level`;
     - environment variable :py:data:`LOG_LEVEL_ENV_VAR_NAME`;
     - default value in: :py:data:`_DEFAULT_LOG_LEVEL`.
-    :param name:
-    :param level:
-    :return:
+
+    Args:
+        name: logger name.
+        level: default logging level.
+
+    Returns:
+        :py:cls:`logging.Logger` instance.
     """
     if not isinstance(name, str) or not name.strip():
         raise ValueError(

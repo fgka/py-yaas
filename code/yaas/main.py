@@ -1,10 +1,7 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=line-too-long
 """
-GCP CloudFunction mandatory entry point:
-* https://cloud.google.com/functions/docs/writing#functions-writing-file-structuring-python
-* https://cloud.google.com/functions/docs/writing/http
-* https://cloud.google.com/functions/docs/tutorials/pubsub
+CLI entry point to test individual parts of the code.
 """
 # pylint: enable=line-too-long
 from datetime import datetime
@@ -24,18 +21,18 @@ if False:  # pylint: disable=using-constant-test
     except Exception as log_err:  # pylint: disable=broad-except
         print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
 
-import click  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+import click
 
-from googleapiclient import errors  # pylint: disable=wrong-import-position
+from googleapiclient import errors
 
-from yaas import logger  # pylint: disable=wrong-import-position
-from yaas.cal import (
-    google_cal,
-    parser,
-    scaling_target,
-)  # pylint: disable=wrong-import-position
-from yaas.control import scaler
+from yaas import logger
+from yaas.cal import event_parser, google_cal
+from yaas.dto import request
 from yaas.gcp import cloud_run
+from yaas.scaler import run, standard
+
+# pylint: enable=wrong-import-position
 
 
 _LOGGER = logger.get(__name__)
@@ -44,13 +41,12 @@ _LOGGER = logger.get(__name__)
 @click.group(help="CLI entry point -- Description here.")
 def cli() -> None:
     """
-    Click entry-point
-    :return:
+    Click entry-point.
     """
 
 
 @cli.command(help="List upcoming events")
-@click.option("--cal-id", required=True, type=str, help="Which cal to read.")
+@click.option("--cal-id", required=True, type=str, help="Which calendar ID to read")
 @click.option(
     "--json-creds", required=False, type=click.File("r"), help="JSON credentials file"
 )
@@ -61,17 +57,14 @@ def list_events(
     calendar_id: str,
     json_creds: Optional[io.TextIOWrapper] = None,
     start_day: Optional[str] = None,
-):
+) -> None:
     """
-    List cal events.
+    List calendar events.
 
     Args:
-        calendar_id:
-        json_creds:
-        start_day:
-
-    Returns:
-
+        calendar_id: Google calendar ID
+        json_creds: Google calendar JSON credentials
+        start_day: From when to start listing the events
     """
     try:
         credentials_json = None
@@ -89,53 +82,66 @@ def list_events(
 
         # Prints the start and name of the next 10 events
         for event in events:
-            scaling_targets = parser.to_scaling(event)
+            scaling_targets = event_parser.to_request(event)
             print(f"Event has: {scaling_targets}")
 
     except errors.HttpError as error:
         print(f"An error occurred: {error}")
 
 
-@cli.command(help="Set Cloud Run min instances")
+@cli.command(help="Set Cloud Run scaling")
 @click.option(
-    "--name", required=True, type=str, help="Cloud Run service full resource name"
+    "--name",
+    required=True,
+    type=str,
+    help="Cloud Run service full resource name in the form:"
+    "projects/MY_PROJECT/locations/MY_LOCATION/services/MY_SERVICE",
 )
 @click.option(
-    "--value", required=True, type=int, help="Value to be set to minimum instances"
+    "--param",
+    required=True,
+    type=click.Choice([param.value for param in run.CloudRunCommandTypes]),
+    help="Which scaling parameter to set",
 )
-def scale_cloud_run(name: str, value: int):
+@click.option(
+    "--value", required=True, type=int, help="Value to be set to the parameter"
+)
+def scale_cloud_run(name: str, param: str, value: int) -> None:
     """
+    Create a :py:cls:`request.ScaleRequest` and, from this request, a :py:cls:`run.CloudRunScaler`
+        based on the arguments.
+    It uses the scaler to enact the request.
 
     Args:
-        name:
-        value:
-
-    Returns:
-
+        name: service full-qualified name
+        param: which scaling param to set
+        value: value of the scaling param
     """
-    target = scaling_target.CloudRunScalingTarget(
-        name=name, scaling_value=value, start=datetime.now()
+    req = request.ScaleRequest(
+        topic=standard.StandardCategoryType.STANDARD.value,
+        resource=name,
+        command=f"{param} {value}",
     )
-    scaler.apply(target)
-    print(f"Scaling target {target}")
+    scaler = run.CloudRunScaler.from_request(req)
+    scaler.enact()
 
 
-@cli.command(help="Set Cloud Run min instances")
+@cli.command(help="Get Cloud Run service definition")
 @click.option(
-    "--name", required=True, type=str, help="Cloud Run service full resource name"
+    "--name",
+    type=str,
+    help="Cloud Run service full resource name in the form:"
+    "projects/MY_PROJECT/locations/MY_LOCATION/services/MY_SERVICE",
 )
-def get_cloud_run(name: str):
+def get_cloud_run(name: str) -> None:
     """
+    Retrieves the service definition based on its name
 
     Args:
-        name:
-        value:
-
-    Returns:
-
+        name: service full-qualified name
     """
     result = cloud_run.get_service(name)
-    print(f"Service {name} resulted in {result}")
+    print(f"Service {name} resulted in:\n{result}\n")
 
 
 if __name__ == "__main__":

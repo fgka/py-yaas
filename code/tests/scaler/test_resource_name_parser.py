@@ -1,9 +1,8 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
-# pylint: disable=protected-access,redefined-outer-name,no-self-use,using-constant-test
+# pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
-# pylint: disable=redefined-builtin
 # type: ignore
 import pytest
 
@@ -12,8 +11,10 @@ from yaas.scaler import resource_name_parser
 _TEST_RESOURCE_CLOUD_RUN_PROJECT: str = "my_project"
 _TEST_RESOURCE_CLOUD_RUN_LOCATION: str = "my_location"
 _TEST_RESOURCE_CLOUD_RUN_SERVICE: str = "my_service"
+# pylint: disable=line-too-long
 _TEST_RESOURCE_CLOUD_RUN_CANONICAL: str = f"projects/{_TEST_RESOURCE_CLOUD_RUN_PROJECT}/locations/{_TEST_RESOURCE_CLOUD_RUN_LOCATION}/services/{_TEST_RESOURCE_CLOUD_RUN_SERVICE}"
 _TEST_RESOURCE_CLOUD_RUN_SIMPLIFIED: str = f"CloudRun {_TEST_RESOURCE_CLOUD_RUN_SERVICE} @ {_TEST_RESOURCE_CLOUD_RUN_PROJECT} {_TEST_RESOURCE_CLOUD_RUN_LOCATION}"
+# pylint: enable=line-too-long
 
 
 @pytest.mark.parametrize(
@@ -43,6 +44,7 @@ def test_canonical_resource_name_and_type_ok_cloud_run(
     assert canonical_str == expected_canonical
 
 
+# pylint: disable=line-too-long
 @pytest.mark.parametrize(
     "resource",
     [
@@ -60,6 +62,7 @@ def test_canonical_resource_name_and_type_ok_cloud_run(
         f" {_TEST_RESOURCE_CLOUD_RUN_SERVICE} @ {_TEST_RESOURCE_CLOUD_RUN_PROJECT} {_TEST_RESOURCE_CLOUD_RUN_LOCATION}",
     ],
 )
+# pylint: enable=line-too-long
 def test_canonical_resource_name_and_type_nok_cloud_run(resource: str):
     (
         resource_type,

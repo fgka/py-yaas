@@ -1,9 +1,8 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
-# pylint: disable=protected-access,redefined-outer-name,no-self-use,using-constant-test
+# pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
-# pylint: disable=redefined-builtin
 # type: ignore
 from typing import Any, Dict, Optional, Tuple
 import pytest
@@ -134,7 +133,6 @@ class TestCloudRunScaler:
             update_name = name
             update_path = path
             update_value = value
-            pass
 
         def mocked_can_be_deployed(value: str) -> Tuple[bool, str]:
             nonlocal can_be_value
@@ -154,7 +152,9 @@ class TestCloudRunScaler:
         target = 13
         for param in run.CloudRunCommandTypes:
             exp_path = _expected_cloud_run_update_path(param)
-            definition = _create_cloud_run_scaling_definition(parameter=param, target=target)
+            definition = _create_cloud_run_scaling_definition(
+                parameter=param, target=target
+            )
             obj = run.CloudRunScaler(definition)
             # When
             res = obj.enact()
@@ -174,4 +174,3 @@ def _expected_cloud_run_update_path(param: run.CloudRunCommandTypes) -> str:
     if param == run.CloudRunCommandTypes.CONCURRENCY:
         return cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
     return None
-

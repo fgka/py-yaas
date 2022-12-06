@@ -1,12 +1,13 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
-# pylint: disable=protected-access,redefined-outer-name,no-self-use,using-constant-test
-# pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods, redefined-builtin
+# pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
+# pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 from datetime import datetime
-import pytz
 from typing import Any, Dict, Tuple
+
+import pytz
 
 import pytest
 
@@ -15,6 +16,7 @@ from yaas.dto import request
 
 _TEST_EVENT_START_TIME: str = "2022-10-18T16:00:00+02:00"
 _TEST_EVENT_DESCRIPTION_TMPL: str = "Description event repeat daily<br>%s<br>"
+# pylint: disable=line-too-long
 _TEST_EVENT: Dict[str, Any] = {
     "kind": "cal#event",
     "etag": '"3332030328331000"',
@@ -46,6 +48,7 @@ _TEST_EVENT: Dict[str, Any] = {
     "reminders": {"useDefault": False},
     "eventType": "default",
 }
+# pylint: enable=line-too-long
 
 
 def _str_to_timestamp(value: str) -> int:

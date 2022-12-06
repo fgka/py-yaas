@@ -1,9 +1,8 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
-# pylint: disable=protected-access,redefined-outer-name,no-self-use,using-constant-test
+# pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
-# pylint: disable=redefined-builtin
 # type: ignore
 from typing import Any, Dict, List, Tuple
 
@@ -152,9 +151,6 @@ class _MyCategoryScalingCommandParser(base.CategoryScalingCommandParser):
 
     called = {}
 
-    def __init__(self, value: request.ScaleRequest) -> None:
-        super().__init__(value)
-
     @classmethod
     def _create_scaler(cls, value: request.ScaleRequest) -> base.Scaler:
         cls.called[_MyCategoryScalingCommandParser._create_scaler.__name__] = True
@@ -163,7 +159,7 @@ class _MyCategoryScalingCommandParser(base.CategoryScalingCommandParser):
     @classmethod
     def supported_categories(cls) -> List[base.CategoryTypes]:
         cls.called[_MyCategoryScalingCommandParser.supported_categories.__name__] = True
-        return [val for val in _MyCategoryTypes]
+        return list(_MyCategoryTypes)
 
 
 class TestCategoryScalingCommandParser:

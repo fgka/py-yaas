@@ -22,6 +22,11 @@ class StandardCategoryType(base.CategoryTypes):
 
     @classmethod
     def default(cls) -> "StandardCategoryType":
+        """
+        Default type.
+
+        Returns:
+        """
         return StandardCategoryType.STANDARD
 
 
@@ -29,9 +34,6 @@ class StandardScalingCommandParser(base.CategoryScalingCommandParser):
     """
     Standard category supported by YAAS.
     """
-
-    def __init__(self, value: request.ScaleRequest) -> None:
-        super().__init__(value)
 
     @classmethod
     def _create_scaler(cls, value: request.ScaleRequest) -> base.Scaler:

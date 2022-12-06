@@ -6,6 +6,8 @@ Events are expected to come out of `list API`_.
 
 .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
 """
+import json
+
 # pylint: enable=line-too-long
 from datetime import datetime
 import re
@@ -98,7 +100,7 @@ def to_request(event: Optional[Dict[str, Any]] = None) -> List[request.ScaleRequ
         else:
             start = event.get(_GOOGLE_CALENDAR_EVENT_START_FIELD)
             start_utc = _parse_start_to_utc(start)
-            result = _parse_event_description(description, start_utc)
+            result = _parse_event_description(description, start_utc, json.dumps(event))
     else:
         _LOGGER.warning(
             "Event <%s>(%s) cannot be parsed, it needs to be instance of %s",
@@ -139,7 +141,7 @@ def _parse_start_to_utc(value: Dict[str, str]) -> datetime:
 
 
 def _parse_event_description(
-    value: str, start_utc: datetime
+    value: str, start_utc: datetime, json_event: str
 ) -> List[request.ScaleRequest]:
     # pylint: disable=line-too-long
     """
@@ -157,7 +159,9 @@ def _parse_event_description(
     # pylint: enable=line-too-long
     result = []
     for line in _extract_text_from_html(value).split("\n"):
-        req = _parse_description_target_line(line, int(start_utc.timestamp()))
+        req = _parse_description_target_line(
+            line, int(start_utc.timestamp()), json_event
+        )
         if req is not None:
             result.append(req)
     return result
@@ -169,7 +173,7 @@ def _extract_text_from_html(value: str) -> str:
 
 
 def _parse_description_target_line(
-    value: str, timestamp_utc: int
+    value: str, timestamp_utc: int, json_event: str
 ) -> Optional[request.ScaleRequest]:
     result = None
     resource_spec_value_match = (
@@ -182,6 +186,7 @@ def _parse_description_target_line(
             resource=resource.strip(),
             command=command.strip(),
             timestamp_utc=timestamp_utc,
+            original_json_event=json_event,
         )
     else:
         _LOGGER.debug(

@@ -32,3 +32,7 @@ class ScaleRequest(  # pylint: disable=too-few-public-methods
             )
         ),
     )
+    original_json_event: str = attrs.field(
+        default=None,
+        validator=attrs.validators.optional(attrs.validators.instance_of(str)),
+    )

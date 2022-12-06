@@ -4,6 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
+import json
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
@@ -105,7 +106,8 @@ def test_to_request_ok(scaling_str: str):
     # Then
     assert isinstance(result, list)
     assert len(result) == 1
-    assert result[0] == _TEST_SCALE_REQUEST
+    assert result[0] == _TEST_SCALE_REQUEST.clone(original_json_event=json.dumps(event))
+    assert result[0].original_json_event == json.dumps(event)
 
 
 def test_to_request_ok_multiple():
@@ -132,6 +134,7 @@ def test_to_request_ok_multiple():
     assert len(result) == total
     for ndx, req in enumerate(result):
         assert req.topic == f"{_TEST_SCALE_REQUEST.topic}_{ndx}"
+        assert req.original_json_event == json.dumps(event)
 
 
 def _generate_event_start_and_expected(

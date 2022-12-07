@@ -19,10 +19,10 @@ def update_event_cache(
     *,
     start_utc: int,
     end_utc: int,
+    merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
     calendar_reader: Callable[[int, int], event.EventSnapshot],
     cache_reader: Callable[[int, int], event.EventSnapshot],
     cache_writer: Callable[[event.EventSnapshot], bool],
-    merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
 ) -> bool:
     """
     This function is the entry-point for updating the current events cache.
@@ -50,10 +50,10 @@ def update_event_cache(
             f"The argument end_utc must be an {int.__name__}. "
             f"Got: <{end_utc}>({type(end_utc)})"
         )
-    if start_utc < 0 or end_utc < 0 or start_utc > end_utc:
+    if start_utc < 0 or end_utc < 0 or start_utc >= end_utc:
         raise ValueError(
-            f"The arguments start_utc <{start_utc}> and end_utc <{end_utc}> "
-            f"must be non-negative as end - start: <{end_utc - start_utc}>"
+            f"The arguments start_utc <{start_utc}> and end_utc <{end_utc}> must be non-negative "
+            f"as end - start, which must be greater than 0 too: <{end_utc - start_utc}>"
         )
     _validate_callable("calendar_reader", calendar_reader)
     _validate_callable("cache_reader", cache_reader)
@@ -64,16 +64,16 @@ def update_event_cache(
     try:
         calendar_snapshot = calendar_reader(start_utc, end_utc)
     except Exception as err:
-        msg = f"Could not read calendar for the range [{start_utc}, {end_utc}]. Got: {err}"
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        raise RuntimeError(
+            f"Could not read calendar for the range [{start_utc}, {end_utc}]. Got: {err}"
+        ) from err
     # read cache
     try:
         cached_snapshot = cache_reader(start_utc, end_utc)
     except Exception as err:
-        msg = f"Could not read cache for the range [{start_utc}, {end_utc}]. Got: {err}"
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        raise RuntimeError(
+            f"Could not read cache for the range [{start_utc}, {end_utc}]. Got: {err}"
+        ) from err
     # merge
     try:
         merged_snapshot = snapshot.merge(
@@ -82,24 +82,20 @@ def update_event_cache(
             merge_strategy=merge_strategy,
         )
     except Exception as err:
-        msg = (
+        raise RuntimeError(
             f"Could not merge snapshots using <{merge_strategy}> "
             f"on calendar snapshot <{calendar_snapshot}> "
             f"and cached snapshot <{cached_snapshot}>. "
             f"Got: {err}"
-        )
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        ) from err
     # write cache
     try:
         result = cache_writer(merged_snapshot)
     except Exception as err:
-        msg = (
+        raise RuntimeError(
             f"Could not write snapshot <{merged_snapshot}> to cache using <{cache_writer}>. "
             f"Got: {err}"
-        )
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        ) from err
     return result
 
 

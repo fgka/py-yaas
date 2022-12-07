@@ -42,18 +42,16 @@ def merge(
     try:
         comparison = compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     except Exception as err:
-        msg = f"Could not compare <{snapshot_a}> to <{snapshot_b}>. Got: {err}"
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        raise RuntimeError(
+            f"Could not compare <{snapshot_a}> to <{snapshot_b}>. Got: {err}"
+        ) from err
     try:
         result = merge_strategy(comparison)
     except Exception as err:
-        msg = (
+        raise RuntimeError(
             f"Could not apply merge strategy <{merge_strategy}> to comparison <{comparison}>. "
             f"Got: {err}"
-        )
-        _LOGGER.exception(msg)
-        raise RuntimeError(msg) from err
+        ) from err
     return result
 
 

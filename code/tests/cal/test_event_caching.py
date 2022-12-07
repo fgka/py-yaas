@@ -318,3 +318,5 @@ def test_update_event_cache_nok(
                         assert called.get("cache_writer") is None
                     else:
                         assert called.get("cache_writer")
+    else:
+        assert not called

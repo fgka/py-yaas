@@ -6,7 +6,7 @@ The difficulty here is to build and merge snapshots,
  in case the current cached values deviate from what is in newly fetched upcoming events.
 """
 # pylint: enable=line-too-long
-from typing import Callable
+from typing import Callable, List
 
 from yaas import logger
 from yaas.dto import event
@@ -82,7 +82,7 @@ def compare(
     The resulting object should have:
         * non_overlapping_a: [snapshot_a_event_1];
         * non_overlapping_b: [snapshot_b_event_5];
-        * non_conflicting_a: [snapshot_a_event_2];
+        * overlapping: [snapshot_a_event_2, snapshot_b_event_2];
         * only_in_a: [snapshot_a_event_4];
         * only_in_b: [snapshot_b_event_3].
 
@@ -103,6 +103,88 @@ def compare(
             f"Argument snapshot_b is not {event.EventSnapshot.__name__}. "
             f"Got <{snapshot_b}>({type(snapshot_b)})"
         )
-    # logic
-    # TODO
-    return None
+    # logic:
+    overlapping = None
+    only_in_a = None
+    only_in_b = None
+    # logic: simple/emtpy
+    if not snapshot_a.timestamp_to_request and snapshot_b.timestamp_to_request:
+        only_in_b = snapshot_b
+    if not snapshot_b.timestamp_to_request and snapshot_a.timestamp_to_request:
+        only_in_a = snapshot_a
+    # logic: potential conflict
+    if snapshot_a.timestamp_to_request and snapshot_b.timestamp_to_request:
+        result = _compare_potential_conflict(snapshot_a, snapshot_b)
+    else:
+        result = event.EventSnapshotComparison(
+            overlapping=overlapping,
+            only_in_a=only_in_a,
+            only_in_b=only_in_b,
+        )
+    return result
+
+
+def _compare_potential_conflict(
+    snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot
+) -> event.EventSnapshotComparison:
+    # break down timestamp to request
+    (
+        only_in_a_ts,
+        only_in_b_ts,
+        overlapping_a_ts,
+        overlapping_b_ts,
+    ) = _breakdown_timestamp_to_request(snapshot_a, snapshot_b)
+    overlapping = None
+    only_in_a = None
+    only_in_b = None
+    if only_in_a_ts:
+        only_in_a = event.EventSnapshot(
+            source=snapshot_a.source, timestamp_to_request=only_in_a_ts
+        )
+    if only_in_b_ts:
+        only_in_b = event.EventSnapshot(
+            source=snapshot_b.source, timestamp_to_request=only_in_b_ts
+        )
+    if overlapping_a_ts and overlapping_b_ts:
+        overlapping = (
+            event.EventSnapshot(
+                source=snapshot_a.source, timestamp_to_request=overlapping_a_ts
+            ),
+            event.EventSnapshot(
+                source=snapshot_b.source, timestamp_to_request=overlapping_b_ts
+            ),
+        )
+    # build result
+    return event.EventSnapshotComparison(
+        overlapping=overlapping,
+        only_in_a=only_in_a,
+        only_in_b=only_in_b,
+    )
+
+
+def _breakdown_timestamp_to_request(snapshot_a, snapshot_b):
+    overlapping_a_ts = {}
+    overlapping_b_ts = {}
+    only_in_a_ts = {}
+    only_in_b_ts = {}
+    # get timeline
+    timeline = _get_timestamp_timeline(snapshot_a, snapshot_b)
+    for t_stamp in timeline:
+        req_list_a = snapshot_a.timestamp_to_request.get(t_stamp)
+        req_list_b = snapshot_b.timestamp_to_request.get(t_stamp)
+        if req_list_a and req_list_b:
+            overlapping_a_ts[t_stamp] = req_list_a
+            overlapping_b_ts[t_stamp] = req_list_b
+        elif not req_list_a:
+            only_in_b_ts[t_stamp] = req_list_b
+        elif not req_list_b:
+            only_in_a_ts[t_stamp] = req_list_a
+    return only_in_a_ts, only_in_b_ts, overlapping_a_ts, overlapping_b_ts
+
+
+def _get_timestamp_timeline(
+    snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot
+) -> List[int]:
+    all_timestamps = set(snapshot_a.timestamp_to_request.keys())
+    all_timestamps = all_timestamps.union(set(snapshot_b.timestamp_to_request.keys()))
+    return sorted(all_timestamps)

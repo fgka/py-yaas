@@ -4,12 +4,12 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import pytest
 
 from yaas.cal import snapshot
-from yaas.dto import event
+from yaas.dto import event, request
 
 _TEST_SNAPSHOT_A: event.EventSnapshot = event.EventSnapshot(source="A")
 _TEST_SNAPSHOT_B: event.EventSnapshot = event.EventSnapshot(source="B")
@@ -149,3 +149,145 @@ def test_merge_nok(
             assert called.get("merge_strategy")
     else:
         assert not called
+
+
+def test_compare_ok_empty_a():
+    snapshot_a = _create_event_snapshot("A")
+    snapshot_b = _create_event_snapshot("B", [1, 2, 3])
+    # When
+    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    # Then
+    assert isinstance(res, event.EventSnapshotComparison)
+    assert res.only_in_a is None
+    assert res.only_in_b == snapshot_b
+    assert res.overlapping is None
+    _validate_comparison_source(snapshot_a, snapshot_b, res)
+
+
+def _create_event_snapshot(
+    source: str, ts_list: Optional[List[int]] = None
+) -> event.EventSnapshot:
+    timestamp_to_request = {}
+    if ts_list:
+        for ts in ts_list:
+            timestamp_to_request[ts] = [
+                request.ScaleRequest(
+                    topic="topic", resource="resource", command=f"{source} = {ts}"
+                )
+            ]
+    return event.EventSnapshot(source=source, timestamp_to_request=timestamp_to_request)
+
+
+def _validate_comparison_source(
+    snapshot_a: event.EventSnapshot,
+    snapshot_b: event.EventSnapshot,
+    comparison: event.EventSnapshotComparison,
+) -> None:
+    if comparison.overlapping is not None:
+        overlapping_a, overlapping_b = comparison.overlapping
+        assert overlapping_a.source == snapshot_a.source
+        assert overlapping_b.source == snapshot_b.source
+    if comparison.only_in_a is not None:
+        assert comparison.only_in_a.source == snapshot_a.source
+    if comparison.only_in_b is not None:
+        assert comparison.only_in_b.source == snapshot_b.source
+
+
+def test_compare_ok_empty_b():
+    snapshot_a = _create_event_snapshot("A", [1, 2, 3])
+    snapshot_b = _create_event_snapshot("B")
+    # When
+    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    # Then
+    assert isinstance(res, event.EventSnapshotComparison)
+    assert res.only_in_a == snapshot_a
+    assert res.only_in_b is None
+    assert res.overlapping is None
+    _validate_comparison_source(snapshot_a, snapshot_b, res)
+
+
+def test_compare_ok_disjoint():
+    """
+      1  2  3  4  5
+    --+--+--+--+--+--
+      |  |  |  |  +- B_5
+      |  |  |  +---- B_4
+      |  |  +------- B_3
+      |  +---------- A_2
+      +------------- A_1
+    """
+    snapshot_a = _create_event_snapshot("A", [1, 2])
+    snapshot_b = _create_event_snapshot("B", [3, 4, 5])
+    # When
+    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    # Then
+    assert isinstance(res, event.EventSnapshotComparison)
+    assert res.overlapping is None
+    assert res.only_in_a == snapshot_a
+    assert res.only_in_b == snapshot_b
+    _validate_comparison_source(snapshot_a, snapshot_b, res)
+
+
+def test_compare_ok_only_conflict():
+    """
+      1  2  3
+    --+--+--+--
+      |  |  +- A_3, B_3
+      |  +---- A_2, B_2
+      +------- A_1, B_1
+    """
+    snapshot_a = _create_event_snapshot("A", [1, 2, 3])
+    snapshot_b = _create_event_snapshot("B", [1, 2, 3])
+    # When
+    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    # Then
+    assert isinstance(res, event.EventSnapshotComparison)
+    assert res.only_in_a is None
+    assert res.only_in_b is None
+    assert res.overlapping is not None
+    overlapping_a, overlapping_b = res.overlapping
+    assert overlapping_a == snapshot_a
+    assert overlapping_b == snapshot_b
+    _validate_comparison_source(snapshot_a, snapshot_b, res)
+
+
+def test_compare_ok_with_conflict():
+    """
+    different commands, always conflicting.
+      1  2  3  4  5
+    --+--+--+--+--+--
+      |  |  |  |  +- B_5
+      |  |  |  +---- A_4
+      |  |  +------- B_3
+      |  +---------- A_2, B_2
+      +------------- A_1
+    """
+    snapshot_a = _create_event_snapshot("A", [1, 2, 4])
+    snapshot_b = _create_event_snapshot("B", [2, 3, 5])
+    # When
+    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    # Then
+    assert isinstance(res, event.EventSnapshotComparison)
+    # Then: only A
+    assert len(res.only_in_a.timestamp_to_request) == 2
+    for ts in [1, 4]:
+        assert res.only_in_a.timestamp_to_request.get(ts) is not None
+        assert res.only_in_a.timestamp_to_request.get(
+            ts
+        ) == snapshot_a.timestamp_to_request.get(ts)
+    # Then: only B
+    assert len(res.only_in_b.timestamp_to_request) == 2
+    for ts in [3, 5]:
+        assert res.only_in_b.timestamp_to_request.get(ts) is not None
+        assert res.only_in_b.timestamp_to_request.get(
+            ts
+        ) == snapshot_b.timestamp_to_request.get(ts)
+    # Then: overlapping
+    assert res.overlapping is not None
+    overlap_a, overlap_b = res.overlapping
+    assert len(overlap_a.timestamp_to_request) == len(overlap_b.timestamp_to_request)
+    for ts in [2]:
+        assert overlap_a.timestamp_to_request.get(ts)
+        assert overlap_b.timestamp_to_request.get(ts)
+    # Then: sources
+    _validate_comparison_source(snapshot_a, snapshot_b, res)

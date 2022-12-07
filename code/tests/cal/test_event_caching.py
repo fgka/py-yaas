@@ -20,7 +20,7 @@ _TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
 
 
 @pytest.mark.parametrize(
-    "start_utc," "end_utc," "cache_write_result",
+    "start_utc,end_utc,cache_write_result",
     [
         (0, 1, True),
         (0, 1, False),
@@ -254,7 +254,7 @@ def _create_fn(
         ),
     ],
 )
-def test_update_event_cache_nok(
+def test_update_event_cache_nok(  # pylint: disable=too-many-arguments
     monkeypatch,
     exception: Exception,
     start_utc: int,

@@ -3,7 +3,7 @@
 """
 Basic definition of types and expected functionality for resource scaler.
 """
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import attrs
 
 from yaas.dto import dto_defaults, request
@@ -22,8 +22,11 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
     timestamp_to_request: Dict[int, List[request.ScaleRequest]] = attrs.field(
         default=attrs.Factory(dict),
         validator=attrs.validators.deep_mapping(
-            key_validator=attrs.validators.instance_of(str),
-            value_validator=attrs.validators.instance_of(request.ScaleRequest),
+            key_validator=attrs.validators.instance_of(int),
+            value_validator=attrs.validators.deep_iterable(
+                member_validator=attrs.validators.instance_of(request.ScaleRequest),
+                iterable_validator=attrs.validators.instance_of(list),
+            ),
             mapping_validator=attrs.validators.instance_of(dict),
         ),
     )
@@ -53,39 +56,22 @@ class EventSnapshotComparison(  # pylint: disable=too-few-public-methods
         * snapshot A timeline goes from event 1 through 4;
         * snapshot B timeline goes from event 2 through 5.
     The resulting object should have:
-        * non_overlapping_a: [snapshot_a_event_1];
-        * non_overlapping_b: [snapshot_b_event_5];
-        * non_conflicting_a: [snapshot_a_event_2];
-        * only_in_a: [snapshot_a_event_4];
-        * only_in_b: [snapshot_b_event_3].
+        * overlapping: [snapshot_a_event_2, snapshot_b_event_2];
+        * only_in_a: [snapshot_a_event_1, snapshot_a_event_4];
+        * only_in_b: [snapshot_b_event_3, snapshot_b_event_5].
     """
 
-    non_overlapping_a: EventSnapshot = attrs.field(
+    overlapping: Tuple[EventSnapshot] = attrs.field(
         default=None,
         validator=attrs.validators.optional(
-            attrs.validators.instance_of(EventSnapshot)
+            attrs.validators.deep_iterable(
+                member_validator=attrs.validators.instance_of(EventSnapshot),
+                iterable_validator=attrs.validators.instance_of(tuple),
+            )
         ),
     )
     """
-    All requests that are in snapshot A and outside the range of snapshot B.
-    """
-    non_overlapping_b: EventSnapshot = attrs.field(
-        default=None,
-        validator=attrs.validators.optional(
-            attrs.validators.instance_of(EventSnapshot)
-        ),
-    )
-    """
-    All requests that are in snapshot B and outside the range of snapshot A.
-    """
-    non_conflicting_a: EventSnapshot = attrs.field(
-        default=None,
-        validator=attrs.validators.optional(
-            attrs.validators.instance_of(EventSnapshot)
-        ),
-    )
-    """
-    All requests that are in snapshot A but are also present in snapshot B exactly as is.
+    All requests that share the same timestamp in both snapshots.
     """
     only_in_a: EventSnapshot = attrs.field(
         default=None,

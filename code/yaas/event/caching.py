@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from yaas import logger
 from yaas.dto import event
-from yaas.cal import snapshot
+from yaas.event import snapshot
 
 _LOGGER = logger.get(__name__)
 

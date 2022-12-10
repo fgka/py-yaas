@@ -8,7 +8,7 @@ from typing import Callable, List, Optional
 
 import pytest
 
-from yaas.cal import snapshot
+from yaas.event import snapshot
 from yaas.dto import event, request
 
 _TEST_SNAPSHOT_A: event.EventSnapshot = event.EventSnapshot(source="A")

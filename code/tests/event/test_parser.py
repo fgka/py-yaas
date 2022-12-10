@@ -12,14 +12,14 @@ import pytz
 
 import pytest
 
-from yaas.cal import event_parser
+from yaas.event import parser
 from yaas.dto import request
 
 _TEST_EVENT_START_TIME: str = "2022-10-18T16:00:00+02:00"
 _TEST_EVENT_DESCRIPTION_TMPL: str = "Description event repeat daily<br>%s<br>"
 # pylint: disable=line-too-long
 _TEST_EVENT: Dict[str, Any] = {
-    "kind": "cal#event",
+    "kind": "event#event",
     "etag": '"3332030328331000"',
     "id": "3johpi0lpma4f08f9p2n4vleu4_20221018T140000Z",
     "status": "confirmed",
@@ -30,7 +30,7 @@ _TEST_EVENT: Dict[str, Any] = {
     "description": "",
     "creator": {"email": "yaas.scaler@gmail.com"},
     "organizer": {
-        "email": "ajbefo4rt4j8mtd808pi4gi5uc@group.cal.google.com",
+        "email": "ajbefo4rt4j8mtd808pi4gi5uc@group.event.google.com",
         "displayName": "YAAS",
         "self": True,
     },
@@ -65,7 +65,7 @@ _TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
 
 
 def _to_scaling_str(topic: str, resource: str, command: str) -> str:
-    return event_parser._GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP.join(
+    return parser._GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP.join(
         [topic, resource, command]
     )
 
@@ -102,7 +102,7 @@ def test_to_request_ok(scaling_str: str):
         **dict(description=scaling_str),
     }
     # When
-    result = event_parser.to_request(event)
+    result = parser.to_request(event)
     # Then
     assert isinstance(result, list)
     assert len(result) == 1
@@ -128,7 +128,7 @@ def test_to_request_ok_multiple():
         **dict(description=_TEST_EVENT_DESCRIPTION_TMPL % "\n".join(lines)),
     }
     # When
-    result = event_parser.to_request(event)
+    result = parser.to_request(event)
     # Then
     assert isinstance(result, list)
     assert len(result) == total
@@ -162,6 +162,6 @@ def _generate_event_start_and_expected(
 )
 def test__parse_start_to_utc_ok(value: str, expected: datetime):
     # Given/When
-    result = event_parser._parse_start_to_utc(value)
+    result = parser._parse_start_to_utc(value)
     # Then
     assert result == expected

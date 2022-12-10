@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pytest
 
-from yaas.cal import event_caching
+from yaas.event import caching
 from yaas.dto import event
 
 _TEST_CALENDAR_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="calendar")
@@ -52,7 +52,7 @@ def test_update_event_cache_ok(
         cache_write_result=cache_write_result,
     )
     # When
-    res = event_caching.update_event_cache(
+    res = caching.update_event_cache(
         start_utc=start_utc,
         end_utc=end_utc,
         merge_strategy=merge_strategy,
@@ -112,7 +112,7 @@ def _create_update_callable_arguments(
         callback_fn=callback_fn,
     )
     monkeypatch.setattr(
-        event_caching.snapshot, event_caching.snapshot.compare.__name__, mocked_compare
+        caching.snapshot, caching.snapshot.compare.__name__, mocked_compare
     )
     return cache_reader, cache_writer, calendar_reader, merge_strategy
 
@@ -290,7 +290,7 @@ def test_update_event_cache_nok(  # pylint: disable=too-many-arguments
     )
     # When
     with pytest.raises(exception):
-        event_caching.update_event_cache(
+        caching.update_event_cache(
             start_utc=start_utc,
             end_utc=end_utc,
             merge_strategy=merge_strategy,

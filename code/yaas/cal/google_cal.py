@@ -32,6 +32,7 @@ def list_upcoming_events(
     credentials_json: Optional[pathlib.Path] = None,
     amount: Optional[int] = None,
     start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
 ) -> List[Dict]:
     # pylint: disable=line-too-long
     """
@@ -116,6 +117,7 @@ def list_upcoming_events(
         credentials_json: cal JSON credentials, if existing.
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
+        end: up until when to list, if given, will discard ``amount``.
 
     Returns:
 
@@ -124,8 +126,9 @@ def list_upcoming_events(
     # pylint: enable=line-too-long
     # Normalize input
     service = _calendar_service(credentials_json=credentials_json)
-    if not isinstance(amount, int):
-        amount = DEFAULT_LIST_EVENTS_AMOUNT
+    if end is None:
+        if not isinstance(amount, int):
+            amount = DEFAULT_LIST_EVENTS_AMOUNT
     start_time = _iso_utc_zulu(start)
     _LOGGER.debug("Getting the upcoming %d events starting at %s", amount, start_time)
     # Prepare call
@@ -250,9 +253,14 @@ def _file_path_from_env_default_value(
 ) -> pathlib.Path:
     result: pathlib.Path = value
     if not isinstance(value, pathlib.Path):
-        result = pathlib.Path(os.environ.get(env_var, default_value))
-        if result:
-            result = result.absolute()
+        result = None
+        result_str = os.environ.get(env_var)
+        if not result_str and default_value:
+            result_str = default_value
+        if result_str:
+            result = pathlib.Path(result_str)
+    if isinstance(result, pathlib.Path):
+        result = result.absolute()
     return result
 
 

@@ -12,7 +12,7 @@ import pytz
 
 import pytest
 
-from yaas.event import parser
+from yaas.cal import parser
 from yaas.dto import request
 
 _TEST_EVENT_START_TIME: str = "2022-10-18T16:00:00+02:00"

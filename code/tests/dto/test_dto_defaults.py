@@ -1,8 +1,8 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
-# pylint: disable=protected-access,redefined-outer-name,using-constant-test
-# pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods, redefined-builtin
+# pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
+# pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 from typing import Any, Dict, List, Optional
 

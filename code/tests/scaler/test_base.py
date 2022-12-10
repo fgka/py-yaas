@@ -50,10 +50,10 @@ class TestScalingDefinition:
         # Given
         req, obj = _create_request_and_definition()
         # when
-        res = _MyScalingDefinition.from_request(req)
+        result = _MyScalingDefinition.from_request(req)
         # Then
-        assert res is not None
-        assert obj == res
+        assert result is not None
+        assert obj == result
         assert _CALLED.get(base.ScalingDefinition._is_resource_valid.__name__)
 
 
@@ -109,12 +109,12 @@ class TestScaler:
         # Given
         req, definition = _create_request_and_definition()
         # When
-        res = _MyScaler.from_request(req)
+        result = _MyScaler.from_request(req)
         # Then
-        assert res is not None
-        assert res.definition == definition
-        assert not res.called.get(base.Scaler._safe_enact.__name__)
-        assert not res.called.get(base.Scaler._safe_enact.__name__)
+        assert result is not None
+        assert result.definition == definition
+        assert not result.called.get(base.Scaler._safe_enact.__name__)
+        assert not result.called.get(base.Scaler._safe_enact.__name__)
 
     def test_enact_ok(self):
         # Given
@@ -122,9 +122,9 @@ class TestScaler:
         obj = _MyScaler.from_request(req)
         obj._can_enact = True
         # When
-        res = obj.enact()
+        result = obj.enact()
         # Then
-        assert res
+        assert result
         assert obj.called.get(base.Scaler.can_enact.__name__)
         assert obj.called.get(base.Scaler._safe_enact.__name__)
 
@@ -135,9 +135,9 @@ class TestScaler:
         obj._can_enact = False
         obj._reason = "TEST_REASON"
         # When
-        res = obj.enact()
+        result = obj.enact()
         # Then
-        assert not res
+        assert not result
         assert obj.called.get(base.Scaler.can_enact.__name__)
         assert not obj.called.get(base.Scaler._safe_enact.__name__)
 

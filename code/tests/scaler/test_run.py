@@ -157,9 +157,9 @@ class TestCloudRunScaler:
             )
             obj = run.CloudRunScaler(definition)
             # When
-            res = obj.enact()
+            result = obj.enact()
             # Then
-            assert res
+            assert result
             assert can_be_value == obj.definition.resource
             assert update_name == obj.definition.resource
             assert update_path == exp_path

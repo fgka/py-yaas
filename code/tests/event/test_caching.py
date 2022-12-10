@@ -52,7 +52,7 @@ def test_update_event_cache_ok(
         cache_write_result=cache_write_result,
     )
     # When
-    res = caching.update_event_cache(
+    result = caching.update_event_cache(
         start_utc=start_utc,
         end_utc=end_utc,
         merge_strategy=merge_strategy,
@@ -61,7 +61,7 @@ def test_update_event_cache_ok(
         cache_writer=cache_writer,
     )
     # Then
-    assert res == cache_write_result
+    assert result == cache_write_result
     assert called.get("calendar_reader")
     assert called.get("cache_reader")
     assert called.get("snapshot.compare")
@@ -112,7 +112,9 @@ def _create_update_callable_arguments(
         callback_fn=callback_fn,
     )
     monkeypatch.setattr(
-        caching.version_control, caching.version_control.compare.__name__, mocked_compare
+        caching.version_control,
+        caching.version_control.compare.__name__,
+        mocked_compare,
     )
     return cache_reader, cache_writer, calendar_reader, merge_strategy
 

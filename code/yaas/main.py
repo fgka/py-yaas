@@ -27,7 +27,7 @@ import click
 from googleapiclient import errors
 
 from yaas import logger
-from yaas.cal import event_parser, google_cal
+from yaas.cal import parser, google_cal
 from yaas.dto import request
 from yaas.gcp import cloud_run
 from yaas.scaler import run, standard
@@ -82,7 +82,7 @@ def list_events(
 
         # Prints the start and name of the next 10 events
         for event in events:
-            scaling_targets = event_parser.to_request(event)
+            scaling_targets = parser.to_request(event)
             print(f"Event has: {scaling_targets}")
 
     except errors.HttpError as error:

@@ -3,7 +3,8 @@
 """
 Basic definition of types and expected functionality for resource scaler.
 """
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
 import attrs
 
 from yaas.dto import dto_defaults, request
@@ -22,7 +23,7 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
     timestamp_to_request: Dict[int, List[request.ScaleRequest]] = attrs.field(
         default=attrs.Factory(dict),
         validator=attrs.validators.deep_mapping(
-            key_validator=attrs.validators.instance_of(int),
+            key_validator=attrs.validators.ge(0),
             value_validator=attrs.validators.deep_iterable(
                 member_validator=attrs.validators.instance_of(request.ScaleRequest),
                 iterable_validator=attrs.validators.instance_of(list),
@@ -30,6 +31,20 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
             mapping_validator=attrs.validators.instance_of(dict),
         ),
     )
+
+    def range(self) -> Optional[Tuple[int, int]]:
+        """
+        Returns the range ot timestamps present here
+            or :py:obj:`None` if ``timestamp_to_request`` is empty.
+        """
+        result = None
+        if self.timestamp_to_request:
+            ts_lst = sorted(self.timestamp_to_request)
+            result = (
+                ts_lst[0],
+                ts_lst[-1],
+            )
+        return result
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)

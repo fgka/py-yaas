@@ -51,13 +51,13 @@ def test_merge_ok(monkeypatch):
         expected=expected,
     )
     # When
-    res = version_control.merge(
+    result = version_control.merge(
         snapshot_a=snapshot_a_arg,
         snapshot_b=snapshot_b_arg,
         merge_strategy=merge_strategy,
     )
     # Then
-    assert res == expected
+    assert result == expected
     assert called.get("mocked_compare")
     assert called.get("merge_strategy")
 
@@ -91,7 +91,9 @@ def _create_merge_arguments(
             raise RuntimeError
         return comparison_snapshot
 
-    monkeypatch.setattr(version_control, version_control.compare.__name__, mocked_compare)
+    monkeypatch.setattr(
+        version_control, version_control.compare.__name__, mocked_compare
+    )
     return merge_strategy
 
 
@@ -155,13 +157,13 @@ def test_compare_ok_empty_a():
     snapshot_a = _create_event_snapshot("A")
     snapshot_b = _create_event_snapshot("B", [1, 2, 3])
     # When
-    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
-    assert isinstance(res, event.EventSnapshotComparison)
-    assert res.only_in_a is None
-    assert res.only_in_b == snapshot_b
-    assert res.overlapping is None
-    _validate_comparison_source(snapshot_a, snapshot_b, res)
+    assert isinstance(result, event.EventSnapshotComparison)
+    assert result.only_in_a is None
+    assert result.only_in_b == snapshot_b
+    assert result.overlapping is None
+    _validate_comparison_source(snapshot_a, snapshot_b, result)
 
 
 def _create_event_snapshot(
@@ -197,13 +199,13 @@ def test_compare_ok_empty_b():
     snapshot_a = _create_event_snapshot("A", [1, 2, 3])
     snapshot_b = _create_event_snapshot("B")
     # When
-    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
-    assert isinstance(res, event.EventSnapshotComparison)
-    assert res.only_in_a == snapshot_a
-    assert res.only_in_b is None
-    assert res.overlapping is None
-    _validate_comparison_source(snapshot_a, snapshot_b, res)
+    assert isinstance(result, event.EventSnapshotComparison)
+    assert result.only_in_a == snapshot_a
+    assert result.only_in_b is None
+    assert result.overlapping is None
+    _validate_comparison_source(snapshot_a, snapshot_b, result)
 
 
 def test_compare_ok_disjoint():
@@ -219,13 +221,13 @@ def test_compare_ok_disjoint():
     snapshot_a = _create_event_snapshot("A", [1, 2])
     snapshot_b = _create_event_snapshot("B", [3, 4, 5])
     # When
-    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
-    assert isinstance(res, event.EventSnapshotComparison)
-    assert res.overlapping is None
-    assert res.only_in_a == snapshot_a
-    assert res.only_in_b == snapshot_b
-    _validate_comparison_source(snapshot_a, snapshot_b, res)
+    assert isinstance(result, event.EventSnapshotComparison)
+    assert result.overlapping is None
+    assert result.only_in_a == snapshot_a
+    assert result.only_in_b == snapshot_b
+    _validate_comparison_source(snapshot_a, snapshot_b, result)
 
 
 def test_compare_ok_only_conflict():
@@ -239,16 +241,16 @@ def test_compare_ok_only_conflict():
     snapshot_a = _create_event_snapshot("A", [1, 2, 3])
     snapshot_b = _create_event_snapshot("B", [1, 2, 3])
     # When
-    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
-    assert isinstance(res, event.EventSnapshotComparison)
-    assert res.only_in_a is None
-    assert res.only_in_b is None
-    assert res.overlapping is not None
-    overlapping_a, overlapping_b = res.overlapping
+    assert isinstance(result, event.EventSnapshotComparison)
+    assert result.only_in_a is None
+    assert result.only_in_b is None
+    assert result.overlapping is not None
+    overlapping_a, overlapping_b = result.overlapping
     assert overlapping_a == snapshot_a
     assert overlapping_b == snapshot_b
-    _validate_comparison_source(snapshot_a, snapshot_b, res)
+    _validate_comparison_source(snapshot_a, snapshot_b, result)
 
 
 def test_compare_ok_with_conflict():
@@ -265,29 +267,29 @@ def test_compare_ok_with_conflict():
     snapshot_a = _create_event_snapshot("A", [1, 2, 4])
     snapshot_b = _create_event_snapshot("B", [2, 3, 5])
     # When
-    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
-    assert isinstance(res, event.EventSnapshotComparison)
+    assert isinstance(result, event.EventSnapshotComparison)
     # Then: only A
-    assert len(res.only_in_a.timestamp_to_request) == 2
+    assert len(result.only_in_a.timestamp_to_request) == 2
     for ts in [1, 4]:
-        assert res.only_in_a.timestamp_to_request.get(ts) is not None
-        assert res.only_in_a.timestamp_to_request.get(
+        assert result.only_in_a.timestamp_to_request.get(ts) is not None
+        assert result.only_in_a.timestamp_to_request.get(
             ts
         ) == snapshot_a.timestamp_to_request.get(ts)
     # Then: only B
-    assert len(res.only_in_b.timestamp_to_request) == 2
+    assert len(result.only_in_b.timestamp_to_request) == 2
     for ts in [3, 5]:
-        assert res.only_in_b.timestamp_to_request.get(ts) is not None
-        assert res.only_in_b.timestamp_to_request.get(
+        assert result.only_in_b.timestamp_to_request.get(ts) is not None
+        assert result.only_in_b.timestamp_to_request.get(
             ts
         ) == snapshot_b.timestamp_to_request.get(ts)
     # Then: overlapping
-    assert res.overlapping is not None
-    overlap_a, overlap_b = res.overlapping
+    assert result.overlapping is not None
+    overlap_a, overlap_b = result.overlapping
     assert len(overlap_a.timestamp_to_request) == len(overlap_b.timestamp_to_request)
     for ts in [2]:
         assert overlap_a.timestamp_to_request.get(ts)
         assert overlap_b.timestamp_to_request.get(ts)
     # Then: sources
-    _validate_comparison_source(snapshot_a, snapshot_b, res)
+    _validate_comparison_source(snapshot_a, snapshot_b, result)

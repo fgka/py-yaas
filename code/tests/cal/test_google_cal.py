@@ -17,6 +17,7 @@ from google.oauth2 import credentials
 
 from yaas.cal import google_cal
 
+# pylint: disable=consider-using-with
 _TEST_PATH_VALUE: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
 _TEST_DEFAULT_PATH_VALUE_ENV_VAR: str = "TEST_ENV_VAR"
 _TEST_DEFAULT_PATH_VALUE_ENV_VAR_VALUE: pathlib.Path = pathlib.Path(
@@ -25,6 +26,7 @@ _TEST_DEFAULT_PATH_VALUE_ENV_VAR_VALUE: pathlib.Path = pathlib.Path(
 _TEST_DEFAULT_PATH_VALUE: pathlib.Path = pathlib.Path(
     tempfile.NamedTemporaryFile().name
 )
+# pylint: enable=consider-using-with
 
 
 def _create_credentials(expired: bool = False):
@@ -80,6 +82,7 @@ def test__file_path_from_env_default_value_ok(
 
 def test__pickle_credentials_ok():
     # Given
+    # pylint: disable=consider-using-with
     expected = "TEST"
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
     with open(value, "wb") as out_file:
@@ -92,6 +95,7 @@ def test__pickle_credentials_ok():
 
 def test__pickle_credentials_ok_file_does_not_exist():
     # Given
+    # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
     result = google_cal._pickle_credentials(value)
@@ -102,6 +106,7 @@ def test__pickle_credentials_ok_file_does_not_exist():
 def test__persist_credentials_pickle_ok():
     # Given
     value = _TEST_CREDENTIALS
+    # pylint: disable=consider-using-with
     credentials_pickle = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
     result = google_cal._persist_credentials_pickle(value, credentials_pickle)
@@ -113,6 +118,7 @@ def test__persist_credentials_pickle_ok():
 
 def test__persist_credentials_pickle_ok_no_credentials():
     # Given
+    # pylint: disable=consider-using-with
     credentials_pickle = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
     result = google_cal._persist_credentials_pickle("TEST", credentials_pickle)
@@ -213,6 +219,7 @@ class _StubInstalledAppFlow:
 
 def test__json_credentials_ok(monkeypatch):
     # Given
+    # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
     app_flow = _StubInstalledAppFlow(_TEST_CREDENTIALS)
     called = {}
@@ -240,8 +247,9 @@ def test__json_credentials_ok(monkeypatch):
     assert app_flow.called.get(_StubInstalledAppFlow.run_local_server.__name__) == 0
 
 
-def test__json_credentials_ok_file_does_not_exist(monkeypatch):
+def test__json_credentials_ok_file_does_not_exist():
     # Given
+    # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
     result = google_cal._json_credentials(value)

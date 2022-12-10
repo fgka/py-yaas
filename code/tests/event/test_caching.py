@@ -112,7 +112,7 @@ def _create_update_callable_arguments(
         callback_fn=callback_fn,
     )
     monkeypatch.setattr(
-        caching.snapshot, caching.snapshot.compare.__name__, mocked_compare
+        caching.version_control, caching.version_control.compare.__name__, mocked_compare
     )
     return cache_reader, cache_writer, calendar_reader, merge_strategy
 

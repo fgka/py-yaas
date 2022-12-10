@@ -8,7 +8,7 @@ from typing import Callable, List, Optional
 
 import pytest
 
-from yaas.event import snapshot
+from yaas.event import version_control
 from yaas.dto import event, request
 
 _TEST_SNAPSHOT_A: event.EventSnapshot = event.EventSnapshot(source="A")
@@ -29,7 +29,7 @@ _TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
 )
 def test_compare_nok(snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot):
     with pytest.raises(TypeError):
-        snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+        version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
 
 
 def test_merge_ok(monkeypatch):
@@ -51,7 +51,7 @@ def test_merge_ok(monkeypatch):
         expected=expected,
     )
     # When
-    res = snapshot.merge(
+    res = version_control.merge(
         snapshot_a=snapshot_a_arg,
         snapshot_b=snapshot_b_arg,
         merge_strategy=merge_strategy,
@@ -91,7 +91,7 @@ def _create_merge_arguments(
             raise RuntimeError
         return comparison_snapshot
 
-    monkeypatch.setattr(snapshot, snapshot.compare.__name__, mocked_compare)
+    monkeypatch.setattr(version_control, version_control.compare.__name__, mocked_compare)
     return merge_strategy
 
 
@@ -135,7 +135,7 @@ def test_merge_nok(
     )
     # When
     with pytest.raises(exception):
-        snapshot.merge(
+        version_control.merge(
             snapshot_a=snapshot_a_arg,
             snapshot_b=snapshot_b_arg,
             merge_strategy=merge_strategy,
@@ -155,7 +155,7 @@ def test_compare_ok_empty_a():
     snapshot_a = _create_event_snapshot("A")
     snapshot_b = _create_event_snapshot("B", [1, 2, 3])
     # When
-    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(res, event.EventSnapshotComparison)
     assert res.only_in_a is None
@@ -197,7 +197,7 @@ def test_compare_ok_empty_b():
     snapshot_a = _create_event_snapshot("A", [1, 2, 3])
     snapshot_b = _create_event_snapshot("B")
     # When
-    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(res, event.EventSnapshotComparison)
     assert res.only_in_a == snapshot_a
@@ -219,7 +219,7 @@ def test_compare_ok_disjoint():
     snapshot_a = _create_event_snapshot("A", [1, 2])
     snapshot_b = _create_event_snapshot("B", [3, 4, 5])
     # When
-    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(res, event.EventSnapshotComparison)
     assert res.overlapping is None
@@ -239,7 +239,7 @@ def test_compare_ok_only_conflict():
     snapshot_a = _create_event_snapshot("A", [1, 2, 3])
     snapshot_b = _create_event_snapshot("B", [1, 2, 3])
     # When
-    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(res, event.EventSnapshotComparison)
     assert res.only_in_a is None
@@ -265,7 +265,7 @@ def test_compare_ok_with_conflict():
     snapshot_a = _create_event_snapshot("A", [1, 2, 4])
     snapshot_b = _create_event_snapshot("B", [2, 3, 5])
     # When
-    res = snapshot.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
+    res = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(res, event.EventSnapshotComparison)
     # Then: only A

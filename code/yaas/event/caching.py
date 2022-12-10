@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from yaas import logger
 from yaas.dto import event
-from yaas.event import snapshot
+from yaas.event import version_control
 
 _LOGGER = logger.get(__name__)
 
@@ -76,7 +76,7 @@ def update_event_cache(
         ) from err
     # merge
     try:
-        merged_snapshot = snapshot.merge(
+        merged_snapshot = version_control.merge(
             snapshot_a=cached_snapshot,
             snapshot_b=calendar_snapshot,
             merge_strategy=merge_strategy,

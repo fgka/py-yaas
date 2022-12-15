@@ -27,7 +27,8 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
         to convert content into py:class:`request.ScaleRequest`.
     """
 
-    def __init__(self, *, calendar_id: str, credentials_json: pathlib.Path):
+    def __init__(self, *, calendar_id: str, credentials_json: pathlib.Path, **kwargs):
+        super(ReadOnlyGoogleCalendarStore, self).__init__(**kwargs)
         if not isinstance(calendar_id, str):
             raise TypeError(
                 f"Calendar ID must be a string. Got: <{calendar_id}>({type(calendar_id)})"
@@ -42,14 +43,14 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
     def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        events: List[Dict[str, Any]] = google_cal.list_upcoming_events(
+        event_lst: List[Dict[str, Any]] = google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,
             credentials_json=self._credentials_json,
             start=start_ts_utc,
             end=end_ts_utc,
         )
         request_lst: List[request.ScaleRequest] = []
-        for item in events:
+        for item in event_lst:
             for req in parser.to_request(item):
                 request_lst.append(req)
         return event.EventSnapshot.from_list_requests(

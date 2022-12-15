@@ -11,7 +11,7 @@ from typing import List
 ###################
 
 CLOUD_RUN_NAME_REGEX: re.Pattern = re.compile(
-    "^projects/([^/]+)/locations/([^/]+)/services/([^/]+)$"
+    "^projects/([^/\s]+)/locations/([^/\s]+)/services/([^/\s]+)$"
 )
 
 

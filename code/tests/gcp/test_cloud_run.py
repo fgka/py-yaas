@@ -16,16 +16,25 @@ _TEST_SERVICE_NAME: str = (
 )
 
 
-@pytest.mark.parametrize("value,amount_errors",[
-    (123, 1),
-    (None, 1),
-    ("", 1),
-    ("projects/ /locations/my-location-123/services/my-service-123", 1),
-    ("projects/my-project-123/locations/ /services/my-service-123", 1),
-    ("projects/my-project-123/locations/my-location-123/services/ ", 1),
-    ("projects/my project 123/locations/my location 123/services/my service 123", 1),
-    ("projects/my-project-123/locations/my-location-123/services/my-service-123", 0),
-])
+@pytest.mark.parametrize(
+    "value,amount_errors",
+    [
+        (123, 1),
+        (None, 1),
+        ("", 1),
+        ("projects/ /locations/my-location-123/services/my-service-123", 1),
+        ("projects/my-project-123/locations/ /services/my-service-123", 1),
+        ("projects/my-project-123/locations/my-location-123/services/ ", 1),
+        (
+            "projects/my project 123/locations/my location 123/services/my service 123",
+            1,
+        ),
+        (
+            "projects/my-project-123/locations/my-location-123/services/my-service-123",
+            0,
+        ),
+    ],
+)
 def test_validate_cloud_run_resource_name_ok(value: str, amount_errors: int):
     # Given/When
     result = cloud_run.validate_cloud_run_resource_name(value, raise_if_invalid=False)
@@ -68,7 +77,6 @@ def test__get_parent_node_attribute_based_on_path_ok(
 
 
 class _StubCloudRunService:
-
     class _StubAttr:
         pass
 
@@ -105,7 +113,9 @@ def test__clean_service_for_update_request_ok():
 def test__update_service_revision_ok():
     # Given
     curr_revision = "current_revision"
-    service = _StubCloudRunService(cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, curr_revision)
+    service = _StubCloudRunService(
+        cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, curr_revision
+    )
     # When
     result = cloud_run._update_service_revision(service)
     # Then

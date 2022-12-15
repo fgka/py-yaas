@@ -5,11 +5,11 @@ Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
 # pylint: enable=line-too-long
-from datetime import datetime
+from datetime import datetime, tzinfo
 import os
 import pathlib
 import pickle
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import cachetools
 
@@ -31,9 +31,9 @@ def list_upcoming_events(
     calendar_id: str,
     credentials_json: Optional[pathlib.Path] = None,
     amount: Optional[int] = None,
-    start: Optional[datetime] = None,
-    end: Optional[datetime] = None,
-) -> List[Dict]:
+    start: Optional[Union[datetime, int]] = None,
+    end: Optional[Union[datetime, int]] = None,
+) -> List[Dict[str, Any]]:
     # pylint: disable=line-too-long
     """
     Wraps the `list API`_.
@@ -132,17 +132,20 @@ def list_upcoming_events(
     start_time = _iso_utc_zulu(start)
     _LOGGER.debug("Getting the upcoming %d events starting at %s", amount, start_time)
     # Prepare call
-    list_kwargs = dict(
+    kwargs_for_list = dict(
         calendarId=calendar_id,
         timeMin=start_time,
         singleEvents=True,
         orderBy="startTime",
     )
+    if end:
+        kwargs_for_list["timeMax"] = _iso_utc_zulu(end)
+        amount = None
     # Retrieve entries
-    result = _list_all_events(service, amount, list_kwargs)
+    result = _list_all_events(service, amount, kwargs_for_list)
     #
     _LOGGER.info(
-        "Got the upcoming %d (desired %d) events starting in %s",
+        "Got the upcoming %s (desired %s) events starting in %s",
         len(result),
         amount,
         start_time,
@@ -150,27 +153,32 @@ def list_upcoming_events(
     return result
 
 
-def _iso_utc_zulu(value: Optional[datetime] = None) -> str:
+def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
     if not isinstance(value, datetime):
-        value = datetime.utcnow()
+        if isinstance(value, int):
+            value = datetime.utcfromtimestamp(value)
+        else:
+            value = datetime.utcnow()
     return value.isoformat() + "Z"
 
 
 def _list_all_events(
-    service: discovery.Resource, amount: int, list_kwargs: Dict[str, Any]
+    service: discovery.Resource, amount: Optional[int], kwargs_for_list: Dict[str, Any]
 ) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
     # pagination/while trick
-    while len(result) < amount:
-        events_result = service.events().list(**list_kwargs).execute()
+    while amount is None or len(result) < amount:
+        events_result = service.events().list(**kwargs_for_list).execute()
         result.extend(events_result.get("items", []))
         # next page token
         next_page_token = events_result.get("nextPageToken")
         if not next_page_token:
             break
         # update kwargs only AFTER retrieving items AND getting the next page token
-        list_kwargs["pageToken"] = next_page_token
-    return result[0:amount]
+        kwargs_for_list["pageToken"] = next_page_token
+    if amount is not None:
+        result = result[:amount]
+    return result
 
 
 def _calendar_service(

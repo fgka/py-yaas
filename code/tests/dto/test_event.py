@@ -73,3 +73,81 @@ class TestEventSnapshot:
         # Then
         assert res_min_ts == min_ts
         assert res_max_ts == max_ts
+
+    @pytest.mark.parametrize(
+        "request_lst",
+        [
+            ([]),
+            (
+                [
+                    request.ScaleRequest(
+                        topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=123
+                    )
+                ]
+            ),
+            (
+                [
+                    request.ScaleRequest(
+                        topic="TEST_TOPIC",
+                        resource="TEST_RESOURCE_A",
+                        timestamp_utc=123,
+                    ),
+                    request.ScaleRequest(
+                        topic="TEST_TOPIC",
+                        resource="TEST_RESOURCE_B",
+                        timestamp_utc=123,
+                    ),
+                ]
+            ),
+            (
+                [
+                    request.ScaleRequest(
+                        topic="TEST_TOPIC",
+                        resource="TEST_RESOURCE_A",
+                        timestamp_utc=123,
+                    ),
+                    request.ScaleRequest(
+                        topic="TEST_TOPIC",
+                        resource="TEST_RESOURCE_B",
+                        timestamp_utc=321,
+                    ),
+                ]
+            ),
+        ],
+    )
+    def test_from_list_requests_ok(self, request_lst):
+        source = "TEST_SOURCE"
+        result = event.EventSnapshot.from_list_requests(
+            source=source, request_lst=request_lst, discard_invalid=False
+        )
+        # Then
+        assert isinstance(result, event.EventSnapshot)
+        assert result.source == source
+        all_request = []
+        for ts, lst_req in result.timestamp_to_request.items():
+            for req in lst_req:
+                assert req.timestamp_utc == ts
+            all_request.extend(lst_req)
+        assert len(all_request) == len(request_lst)
+
+    def test_from_list_requests_ok_discard(self):
+        # Given
+        req = request.ScaleRequest(
+            topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=None
+        )
+        # When
+        result = event.EventSnapshot.from_list_requests(
+            source="TEST_SOURCE", request_lst=[req], discard_invalid=True
+        )
+        # Then
+        assert isinstance(result, event.EventSnapshot)
+        assert not result.timestamp_to_request
+
+    def test_from_list_requests_nok(self):
+        req = request.ScaleRequest(
+            topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=None
+        )
+        with pytest.raises(ValueError):
+            event.EventSnapshot.from_list_requests(
+                source="TEST_SOURCE", request_lst=[req], discard_invalid=False
+            )

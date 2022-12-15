@@ -8,7 +8,9 @@ from typing import Dict, List, Optional, Tuple
 import attrs
 
 from yaas.dto import dto_defaults, request
-from yaas import const
+from yaas import const, logger
+
+_LOGGER = logger.get(__name__)
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -45,6 +47,45 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
                 ts_lst[-1],
             )
         return result
+
+    @staticmethod
+    def from_list_requests(
+        *,
+        source: str,
+        request_lst: List[request.ScaleRequest],
+        discard_invalid: Optional[bool] = False,
+    ) -> "EventSnapshot":
+        """
+        Assumes all items in ``request_list`` do have a valid ``timestamp_utc`` value.
+        If any item does not have the timestamp set and ``discard_invalid`` is :py:obj:`False`,
+        it will raise :py:class:`ValueError`.
+
+        Args:
+            source:
+            request_lst:
+            discard_invalid: if :py:obj:`False` raises :py:class:`ValueError`
+                for items in ``request_lst`` that do not have a proper ``timestamp_utc`` value.
+
+        Returns:
+
+        """
+        # Build map
+        timestamp_to_request = {}
+        if request_lst:
+            for item in request_lst:
+                key = item.timestamp_utc
+                if not key:
+                    msg = f"Item <{item}> from request list does not have a proper timestamp value."
+                    if not discard_invalid:
+                        raise ValueError(msg)
+                    else:
+                        _LOGGER.warning(msg + " Ignoring")
+                        continue
+                if key not in timestamp_to_request:
+                    timestamp_to_request[key] = []
+                timestamp_to_request[key].append(item)
+        # return
+        return EventSnapshot(source=source, timestamp_to_request=timestamp_to_request)
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)

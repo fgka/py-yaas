@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pathlib
 import pickle
 import tempfile
-from typing import List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -38,6 +38,66 @@ def _create_credentials(expired: bool = False):
 
 
 _TEST_CREDENTIALS: credentials.Credentials = _create_credentials()
+_TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
+
+
+@pytest.mark.parametrize(
+    "amount,exp_amount,end,exp_kwargs",
+    [
+        (None, google_cal.DEFAULT_LIST_EVENTS_AMOUNT, None, dict(timeMax=None)),
+        (10, 10, None, dict(timeMax=None)),
+        (None, None, 123, dict(timeMax=google_cal._iso_utc_zulu(123))),
+        (10, None, 123, dict(timeMax=google_cal._iso_utc_zulu(123))),
+    ],
+)
+def test_list_upcoming_events_ok(
+    monkeypatch, amount: int, exp_amount: int, end: int, exp_kwargs: Dict[str, Any]
+):
+    # Given
+    amount = 10
+    calendar_id = _TEST_CALENDAR_ID
+    credentials_json = _TEST_CREDENTIALS
+    service = "TEST_SERVICE"
+    credentials_json_arg = None
+    kwargs_for_list_arg = None
+    amount_arg = None
+    expected = ["TEST"]
+
+    def mocked_calendar_service(**kwargs) -> Any:
+        nonlocal credentials_json_arg
+        credentials_json_arg = kwargs.get("credentials_json")
+        return service
+
+    def mocked_list_all_events(
+        service_: Any, amount_: int, kwargs_for_list: Dict[str, Any]
+    ) -> List[Any]:
+        nonlocal amount_arg, kwargs_for_list_arg
+        amount_arg = amount_
+        kwargs_for_list_arg = kwargs_for_list
+        assert service_ == service
+        return expected
+
+    monkeypatch.setattr(
+        google_cal, google_cal._calendar_service.__name__, mocked_calendar_service
+    )
+    monkeypatch.setattr(
+        google_cal, google_cal._list_all_events.__name__, mocked_list_all_events
+    )
+
+    # When
+    result = google_cal.list_upcoming_events(
+        calendar_id=calendar_id,
+        credentials_json=credentials_json,
+        amount=amount,
+        start=0,
+        end=end,
+    )
+    # Then
+    assert result == expected
+    assert credentials_json_arg == credentials_json
+    assert amount_arg == exp_amount
+    for key, val in exp_kwargs.items():
+        assert kwargs_for_list_arg.get(key) == val
 
 
 @pytest.mark.parametrize(

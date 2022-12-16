@@ -5,7 +5,7 @@ Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
 # pylint: enable=line-too-long
-from datetime import datetime, tzinfo
+from datetime import datetime
 import os
 import pathlib
 import pickle

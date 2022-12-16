@@ -6,75 +6,321 @@
 # type: ignore
 import pathlib
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, List
 
 import pytest
 
+from yaas import const
 from yaas.dto import event, request
-from yaas.event.store import calendar
+from yaas.event.store import base, file
 
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
 # pylint: disable=consider-using-with
-_TEST_CREDENTIALS_JSON: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
+_TEST_JSON_LINE_FILE: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
 # pylint: enable=consider-using-with
 _TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
     topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=13
 )
 
 
-class TestReadOnlyGoogleCalendarStore:
+class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
     def setup(self):
-        self.obj = calendar.ReadOnlyGoogleCalendarStore(
-            calendar_id=_TEST_CALENDAR_ID, credentials_json=_TEST_CREDENTIALS_JSON
-        )
+        with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
+            with tempfile.NamedTemporaryFile(delete=True) as tmp_archive:
+                self.obj = file.JsonLineFileStore(
+                    json_line_file=pathlib.Path(tmp_file.name),
+                    archive_json_line_file=pathlib.Path(tmp_archive.name),
+                )
 
     @pytest.mark.parametrize(
-        "calendar_id,credentials_json",
+        "json_line_file,archive_json_line_file",
         [
-            (None, None),
-            (None, _TEST_CREDENTIALS_JSON),
-            (_TEST_CALENDAR_ID, None),
+            (None, _TEST_JSON_LINE_FILE),
+            (str(_TEST_JSON_LINE_FILE), _TEST_JSON_LINE_FILE),
+            (_TEST_JSON_LINE_FILE, None),
+            (_TEST_JSON_LINE_FILE, str(_TEST_JSON_LINE_FILE)),
         ],
     )
-    def test_ctor_nok(self, calendar_id: str, credentials_json: pathlib.Path):
+    def test_ctor_nok_type(self, json_line_file: Any, archive_json_line_file: Any):
         with pytest.raises(TypeError):
-            calendar.ReadOnlyGoogleCalendarStore(
-                calendar_id=calendar_id, credentials_json=credentials_json
+            file.JsonLineFileStore(
+                json_line_file=json_line_file,
+                archive_json_line_file=archive_json_line_file,
             )
 
-    def test_read_ok(self, monkeypatch):
-        start_ts_utc = 0
-        end_ts_utc = start_ts_utc + 123
-        event_lst = [{"key": "value"}]
+    def test_ctor_nok_same_file(self):
+        with pytest.raises(ValueError):
+            file.JsonLineFileStore(
+                json_line_file=_TEST_JSON_LINE_FILE,
+                archive_json_line_file=_TEST_JSON_LINE_FILE,
+            )
 
-        def mocked_list_upcoming_events(**kwargs) -> List[Dict[str, Any]]:
-            assert kwargs.get("calendar_id") == _TEST_CALENDAR_ID
-            assert kwargs.get("credentials_json") == _TEST_CREDENTIALS_JSON
-            assert kwargs.get("start") == start_ts_utc
-            assert kwargs.get("end") == end_ts_utc
-            return event_lst
+    def test_read_nok_file_does_not_exist(self):
+        with pytest.raises(base.StoreError):
+            self.obj.read()
 
-        def mocked_to_request(value: Dict[str, Any]) -> List[request.ScaleRequest]:
-            assert value == event_lst[0]
-            return [_TEST_SCALE_REQUEST]
-
-        monkeypatch.setattr(
-            calendar.google_cal,
-            calendar.google_cal.list_upcoming_events.__name__,
-            mocked_list_upcoming_events,
-        )
-        monkeypatch.setattr(
-            calendar.parser, calendar.parser.to_request.__name__, mocked_to_request
-        )
-
+    def test_read_ok_file_empty(self):
+        # Given
+        self._create_file_with_content()
         # When
-        result = self.obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        result = self.obj.read()
         # Then
         assert isinstance(result, event.EventSnapshot)
-        assert result.source == _TEST_CALENDAR_ID
-        assert len(result.timestamp_to_request) == 1
+        assert result.source == self.obj.json_line_file.name
+        assert not result.timestamp_to_request
+
+    def _create_file_with_content(self, *values: List[request.ScaleRequest]) -> None:
+        with open(
+            self.obj.json_line_file, "a", encoding=const.ENCODING_UTF8
+        ) as out_file:
+            if values:
+                lines = [f"\n{val.as_json()}" for val in values]
+                out_file.writelines(lines)
+
+    def test_read_ok(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        # When
+        result = self.obj.read(
+            start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+            end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+        )
+        # Then
+        assert isinstance(result, event.EventSnapshot)
+        assert result.source == self.obj.json_line_file.name
         assert _TEST_SCALE_REQUEST.timestamp_utc in result.timestamp_to_request
         assert (
             result.timestamp_to_request.get(_TEST_SCALE_REQUEST.timestamp_utc)[0]
             == _TEST_SCALE_REQUEST
         )
+
+    @pytest.mark.parametrize(
+        "request_lst,req,start_ts_utc,end_ts_utc",
+        [
+            (None, _TEST_SCALE_REQUEST, None, None),
+            ([], _TEST_SCALE_REQUEST, None, None),
+            (None, _TEST_SCALE_REQUEST, _TEST_SCALE_REQUEST.timestamp_utc, None),
+            (None, _TEST_SCALE_REQUEST, None, _TEST_SCALE_REQUEST.timestamp_utc),
+            (
+                None,
+                _TEST_SCALE_REQUEST,
+                _TEST_SCALE_REQUEST.timestamp_utc,
+                _TEST_SCALE_REQUEST.timestamp_utc,
+            ),
+        ],
+    )
+    def test__populate_timestamp_to_request_ok(
+        self,
+        request_lst: List[request.ScaleRequest],
+        req: request.ScaleRequest,
+        start_ts_utc: int,
+        end_ts_utc: int,
+    ):
+        # Given/When
+        result = self.obj._populate_timestamp_to_request(
+            request_lst=request_lst,
+            req=req,
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+        )
+        # Then
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0] == req
+
+    @pytest.mark.parametrize(
+        "request_lst,req,start_ts_utc,end_ts_utc",
+        [
+            (None, _TEST_SCALE_REQUEST, _TEST_SCALE_REQUEST.timestamp_utc + 1, None),
+            (None, _TEST_SCALE_REQUEST, None, _TEST_SCALE_REQUEST.timestamp_utc - 1),
+        ],
+    )
+    def test__populate_timestamp_to_request_nok(
+        self,
+        request_lst: List[request.ScaleRequest],
+        req: request.ScaleRequest,
+        start_ts_utc: int,
+        end_ts_utc: int,
+    ):
+        # Given/When
+        result = self.obj._populate_timestamp_to_request(
+            request_lst=request_lst,
+            req=req,
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+        )
+        # Then
+        assert isinstance(result, list)
+        assert not result
+
+    def test__read_all_ok_file_does_not_exist(self):
+        # Given/When
+        result = self.obj._read_all()
+        # Then
+        assert isinstance(result, list)
+        assert not result
+
+    def test__read_all_ok_file_empty(self):
+        # Given
+        self._create_file_with_content()
+        # When
+        result = self.obj._read_all()
+        # Then
+        assert isinstance(result, list)
+        assert not result
+
+    def test__read_all_ok(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST, _TEST_SCALE_REQUEST)
+        # When
+        result = self.obj._read_all()
+        # Then
+        assert len(result) == 2
+        for val in result:
+            assert val == _TEST_SCALE_REQUEST
+
+    def test_remove_ok_empty(self):
+        # Given/When
+        result = self.obj.remove()
+        # Then
+        assert result
+        assert result.source == self.obj.json_line_file.name
+        assert not result.timestamp_to_request
+
+    def test_remove_ok_start_not_in_range(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        # When
+        result = self.obj.remove(start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc + 1)
+        # Then
+        assert result
+        assert result.source == self.obj.json_line_file.name
+        assert not result.timestamp_to_request
+
+    def test_remove_ok_end_not_in_range(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        # When
+        result = self.obj.remove(
+            start_ts_utc=0, end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc - 1
+        )
+        # Then
+        assert result
+        assert result.source == self.obj.json_line_file.name
+        assert not result.timestamp_to_request
+
+    def test_remove_ok(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        # When
+        result = self.obj.remove(
+            start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+            end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+        )
+        # Then
+        assert result
+        assert result.source == self.obj.json_line_file.name
+        assert _TEST_SCALE_REQUEST.timestamp_utc in result.timestamp_to_request
+        assert (
+            result.timestamp_to_request.get(_TEST_SCALE_REQUEST.timestamp_utc)[0]
+            == _TEST_SCALE_REQUEST
+        )
+        # Then: read
+        request_lst = self.obj._read_all()
+        assert not request_lst
+
+    def test_write_ok_empty(self):
+        # Given
+        value = event.EventSnapshot(source="TEST_SOURCE")
+        # When
+        self.obj.write(value)
+        # Then
+        result = self.obj._read_all()
+        assert not result
+
+    def test_write_ok(self):
+        # Given
+        value = event.EventSnapshot.from_list_requests(
+            source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
+        )
+        # When
+        self.obj.write(value)
+        # Then
+        result = self.obj._read_all()
+        assert len(result) == 1
+        assert result[0] == _TEST_SCALE_REQUEST
+
+    def test_write_ok_overwrite(self):
+        # Given
+        value = event.EventSnapshot.from_list_requests(
+            source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
+        )
+        # When
+        self.obj.write(value, overwrite_within_range=False)
+        # Then
+        result = self.obj._read_all()
+        assert len(result) == 1
+        assert result[0] == _TEST_SCALE_REQUEST
+
+    def test_write_ok_already_exist(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        value = event.EventSnapshot.from_list_requests(
+            source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
+        )
+        # When
+        self.obj.write(value, overwrite_within_range=False)
+        # Then
+        result = self.obj._read_all()
+        assert len(result) == 1
+        assert result[0] == _TEST_SCALE_REQUEST
+
+    def test_write_ok_overwrite_with_existing(self):
+        # Given
+        existing_value = request.ScaleRequest(
+            topic="TEST_TOPIC", resource="TEST_RESOURCE_EXIST", timestamp_utc=13
+        )
+        new_value = request.ScaleRequest(
+            topic="TEST_TOPIC", resource="TEST_RESOURCE_NEW", timestamp_utc=13
+        )
+
+        self._create_file_with_content(existing_value)
+        value = event.EventSnapshot.from_list_requests(
+            source="TEST_SOURCE", request_lst=[new_value]
+        )
+        # When
+        self.obj.write(value, overwrite_within_range=True)
+        # Then
+        result = self.obj._read_all()
+        assert len(result) == 1
+        assert result[0] == new_value
+
+    def test_archive_ok_no_file(self):
+        # Given/When
+        self.obj.archive()
+        # Then
+        assert not self.obj._read_all(is_archive=True)
+
+    def test_archive_ok_empty(self):
+        # Given
+        self._create_file_with_content()
+        # When
+        self.obj.archive()
+        # Then
+        assert not self.obj._read_all(is_archive=True)
+
+    def test_archive_ok(self):
+        # Given
+        self._create_file_with_content(_TEST_SCALE_REQUEST)
+        # When
+        self.obj.archive(
+            start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+            end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
+        )
+        # Then: archive
+        result = self.obj._read_all(is_archive=True)
+        assert len(result) == 1
+        assert result[0] == _TEST_SCALE_REQUEST
+        # Then: store
+        current = self.obj._read_all(is_archive=False)
+        assert not current

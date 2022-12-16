@@ -14,7 +14,9 @@ from yaas.dto import event, request
 from yaas.event.store import calendar
 
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
+# pylint: disable=consider-using-with
 _TEST_CREDENTIALS_JSON: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
+# pylint: enable=consider-using-with
 _TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
     topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=13
 )
@@ -39,6 +41,10 @@ class TestReadOnlyGoogleCalendarStore:
             calendar.ReadOnlyGoogleCalendarStore(
                 calendar_id=calendar_id, credentials_json=credentials_json
             )
+
+    def test_properties_ok(self):
+        assert self.obj.calendar_id == _TEST_CALENDAR_ID
+        assert self.obj.credentials_json == _TEST_CREDENTIALS_JSON
 
     def test_read_ok(self, monkeypatch):
         start_ts_utc = 0

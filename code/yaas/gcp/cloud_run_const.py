@@ -10,10 +10,11 @@ from typing import List
 #  Resource name  #
 ###################
 
+# pylint: disable=anomalous-backslash-in-string
 CLOUD_RUN_NAME_REGEX: re.Pattern = re.compile(
     "^projects/([^/\s]+)/locations/([^/\s]+)/services/([^/\s]+)$"
 )
-
+# pylint: enable=anomalous-backslash-in-string
 
 ###########################
 #  Update Request: paths  #
@@ -85,7 +86,6 @@ CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE: List[str] = [
     "uid",
     "update_time",
 ]
-
 
 ##############################
 #  Update Request: revision  #

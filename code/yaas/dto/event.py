@@ -78,9 +78,10 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
                     msg = f"Item <{item}> from request list does not have a proper timestamp value."
                     if not discard_invalid:
                         raise ValueError(msg)
-                    else:
-                        _LOGGER.warning(msg + " Ignoring")
-                        continue
+                    _LOGGER.warning(  # pylint: disable=logging-not-lazy
+                        msg + " Ignoring"
+                    )
+                    continue
                 if key not in timestamp_to_request:
                     timestamp_to_request[key] = []
                 timestamp_to_request[key].append(item)

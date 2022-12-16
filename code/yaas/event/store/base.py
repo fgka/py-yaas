@@ -205,6 +205,42 @@ class Store(abc.ABC):
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
+    def archive(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> None:
+        """
+        Similar to :py:meth:`remove` but will move the data out of the current store into a
+            _cold_ storage.
+        The archiving content is the one within the range specified by
+            ``[start_ts_utc, end_ts_utc]`` and return them.
+
+        Args:
+            start_ts_utc: earliest event possible in the snapshot.
+                Default: :py:obj:`None`, meaning is given by implementation.
+            end_ts_utc: latest event possible in the snapshot.
+                Default: :py:obj:`None`, meaning is given by implementation.
+
+        Returns:
+
+        Raises:
+            :py:class:`StoreError`
+        """
+        start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
+        end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
+        try:
+            self._archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        except Exception as err:
+            raise StoreError(
+                f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. "
+                f"Error: {err}"
+            ) from err
+
+    @abc.abstractmethod
+    def _archive(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> None:
+        raise NotImplementedError
+
 
 class ReadOnlyStore(Store, abc.ABC):
     """
@@ -222,6 +258,13 @@ class ReadOnlyStore(Store, abc.ABC):
     def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
+        raise StoreError(
+            f"This is a {self.__class__.__name__} instance which is also read-only."
+        )
+
+    def _archive(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> None:
         raise StoreError(
             f"This is a {self.__class__.__name__} instance which is also read-only."
         )

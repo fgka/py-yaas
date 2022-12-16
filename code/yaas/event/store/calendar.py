@@ -13,11 +13,6 @@ from yaas import logger
 
 _LOGGER = logger.get(__name__)
 
-_DEFAULT_END_TS_FROM_NOW_IN_DAYS: int = 7
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS_LOWER_BOUND: int = 1
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS_UPPER_BOUND: int = 360
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS: int = 30
-
 
 class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
     """
@@ -28,17 +23,32 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
     """
 
     def __init__(self, *, calendar_id: str, credentials_json: pathlib.Path, **kwargs):
-        super(ReadOnlyGoogleCalendarStore, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if not isinstance(calendar_id, str):
             raise TypeError(
                 f"Calendar ID must be a string. Got: <{calendar_id}>({type(calendar_id)})"
             )
         if not isinstance(credentials_json, pathlib.Path):
             raise TypeError(
-                f"Credentials JSON must be a {pathlib.Path.__name__}. Got: <{credentials_json}>({type(credentials_json)})"
+                f"Credentials JSON must be a {pathlib.Path.__name__}. "
+                f"Got: <{credentials_json}>({type(credentials_json)})"
             )
         self._calendar_id = calendar_id
         self._credentials_json = credentials_json
+
+    @property
+    def calendar_id(self) -> str:
+        """
+        Google Calendar ID
+        """
+        return self._calendar_id
+
+    @property
+    def credentials_json(self) -> pathlib.Path:
+        """
+        Google Calendar corresponding credentials JSON file.
+        """
+        return self._credentials_json
 
     def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None

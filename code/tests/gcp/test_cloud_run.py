@@ -91,6 +91,7 @@ class _StubCloudRunService:
 
 
 def test__set_service_value_by_path_ok():
+    # pylint: disable=no-member
     # Given
     expected = "TEST_VALUE"
     service = _StubCloudRunService("a.b", f"NOT_{expected}")
@@ -117,7 +118,7 @@ def test__update_service_revision_ok():
         cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, curr_revision
     )
     # When
-    result = cloud_run._update_service_revision(service)
+    cloud_run._update_service_revision(service)
     # Then
     node, attr_name = cloud_run._get_parent_node_attribute_based_on_path(
         service, cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH

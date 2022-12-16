@@ -4,50 +4,181 @@
 Store interface for Google Calendar as event source.
 """
 import pathlib
-from typing import Any, Dict, List, Optional
+import threading
+from typing import List, Optional
 
-from yaas.cal import google_cal, parser
 from yaas.dto import event, request
 from yaas.event.store import base
-from yaas import logger
+from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
 
-_DEFAULT_END_TS_FROM_NOW_IN_DAYS: int = 7
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS_LOWER_BOUND: int = 1
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS_UPPER_BOUND: int = 360
-_MAXIMUM_END_TS_FROM_NOW_IN_DAYS: int = 30
 
-
-class PickleFileStore(base.Store):
+class JsonLineFileStore(base.Store):
     """
-    This class bridge the :py:module:`yaas.cal.google_cal` calls
-        to comply with :py:class:`base.Store` interface.
-    It also leverages :py:module:`yaas.cal.parser`
-        to convert content into py:class:`request.ScaleRequest`.
+    A very inefficient version of a text file store,
+    where each line is JSON entry representing a scale request.
     """
 
-    def __init__(self, *, pickle_file: pathlib.Path, **kwargs):
-        super(PickleFileStore, self).__init__(**kwargs)
-        if not isinstance(pickle_file, pathlib.Path):
+    def __init__(
+        self,
+        *,
+        json_line_file: pathlib.Path,
+        archive_json_line_file: pathlib.Path,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if not isinstance(json_line_file, pathlib.Path):
             raise TypeError(
-                f"Credentials JSON must be a {pathlib.Path.__name__}. Got: <{pickle_file}>({type(pickle_file)})"
+                f"JSON line file must be a {pathlib.Path.__name__}. "
+                f"Got: <{json_line_file}>({type(json_line_file)})"
             )
-        self._pickle_file = pickle_file
+        if not isinstance(archive_json_line_file, pathlib.Path):
+            raise TypeError(
+                f"Archive JSON line file must be a {pathlib.Path.__name__}. "
+                f"Got: <{archive_json_line_file}>({type(archive_json_line_file)})"
+            )
+        json_line_file = json_line_file.absolute()
+        archive_json_line_file = archive_json_line_file.absolute()
+        if json_line_file == archive_json_line_file:
+            raise ValueError(
+                f"JSON line file <{json_line_file}> "
+                f"can *NOT* be the same as <{archive_json_line_file}>"
+            )
+        self._json_line_file = json_line_file
+        self._archive_json_line_file = archive_json_line_file
+        # required to make it thread-safe
+        self._file_lock = threading.Lock()
+
+    @property
+    def json_line_file(self) -> pathlib.Path:
+        """
+        Where is the data being stored.
+        """
+        return self._json_line_file
+
+    @property
+    def archive_json_line_file(self) -> pathlib.Path:
+        """
+        Where to archive data.
+        """
+        return self._archive_json_line_file
 
     def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        event_lst: List[Dict[str, Any]] = google_cal.list_upcoming_events(
-            calendar_id=self._calendar_id,
-            credentials_json=self._credentials_json,
-            start=start_ts_utc,
-            end=end_ts_utc,
-        )
-        request_lst: List[request.ScaleRequest] = []
-        for item in event_lst:
-            for req in parser.to_request(item):
-                request_lst.append(req)
+        request_lst = None
+        with self._file_lock:
+            with open(
+                self._json_line_file, "r", encoding=const.ENCODING_UTF8
+            ) as in_file:
+                for line in in_file.readlines():
+                    if line.strip():
+                        req = request.ScaleRequest.from_json(line.strip())
+                        request_lst = self._populate_timestamp_to_request(
+                            request_lst=request_lst,
+                            req=req,
+                            start_ts_utc=start_ts_utc,
+                            end_ts_utc=end_ts_utc,
+                        )
+        return self._snapshot_from_request_lst(request_lst)
+
+    def _snapshot_from_request_lst(
+        self, request_lst: Optional[List[request.ScaleRequest]] = None
+    ) -> event.EventSnapshot:
         return event.EventSnapshot.from_list_requests(
-            source=self._calendar_id, request_lst=request_lst
+            source=self._json_line_file.name,
+            request_lst=request_lst,
         )
+
+    @staticmethod
+    def _populate_timestamp_to_request(
+        *,
+        request_lst: List[request.ScaleRequest],
+        req: request.ScaleRequest,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+    ) -> List[request.ScaleRequest]:
+        to_add = (
+            not isinstance(start_ts_utc, int) or req.timestamp_utc >= start_ts_utc
+        ) and (not isinstance(end_ts_utc, int) or req.timestamp_utc <= end_ts_utc)
+        if request_lst is None:
+            request_lst = []
+        if to_add:
+            request_lst.append(req)
+        return request_lst
+
+    def _write(self, value: event.EventSnapshot) -> None:
+        self._write_only_new(value, is_archive=False)
+
+    def _write_only_new(
+        self, value: event.EventSnapshot, *, is_archive: Optional[bool] = False
+    ) -> None:
+        all_existent = set(self._read_all(is_archive=is_archive))
+        path = self._json_line_file if not is_archive else self._archive_json_line_file
+        with self._file_lock:
+            with open(path, "a", encoding=const.ENCODING_UTF8) as out_file:
+                for req_lst in value.timestamp_to_request.values():
+                    # only add non-existent
+                    out_file.writelines(
+                        [
+                            f"\n{val.as_json()}"
+                            for val in req_lst
+                            if val not in all_existent
+                        ]
+                    )
+
+    def _read_all(
+        self, *, is_archive: Optional[bool] = False
+    ) -> List[request.ScaleRequest]:
+        result = []
+        path = self._json_line_file if not is_archive else self._archive_json_line_file
+        if path.exists():
+            with self._file_lock:
+                with open(path, "r", encoding=const.ENCODING_UTF8) as in_file:
+                    result = [
+                        request.ScaleRequest.from_json(line.strip())
+                        for line in in_file.readlines()
+                        if line.strip()
+                    ]
+        return result
+
+    def _remove(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> event.EventSnapshot:
+        request_lst = []
+        all_request_lst = self._read_all()
+        with self._file_lock:
+            with open(
+                self._json_line_file, "w", encoding=const.ENCODING_UTF8
+            ) as out_file:
+                for req in all_request_lst:
+                    if start_ts_utc <= req.timestamp_utc <= end_ts_utc:
+                        request_lst.append(req)
+                    else:
+                        out_file.write(f"\n{req.as_json()}")
+        return self._snapshot_from_request_lst(request_lst)
+
+    def _archive(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> None:
+        to_archive = self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        try:
+            self._write_only_new(to_archive, is_archive=True)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.error(
+                "Could not archive into <%s> snapshot <%s>. Error: %s",
+                self._archive_json_line_file,
+                to_archive,
+                err,
+            )
+            try:
+                self._write_only_new(to_archive, is_archive=False)
+            except Exception as err_roll_back:
+                raise RuntimeError(
+                    f"[DATA LOSS] Removed snapshot <{to_archive} for store, "
+                    f"failed to archive <{self._archive_json_line_file}>(see logs), "
+                    f"and failed to reinsert into <{self._json_line_file}>. "
+                    f"Archive error: {err}. "
+                    f"Error: {err_roll_back}"
+                ) from err_roll_back

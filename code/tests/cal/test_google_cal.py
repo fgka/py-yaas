@@ -50,7 +50,7 @@ _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
         (10, None, 123, dict(timeMax=google_cal._iso_utc_zulu(123))),
     ],
 )
-def test_list_upcoming_events_ok(
+def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
     monkeypatch, amount: int, exp_amount: int, end: int, exp_kwargs: Dict[str, Any]
 ):
     # Given

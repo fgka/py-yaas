@@ -6,13 +6,21 @@ The difficulty here is to build and merge snapshots,
  in case the current cached values deviate from what is in newly fetched upcoming events.
 """
 # pylint: enable=line-too-long
-from typing import Any, Callable
+from datetime import datetime, timedelta
+from typing import Any, Callable, Optional
 
 from yaas import logger
 from yaas.dto import event
+from yaas.event.store import base
 from yaas.event import version_control
 
 _LOGGER = logger.get(__name__)
+
+DEFAULT_UPDATE_REQUEST_TIME_SPAN_IN_DAYS: int = 10
+
+
+class CachingError(Exception):
+    """To code all caching operation errors."""
 
 
 def update_event_cache(
@@ -104,3 +112,119 @@ def _validate_callable(name: str, value: Any) -> None:
         raise TypeError(
             f"The argument {name} must be callable. Got: <{value}>({type(value)})"
         )
+
+
+def update_cache(
+    *,
+    source: base.Store,
+    cache: base.Store,
+    merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
+    start: Optional[datetime] = None,
+    time_span_in_days: Optional[int] = DEFAULT_UPDATE_REQUEST_TIME_SPAN_IN_DAYS,
+) -> None:
+    """
+    Will fetch entries from ``source``
+    (within the timespan in ``time_span_in_days`` starting in ``start``),
+    read the currently cached events from ``cache``,
+    merge them using ``merge_strategy``,
+    and store back into the store.
+    Args:
+        source:
+        cache:
+        merge_strategy:
+        start: when the period starts, if :py:obj:`None` it will revert to current time.
+        time_span_in_days: how many days to cache.
+
+    Returns:
+
+    Raises:
+        py:class:`CachingError` in case o errors.
+
+    """
+    # input validation
+    if not isinstance(source, base.Store):
+        raise TypeError(
+            f"Source must be an instance of {base.Store.__name__}. "
+            f"Got: <{cache}>({type(cache)})"
+        )
+    if not isinstance(cache, base.Store):
+        raise TypeError(
+            f"Cache must be an instance of {base.Store.__name__}. "
+            f"Got: <{cache}>({type(cache)})"
+        )
+    if not callable(merge_strategy):
+        raise TypeError(
+            f"Merge strategy must be callable. "
+            f"Got: <{merge_strategy}>({type(merge_strategy)})"
+        )
+    if start is None:
+        start = datetime.utcnow()
+    if not isinstance(start, datetime):
+        raise TypeError(
+            f"Start must be an instance of {datetime.__name__}. "
+            f"Got: <{start}>({type(start)})"
+        )
+    if not isinstance(time_span_in_days, int) or time_span_in_days <= 0:
+        raise TypeError(
+            f"Time span must be integer greater than 0. "
+            f"Got: <{time_span_in_days}>({type(time_span_in_days)})"
+        )
+    # logic
+    _update_cache(
+        source=source,
+        cache=cache,
+        merge_strategy=merge_strategy,
+        start=start,
+        time_span_in_days=time_span_in_days,
+    )
+
+
+def _update_cache(
+    *,
+    source: base.Store,
+    cache: base.Store,
+    merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
+    start: datetime,
+    time_span_in_days: int,
+) -> None:
+    # convert times
+    start_ts_utc = start.timestamp()
+    end_ts_utc = (start + timedelta(days=time_span_in_days)).timestamp()
+    # read source
+    try:
+        source_snapshot = source.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+    except Exception as err:
+        raise CachingError(
+            f"Could not read source starting on {start} for {time_span_in_days} days. "
+            f"Got: {err}"
+        ) from err
+    # read cache
+    try:
+        cached_snapshot = cache.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+    except Exception as err:
+        raise CachingError(
+            f"Could not read cache starting on {start} for {time_span_in_days} days. "
+            f"Got: {err}"
+        ) from err
+    # merge
+    try:
+        merged_snapshot = version_control.merge(
+            snapshot_a=cached_snapshot,
+            snapshot_b=source_snapshot,
+            merge_strategy=merge_strategy,
+        )
+    except Exception as err:
+        raise CachingError(
+            f"Could not merge snapshots using <{merge_strategy}> "
+            f"on source snapshot <{source_snapshot}> "
+            f"and cached snapshot <{cached_snapshot}>. "
+            f"Got: {err}"
+        ) from err
+    # write cache
+    try:
+        cache.write(merged_snapshot, overwrite_within_range=True)
+    except Exception as err:
+        raise CachingError(
+            f"Could not write snapshot <{merged_snapshot}> to cache using <{cache}>. "
+            f"Got: {err}"
+        ) from err

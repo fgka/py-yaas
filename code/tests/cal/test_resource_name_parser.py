@@ -6,7 +6,7 @@
 # type: ignore
 import pytest
 
-from yaas.gcp import resource_name_parser
+from yaas.cal import resource_name_parser
 
 _TEST_RESOURCE_CLOUD_RUN_PROJECT: str = "my_project"
 _TEST_RESOURCE_CLOUD_RUN_LOCATION: str = "my_location"

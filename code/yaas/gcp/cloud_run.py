@@ -14,7 +14,7 @@ import cachetools
 from google.cloud import run_v2
 
 from yaas import logger
-from yaas.gcp import cloud_run_const
+from yaas.gcp import cloud_run_const, resource_name
 
 _LOGGER = logger.get(__name__)
 
@@ -78,11 +78,6 @@ def can_be_deployed(name: str) -> Tuple[bool, str]:
     return reason is None, reason
 
 
-_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG: str = (
-    "projects/{{project}}/locations/{{location}}/services/{{service_id}}"
-)
-
-
 def validate_cloud_run_resource_name(
     value: str, *, raise_if_invalid: bool = True
 ) -> List[str]:
@@ -98,42 +93,11 @@ def validate_cloud_run_resource_name(
         If ``raise_if_invalid`` if :py:obj:`False` will contain all reasons
             why the validation failed.
     """
-    result = []
-    if not isinstance(value, str):
-        result.append(
-            f"Name <{value}>({type(str)}) must be an instance of {str.__name__}"
-        )
-    else:
-        # validate format
-        matched = cloud_run_const.CLOUD_RUN_NAME_REGEX.match(value)
-        if matched is None:
-            result.append(
-                f"Name must obey the format: '{_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}'. "
-                f"Got <{value}>"
-            )
-        else:
-            project, location, service_id = matched.groups()
-            # validate individual tokens
-            if not project:
-                result.append(
-                    f"Could not find project ID in <{value}> "
-                    f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
-                )
-            if not location:
-                result.append(
-                    f"Could not find location in <{value}> "
-                    f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
-                )
-            if not service_id:
-                result.append(
-                    f"Could not find service ID in <{value}> "
-                    f"assuming pattern {_CLOUD_RUN_NAME_REGEX_ERROR_MSG_ARG}"
-                )
-    if result and raise_if_invalid:
-        raise ValueError(
-            f"Could not validate Cloud Run service name <{value}>. Error(s): {result}"
-        )
-    return result
+    return resource_name.validate_resource_name(
+        value=value,
+        tokens=cloud_run_const.CLOUD_RUN_NAME_TOKENS,
+        raise_if_invalid=raise_if_invalid,
+    )
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))

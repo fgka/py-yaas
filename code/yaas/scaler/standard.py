@@ -7,7 +7,7 @@ from typing import List
 
 from yaas import logger
 from yaas.dto import request
-from yaas.gcp import resource_name_parser
+from yaas.cal import resource_name_parser
 from yaas.scaler import base, run
 
 _LOGGER = logger.get(__name__)

@@ -117,3 +117,33 @@ def test_get_nok(monkeypatch):
     # When/Then
     with pytest.raises(secrets.SecretManagerAccessError):
         secrets.get("TEST_SECRET")
+
+
+@pytest.mark.parametrize(
+    "value,amount_errors",
+    [
+        (123, 1),
+        (None, 1),
+        ("", 1),
+        ("projects/ /secrets/my-secret-123/versions/my-version-123", 1),
+        ("projects/my-project-123/secrets/ /versions/my-version-123", 1),
+        ("projects/my-project-123/secrets/my-secret-123/versions/ ", 1),
+        (
+            " projects/my-project-123/secrets/my-secret-123/versions/my-version-123",
+            1,
+        ),
+        (
+            "projects/my project 123/secrets/my secret 123/versions/my version 123",
+            1,
+        ),
+        (
+            "projects/my-project-123/secrets/my-secret-123/versions/my-version-123",
+            0,
+        ),
+    ],
+)
+def test_validate_secret_resource_name_ok(value: str, amount_errors: int):
+    # Given/When
+    result = secrets.validate_secret_resource_name(value, raise_if_invalid=False)
+    # Then
+    assert len(result) == amount_errors

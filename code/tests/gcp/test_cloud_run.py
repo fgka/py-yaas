@@ -26,6 +26,10 @@ _TEST_SERVICE_NAME: str = (
         ("projects/my-project-123/locations/ /services/my-service-123", 1),
         ("projects/my-project-123/locations/my-location-123/services/ ", 1),
         (
+            " projects/my-project-123/locations/my-location-123/services/my-service-123",
+            1,
+        ),
+        (
             "projects/my project 123/locations/my location 123/services/my service 123",
             1,
         ),

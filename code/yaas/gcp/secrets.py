@@ -6,20 +6,16 @@ GCP `Secret Manager`_ entry point
 .. _Secret Manager: https://cloud.google.com/secret-manager/docs/quickstart#secretmanager-quickstart-python
 """
 # pylint: enable=line-too-long
-from typing import Optional
+from typing import List, Optional
 
 import cachetools
 
 from google.cloud import secretmanager
 
 from yaas import const, logger
+from yaas.gcp import resource_name, secrets_const
 
 _LOGGER = logger.get(__name__)
-
-_GCP_SECRET_NAME_TMPL: str = (
-    "projects/{project_id}/secrets/{secret_id}/versions/{version}"
-)
-_DEFAULT_GCP_SECRET_VERSION: str = "latest"
 
 
 class SecretManagerAccessError(Exception):
@@ -50,8 +46,8 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
         )
     # logic
     if not isinstance(version, str):
-        version = _DEFAULT_GCP_SECRET_VERSION
-    return _GCP_SECRET_NAME_TMPL.format(
+        version = secrets_const.DEFAULT_GCP_SECRET_VERSION
+    return secrets_const.GCP_SECRET_NAME_TMPL.format(
         project_id=project_id, secret_id=secret_id, version=version
     )
 
@@ -84,3 +80,25 @@ def get(secret_name: str) -> str:
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
 def _secret_client() -> secretmanager.SecretManagerServiceClient:
     return secretmanager.SecretManagerServiceClient()
+
+
+def validate_secret_resource_name(
+    value: str, *, raise_if_invalid: bool = True
+) -> List[str]:
+    """
+    Validates the ``value`` against the pattern:
+        "projects/my-project-123/secrets/my-secret/versions/my-version".
+
+    Args:
+        value: Secret resource name to be validated.
+        raise_if_invalid: if :py:obj:`True` will raise exception if ``value`` is not valid.
+
+    Returns:
+        If ``raise_if_invalid`` if :py:obj:`False` will contain all reasons
+            why the validation failed.
+    """
+    return resource_name.validate_resource_name(
+        value=value,
+        tokens=secrets_const.SECRET_NAME_TOKENS,
+        raise_if_invalid=raise_if_invalid,
+    )

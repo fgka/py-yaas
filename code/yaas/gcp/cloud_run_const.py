@@ -2,7 +2,6 @@
 """
 Default values related to Cloud Run.
 """
-import re
 from typing import List
 
 
@@ -10,11 +9,7 @@ from typing import List
 #  Resource name  #
 ###################
 
-# pylint: disable=anomalous-backslash-in-string
-CLOUD_RUN_NAME_REGEX: re.Pattern = re.compile(
-    "^projects/([^/\s]+)/locations/([^/\s]+)/services/([^/\s]+)$"
-)
-# pylint: enable=anomalous-backslash-in-string
+CLOUD_RUN_NAME_TOKENS: List[str] = ["projects", "locations", "services"]
 
 ###########################
 #  Update Request: paths  #

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pathlib
 import pickle
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -41,8 +41,9 @@ _TEST_CREDENTIALS: credentials.Credentials = _create_credentials()
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "amount,exp_amount,end,exp_kwargs",
+    "amount_arg,exp_amount,end,exp_kwargs",
     [
         (None, google_cal.DEFAULT_LIST_EVENTS_AMOUNT, None, dict(timeMax=None)),
         (10, 10, None, dict(timeMax=None)),
@@ -50,31 +51,31 @@ _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
         (10, None, 123, dict(timeMax=google_cal._iso_utc_zulu(123))),
     ],
 )
-def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
-    monkeypatch, amount: int, exp_amount: int, end: int, exp_kwargs: Dict[str, Any]
+async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
+    monkeypatch, amount_arg: int, exp_amount: int, end: int, exp_kwargs: Dict[str, Any]
 ):
     # Given
-    amount = 10
+    amount_arg = 10
     calendar_id = _TEST_CALENDAR_ID
     credentials_json = _TEST_CREDENTIALS
-    service = "TEST_SERVICE"
+    service_arg = "TEST_SERVICE"
     credentials_json_arg = None
     kwargs_for_list_arg = None
-    amount_arg = None
+    amount_used = None
     expected = ["TEST"]
 
     def mocked_calendar_service(**kwargs) -> Any:
         nonlocal credentials_json_arg
         credentials_json_arg = kwargs.get("credentials_json")
-        return service
+        return service_arg
 
-    def mocked_list_all_events(
-        service_: Any, amount_: int, kwargs_for_list: Dict[str, Any]
+    async def mocked_list_all_events(
+        *, service: Any, amount: int, kwargs_for_list: Dict[str, Any]
     ) -> List[Any]:
-        nonlocal amount_arg, kwargs_for_list_arg
-        amount_arg = amount_
+        nonlocal amount_used, kwargs_for_list_arg
+        amount_used = amount
         kwargs_for_list_arg = kwargs_for_list
-        assert service_ == service
+        assert service == service_arg
         return expected
 
     monkeypatch.setattr(
@@ -85,19 +86,69 @@ def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
     )
 
     # When
-    result = google_cal.list_upcoming_events(
+    result = await google_cal.list_upcoming_events(
         calendar_id=calendar_id,
         credentials_json=credentials_json,
-        amount=amount,
+        amount=amount_arg,
         start=0,
         end=end,
     )
     # Then
     assert result == expected
     assert credentials_json_arg == credentials_json
-    assert amount_arg == exp_amount
+    assert amount_used == exp_amount
     for key, val in exp_kwargs.items():
         assert kwargs_for_list_arg.get(key) == val
+
+
+class _StubExecutable:
+    def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
+        self._result = result
+        self.called = {}
+
+    def execute(self) -> Dict[str, Any]:
+        self.called[_StubExecutable.execute.__name__] = True
+        return dict(items=self._result)
+
+
+class _StubEvents:
+    def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
+        self._executable = _StubExecutable(result=result)
+        self.called = {}
+
+    def list(self, **kwargs) -> _StubExecutable:
+        self.called[_StubEvents.list.__name__] = kwargs
+        return self._executable
+
+
+class _StubGoogleCalServiceResource:
+    def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
+        self._events = _StubEvents(result=result)
+        self.called = {}
+
+    def events(self) -> _StubEvents:
+        self.called[_StubGoogleCalServiceResource.events.__name__] = True
+        return self._events
+
+
+@pytest.mark.asyncio
+async def test__list_all_events_ok_amount_given():
+    # Given
+    amount = 10
+    list_results = []
+    for ndx in range(amount + 1):
+        list_results.append(dict(key=f"value_{ndx}"))
+    service = _StubGoogleCalServiceResource(result=list_results)
+    kwargs_for_list = dict(arg_1="value_1", arg_2="value_2")
+    # When
+    result = await google_cal._list_all_events(
+        service=service, amount=amount, kwargs_for_list=kwargs_for_list
+    )
+    # Then
+    assert len(result) == amount
+    assert service.called.get(_StubGoogleCalServiceResource.events.__name__)
+    assert service._events.called.get(_StubEvents.list.__name__) == kwargs_for_list
+    assert service._events._executable.called.get(_StubExecutable.execute.__name__)
 
 
 @pytest.mark.parametrize(
@@ -140,7 +191,8 @@ def test__file_path_from_env_default_value_ok(
     assert result == expected
 
 
-def test__pickle_credentials_ok():
+@pytest.mark.asyncio
+async def test__pickle_credentials_ok():
     # Given
     # pylint: disable=consider-using-with
     expected = "TEST"
@@ -148,56 +200,61 @@ def test__pickle_credentials_ok():
     with open(value, "wb") as out_file:
         pickle.dump(expected, out_file)
     # When
-    result = google_cal._pickle_credentials(value)
+    result = await google_cal._pickle_credentials(value)
     # Then
     assert result == expected
 
 
-def test__pickle_credentials_ok_file_does_not_exist():
+@pytest.mark.asyncio
+async def test__pickle_credentials_ok_file_does_not_exist():
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
-    result = google_cal._pickle_credentials(value)
+    result = await google_cal._pickle_credentials(value)
     # Then
     assert result is None
 
 
-def test__persist_credentials_pickle_ok():
+@pytest.mark.asyncio
+async def test__persist_credentials_pickle_ok():
     # Given
     value = _TEST_CREDENTIALS
     # pylint: disable=consider-using-with
     credentials_pickle = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
-    result = google_cal._persist_credentials_pickle(value, credentials_pickle)
+    result = await google_cal._persist_credentials_pickle(value, credentials_pickle)
     # Then
     assert result
-    content = google_cal._pickle_credentials(credentials_pickle)
+    content = await google_cal._pickle_credentials(credentials_pickle)
     assert content.token == _TEST_CREDENTIALS.token
 
 
-def test__persist_credentials_pickle_ok_no_credentials():
+@pytest.mark.asyncio
+async def test__persist_credentials_pickle_ok_no_credentials():
     # Given
     # pylint: disable=consider-using-with
     credentials_pickle = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
-    result = google_cal._persist_credentials_pickle("TEST", credentials_pickle)
+    result = await google_cal._persist_credentials_pickle("TEST", credentials_pickle)
     # Then
     assert not result
 
 
-def test__persist_credentials_pickle_nok_no_file(monkeypatch):
+@pytest.mark.asyncio
+async def test__persist_credentials_pickle_nok_no_file(monkeypatch):
     # Given
     value = _TEST_CREDENTIALS
     monkeypatch.setenv(google_cal._CREDENTIALS_PICKLE_FILE_ENV_VAR_NAME, "")
     monkeypatch.setattr(google_cal, "_DEFAULT_CREDENTIALS_PICKLE_FILE", None)
     # When/Then
     with pytest.raises(TypeError):
-        google_cal._persist_credentials_pickle(value, None)
+        await google_cal._persist_credentials_pickle(value, None)
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("expired", [True, False])
-def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
+async def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
     creds = _create_credentials(expired=expired)
     called = {}
 
@@ -207,7 +264,7 @@ def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
 
     monkeypatch.setattr(creds, creds.refresh.__name__, mocked_refresh)
     # When
-    result = google_cal._refresh_credentials_if_needed(creds)
+    result = await google_cal._refresh_credentials_if_needed(creds)
     # Then
     assert result == creds
     assert (called.get("refresh") is not None) == expired
@@ -215,28 +272,30 @@ def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
         assert isinstance(called.get("refresh"), requests.Request)
 
 
-def test__secret_credentials_ok(monkeypatch):
+@pytest.mark.asyncio
+async def test__secret_credentials_ok(monkeypatch):
     secret_name = "TEST_SECRET"
     called = {}
 
-    def mocked_get(value: str) -> credentials.Credentials:
+    async def mocked_get(value: str) -> credentials.Credentials:
         nonlocal called
         called["get"] = value
         return _TEST_CREDENTIALS
 
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
     # When
-    result = google_cal._secret_credentials(secret_name)
+    result = await google_cal._secret_credentials(secret_name)
     # Then
     assert result == _TEST_CREDENTIALS
     assert called.get("get") == secret_name
 
 
-def test__secret_credentials_ok_env_secret_name(monkeypatch):
+@pytest.mark.asyncio
+async def test__secret_credentials_ok_env_secret_name(monkeypatch):
     secret_name = "TEST_SECRET"
     called = {}
 
-    def mocked_get(value: str) -> credentials.Credentials:
+    async def mocked_get(value: str) -> credentials.Credentials:
         nonlocal called
         called["get"] = value
         return _TEST_CREDENTIALS
@@ -244,16 +303,17 @@ def test__secret_credentials_ok_env_secret_name(monkeypatch):
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
     monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, secret_name)
     # When
-    result = google_cal._secret_credentials(None)
+    result = await google_cal._secret_credentials(None)
     # Then
     assert result == _TEST_CREDENTIALS
     assert called.get("get") == secret_name
 
 
-def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
+@pytest.mark.asyncio
+async def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
     called = {}
 
-    def mocked_get(value: str) -> credentials.Credentials:
+    async def mocked_get(value: str) -> credentials.Credentials:
         nonlocal called
         called["get"] = value
         return _TEST_CREDENTIALS
@@ -261,7 +321,7 @@ def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
     monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, "")
     # When
-    result = google_cal._secret_credentials(None)
+    result = await google_cal._secret_credentials(None)
     # Then
     assert result is None
     assert called.get("get") is None
@@ -277,7 +337,8 @@ class _StubInstalledAppFlow:
         return self._creds
 
 
-def test__json_credentials_ok(monkeypatch):
+@pytest.mark.asyncio
+async def test__json_credentials_ok(monkeypatch):
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
@@ -297,7 +358,7 @@ def test__json_credentials_ok(monkeypatch):
         mocked_from_client_secrets_file,
     )
     # When
-    result = google_cal._json_credentials(value)
+    result = await google_cal._json_credentials(value)
     # Then
     assert result == _TEST_CREDENTIALS
     assert called.get("from_client_secrets_file") == (
@@ -307,11 +368,12 @@ def test__json_credentials_ok(monkeypatch):
     assert app_flow.called.get(_StubInstalledAppFlow.run_local_server.__name__) == 0
 
 
-def test__json_credentials_ok_file_does_not_exist():
+@pytest.mark.asyncio
+async def test__json_credentials_ok_file_does_not_exist():
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
-    result = google_cal._json_credentials(value)
+    result = await google_cal._json_credentials(value)
     # Then
     assert result is None

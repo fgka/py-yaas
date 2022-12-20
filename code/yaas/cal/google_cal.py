@@ -5,12 +5,14 @@ Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
 # pylint: enable=line-too-long
+import asyncio
 from datetime import datetime
 import os
 import pathlib
 import pickle
 from typing import Any, Dict, List, Optional, Union
 
+import aiofiles
 import cachetools
 
 from google.auth.transport import requests
@@ -26,7 +28,7 @@ _LOGGER = logger.get(__name__)
 DEFAULT_LIST_EVENTS_AMOUNT: int = 10
 
 
-def list_upcoming_events(
+async def list_upcoming_events(
     *,
     calendar_id: str,
     credentials_json: Optional[pathlib.Path] = None,
@@ -142,7 +144,9 @@ def list_upcoming_events(
         kwargs_for_list["timeMax"] = _iso_utc_zulu(end)
         amount = None
     # Retrieve entries
-    result = _list_all_events(service, amount, kwargs_for_list)
+    result = await _list_all_events(
+        service=service, amount=amount, kwargs_for_list=kwargs_for_list
+    )
     #
     _LOGGER.info(
         "Got the upcoming %s (desired %s) events starting in %s",
@@ -162,13 +166,19 @@ def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
     return value.isoformat() + "Z"
 
 
-def _list_all_events(
-    service: discovery.Resource, amount: Optional[int], kwargs_for_list: Dict[str, Any]
+async def _list_all_events(
+    *,
+    service: discovery.Resource,
+    amount: Optional[int],
+    kwargs_for_list: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
     # pagination/while trick
+    loop = asyncio.get_event_loop()
     while amount is None or len(result) < amount:
-        events_result = service.events().list(**kwargs_for_list).execute()
+        events_result = await loop.run_in_executor(
+            None, _list_events_for_kwargs, service, kwargs_for_list
+        )
         result.extend(events_result.get("items", []))
         # next page token
         next_page_token = events_result.get("nextPageToken")
@@ -181,18 +191,25 @@ def _list_all_events(
     return result
 
 
-def _calendar_service(
+def _list_events_for_kwargs(
+    service: discovery.Resource, kwargs_for_list: Dict[str, Any]
+) -> Dict[str, Any]:
+    """To make async"""
+    return service.events().list(**kwargs_for_list).execute()
+
+
+async def _calendar_service(
     *,
     credentials_pickle: Optional[pathlib.Path] = None,
     secret_name: Optional[str] = None,
     credentials_json: Optional[pathlib.Path] = None,
 ) -> discovery.Resource:
-    cal_creds = _calendar_credentials(
+    cal_creds = await _calendar_credentials(
         credentials_pickle=credentials_pickle,
         secret_name=secret_name,
         credentials_json=credentials_json,
     )
-    _refresh_credentials_if_needed(cal_creds)
+    await _refresh_credentials_if_needed(cal_creds)
     result: discovery.Resource = None
     if isinstance(cal_creds, credentials.Credentials):
         _LOGGER.debug(
@@ -216,7 +233,7 @@ def _calendar_service(
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
-def _calendar_credentials(
+async def _calendar_credentials(
     *,
     credentials_pickle: Optional[pathlib.Path] = None,
     secret_name: Optional[str] = None,
@@ -227,13 +244,13 @@ def _calendar_credentials(
         is sufficient for *ALL* calls within the single execution.
     """
     # First: pickle
-    result: credentials.Credentials = _pickle_credentials(credentials_pickle)
+    result: credentials.Credentials = await _pickle_credentials(credentials_pickle)
     # Second: Cloud Secrets
     if not result:
-        result = _secret_credentials(secret_name)
+        result = await _secret_credentials(secret_name)
     # Third: JSON
     if not result:
-        result = _json_credentials(credentials_json)
+        result = await _json_credentials(credentials_json)
     if not result:
         raise RuntimeError(
             "Could not find credentials for cal access."
@@ -242,7 +259,7 @@ def _calendar_credentials(
             f", and JSON file <{credentials_json}>"
         )
     # Cache values on pickle file
-    _persist_credentials_pickle(result, credentials_pickle)
+    await _persist_credentials_pickle(result, credentials_pickle)
     return result
 
 
@@ -272,7 +289,7 @@ def _file_path_from_env_default_value(
     return result
 
 
-def _pickle_credentials(
+async def _pickle_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
@@ -281,15 +298,16 @@ def _pickle_credentials(
     )
     value = _pickle_filepath(value)
     if value.exists():
-        with open(value, "rb") as in_file:
-            result = pickle.load(in_file)
+        async with aiofiles.open(value, "rb") as in_file:
+            content = await in_file.read()
+        result = pickle.loads(content)
         _LOGGER.info("Retrieved cal credentials from pickle file %s", value)
     else:
         _LOGGER.info("Pickle file %s does not exist, ignoring", value)
     return result
 
 
-def _persist_credentials_pickle(
+async def _persist_credentials_pickle(
     value: Optional[credentials.Credentials] = None,
     credentials_pickle: Optional[pathlib.Path] = None,
 ) -> bool:
@@ -306,8 +324,9 @@ def _persist_credentials_pickle(
                 f"Expecting a {pathlib.Path.__name__} as credentials pickle file path."
                 f" Got <{credentials_pickle}>({type(credentials_pickle)})"
             )
-        with open(credentials_pickle, "wb") as out_file:
-            pickle.dump(value, out_file)
+        content = pickle.dumps(value)
+        async with aiofiles.open(credentials_pickle, "wb") as out_file:
+            await out_file.write(content)
             result = True
         _LOGGER.info(
             "Persisted cal credentials with client ID %s into pickle file: %s",
@@ -320,7 +339,7 @@ def _persist_credentials_pickle(
 _CREDENTIALS_SECRET_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_SECRET_NAME"
 
 
-def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
+async def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
         "Retrieving cal credentials from cloud secret name: <%s>(%s)",
@@ -330,17 +349,17 @@ def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
     if not isinstance(value, str):
         value = os.environ.get(_CREDENTIALS_SECRET_ENV_VAR_NAME, None)
     if value:
-        result = secrets.get(value)
+        result = await secrets.get(value)
         _LOGGER.info(
             "Retrieved cal credentials from cloud secret name: <%s>(%s)",
             value,
             type(value),
         )
-        result = _refresh_credentials_if_needed(result)
+        result = await _refresh_credentials_if_needed(result)
     return result
 
 
-def _refresh_credentials_if_needed(
+async def _refresh_credentials_if_needed(
     value: credentials.Credentials,
 ) -> credentials.Credentials:
     if (
@@ -349,9 +368,21 @@ def _refresh_credentials_if_needed(
         and value.refresh_token
     ):
         _LOGGER.debug("Refreshing cal credentials for client ID: %s", value.client_id)
-        value.refresh(requests.Request())
+        loop = asyncio.get_event_loop()
+        req = await loop.run_in_executor(None, _create_request)
+        await loop.run_in_executor(None, _refresh_credentials, value, req)
         _LOGGER.info("Refreshed cal credentials for client ID: %s", value.client_id)
     return value
+
+
+def _refresh_credentials(value: credentials.Credentials, req: requests.Request) -> None:
+    """To make async"""
+    value.refresh(req)
+
+
+def _create_request() -> requests.Request:
+    """To make async"""
+    return requests.Request()
 
 
 _CREDENTIALS_JSON_FILE_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_JSON_FILENAME"
@@ -361,7 +392,7 @@ _CALENDAR_SCOPES: List[str] = [
 ]
 
 
-def _json_credentials(
+async def _json_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
@@ -370,15 +401,32 @@ def _json_credentials(
     )
     value = _json_filepath(value)
     if value.exists():
-        app_flow = flow.InstalledAppFlow.from_client_secrets_file(
-            value, _CALENDAR_SCOPES
+        loop = asyncio.get_event_loop()
+        app_flow = await loop.run_in_executor(
+            None, _app_flow_from_client_secrets_file, value
         )
-        result = app_flow.run_local_server(port=0)
+        result = await loop.run_in_executor(
+            None, _app_flow_run_local_server, app_flow, dict(port=0)
+        )
         _LOGGER.info("Retrieved cal credentials from JSON file %s", value)
-        _refresh_credentials_if_needed(result)
+        await _refresh_credentials_if_needed(result)
     else:
         _LOGGER.info("JSON file %s does not exist, ignoring", value)
     return result
+
+
+def _app_flow_from_client_secrets_file(
+    value: Optional[pathlib.Path],
+) -> flow.InstalledAppFlow:
+    """To make async"""
+    return flow.InstalledAppFlow.from_client_secrets_file(value, _CALENDAR_SCOPES)
+
+
+def _app_flow_run_local_server(
+    app_flow: flow.InstalledAppFlow, kwargs: Dict[str, Any]
+) -> credentials.Credentials:
+    """To make async"""
+    return app_flow.run_local_server(**kwargs)
 
 
 def _json_filepath(value: Optional[pathlib.Path] = None) -> pathlib.Path:

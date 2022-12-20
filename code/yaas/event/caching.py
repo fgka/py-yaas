@@ -114,7 +114,7 @@ def _validate_callable(name: str, value: Any) -> None:
         )
 
 
-def update_cache(
+async def update_cache(
     *,
     source: base.Store,
     cache: base.Store,
@@ -170,7 +170,7 @@ def update_cache(
             f"Got: <{time_span_in_days}>({type(time_span_in_days)})"
         )
     # logic
-    _update_cache(
+    await _update_cache(
         source=source,
         cache=cache,
         merge_strategy=merge_strategy,
@@ -179,7 +179,7 @@ def update_cache(
     )
 
 
-def _update_cache(
+async def _update_cache(
     *,
     source: base.Store,
     cache: base.Store,
@@ -192,7 +192,7 @@ def _update_cache(
     end_ts_utc = (start + timedelta(days=time_span_in_days)).timestamp()
     # read source
     try:
-        source_snapshot = source.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        source_snapshot = await source.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     except Exception as err:
         raise CachingError(
             f"Could not read source starting on {start} for {time_span_in_days} days. "
@@ -200,7 +200,7 @@ def _update_cache(
         ) from err
     # read cache
     try:
-        cached_snapshot = cache.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        cached_snapshot = await cache.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     except Exception as err:
         raise CachingError(
             f"Could not read cache starting on {start} for {time_span_in_days} days. "
@@ -222,7 +222,7 @@ def _update_cache(
         ) from err
     # write cache
     try:
-        cache.write(merged_snapshot, overwrite_within_range=True)
+        await cache.write(merged_snapshot, overwrite_within_range=True)
     except Exception as err:
         raise CachingError(
             f"Could not write snapshot <{merged_snapshot}> to cache using <{cache}>. "

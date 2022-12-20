@@ -21,7 +21,13 @@ _LOGGER = logger.get(__name__)
 _CLOUD_RUN_REVISION_TMPL: str = "{}-scaler-{}"
 
 
-def get_service(name: str) -> run_v2.Service:
+class CloudRunServiceError(Exception):
+    """
+    To encapsulate all exceptions operating on CloudRun.
+    """
+
+
+async def get_service(name: str) -> run_v2.Service:
     # pylint: disable=line-too-long
     """
     Wrapper for :py:meth:`run_v2.ServicesClient.get_service` (`documentation`_).
@@ -31,6 +37,10 @@ def get_service(name: str) -> run_v2.Service:
             `projects/my-project-123/locations/my-location-123/services/my-service-123`.
 
     Returns:
+        Service
+
+    Raises:
+        py:class:`CloudRunServiceError` any error accessing the CloudRun control plane.
 
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_get_service
     .. _x-path: https://en.wikipedia.org/wiki/XPath
@@ -41,15 +51,15 @@ def get_service(name: str) -> run_v2.Service:
     validate_cloud_run_resource_name(name)
     # get service definition
     try:
-        result = _run_client().get_service(request={"name": name})
+        result = await _run_client().get_service(request={"name": name})
     except Exception as err:  # pylint: disable=broad-except
-        raise RuntimeError(
+        raise CloudRunServiceError(
             f"Could not retrieve service <{name}>. Error: {err}"
         ) from err
     return result
 
 
-def can_be_deployed(name: str) -> Tuple[bool, str]:
+async def can_be_deployed(name: str) -> Tuple[bool, str]:
     # pylint: disable=line-too-long
     """
     A wrapper around :py:func:`get_service` and returning ``NOT reconciling`` field.
@@ -68,7 +78,7 @@ def can_be_deployed(name: str) -> Tuple[bool, str]:
     _LOGGER.debug("Checking readiness of service <%s>", name)
     try:
         # service
-        service = get_service(name)
+        service = await get_service(name)
         # checking reconciling
         if service.reconciling:
             reason = f"Service <{name}> is reconciling, try again later."
@@ -101,11 +111,13 @@ def validate_cloud_run_resource_name(
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
-def _run_client() -> run_v2.ServicesClient:
-    return run_v2.ServicesClient()
+def _run_client() -> run_v2.ServicesAsyncClient:
+    return run_v2.ServicesAsyncClient()
 
 
-def update_service(*, name: str, path: str, value: Optional[Any]) -> run_v2.Service:
+async def update_service(
+    *, name: str, path: str, value: Optional[Any]
+) -> run_v2.Service:
     # pylint: disable=line-too-long
     """
     Wrapper for :py:meth:`run_v2.ServicesClient.update_service` (`documentation`_).
@@ -130,15 +142,24 @@ def update_service(*, name: str, path: str, value: Optional[Any]) -> run_v2.Serv
             f"Path argument must be a non-empty {str.__name__}. Got: <{path}>({type(path)}"
         )
     path = path.strip()
-    # update
+    # get service
+    service = await get_service(name)
+    # update service
     service = _update_service_revision(
         _clean_service_for_update_request(
-            _set_service_value_by_path(get_service(name), path, value)
+            _set_service_value_by_path(service, path, value)
         )
     )
-    request = run_v2.UpdateServiceRequest(service=service)
-    operation = _run_client().update_service(request=request)
-    result = operation.result()
+    request = _create_update_request(service)
+    try:
+        operation = await _run_client().update_service(request=request)
+        result = await operation.result()
+    except Exception as err:
+        raise CloudRunServiceError(
+            f"Could not update service <{name}> with <{path}> set to <{value}>. "
+            f"Request: {request}. "
+            f"Error: {err}"
+        ) from err
     _LOGGER.info(
         "Update request for service %s with param %s = %s sent.",
         name,
@@ -146,6 +167,13 @@ def update_service(*, name: str, path: str, value: Optional[Any]) -> run_v2.Serv
         value,
     )
     return _validate_service(result, path, value)
+
+
+def _create_update_request(
+    service: run_v2.Service, **kwargs
+) -> run_v2.UpdateServiceRequest:
+    """For testing"""
+    return run_v2.UpdateServiceRequest(service=service, **kwargs)
 
 
 def _set_service_value_by_path(service: Any, path: str, value: Any) -> Any:

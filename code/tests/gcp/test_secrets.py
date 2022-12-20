@@ -79,7 +79,7 @@ class _StubResponse:
         self.payload = _StubResponse._StubPayload(data)
 
 
-class _StubSecretClient:
+class _StubSecretAsyncClient:
     def __init__(
         self,
         *,
@@ -90,33 +90,35 @@ class _StubSecretClient:
         self._raise_on_access = raise_on_access
         self._request = None
 
-    def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+    async def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
         if self._raise_on_access:
             raise RuntimeError
         return self._response
 
 
-def test_get_ok(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_ok(monkeypatch):
     # Given
     expected = "EXPECTED"
     secret_name = "TEST_SECRET"
-    client = _StubSecretClient(data=expected)
+    client = _StubSecretAsyncClient(data=expected)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When
-    result = secrets.get(secret_name)
+    result = await secrets.get(secret_name)
     # Then
     assert result == expected
     assert client._request.get("name") == secret_name
 
 
-def test_get_nok(monkeypatch):
+@pytest.mark.asyncio
+async def test_get_nok(monkeypatch):
     # Given
-    client = _StubSecretClient(raise_on_access=True)
+    client = _StubSecretAsyncClient(raise_on_access=True)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When/Then
     with pytest.raises(secrets.SecretManagerAccessError):
-        secrets.get("TEST_SECRET")
+        await secrets.get("TEST_SECRET")
 
 
 @pytest.mark.parametrize(

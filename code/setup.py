@@ -55,6 +55,7 @@ CODE_QUALITY_REQUIRED = [
     "pylama-pylint>=3.1.1",
     "pylint>=2.14.5",
     "pytest>=7.1.2",
+    "pytest-asyncio>=0.20.3",
     "pytest-cov>=3.0.0",
     "pytest-mock>=3.8.2",
     "pytest-pudb>=0.7.0",

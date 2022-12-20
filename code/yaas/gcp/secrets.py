@@ -52,7 +52,7 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
     )
 
 
-def get(secret_name: str) -> str:
+async def get(secret_name: str) -> str:
     """
     Retrieves a secret, by name.
 
@@ -66,10 +66,11 @@ def get(secret_name: str) -> str:
         raise SecretManagerAccessError(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
-    client = _secret_client()
     _LOGGER.info("Retrieving secret <%s>", secret_name)
     try:
-        response = client.access_secret_version(request={"name": secret_name})
+        response = await _secret_client().access_secret_version(
+            request={"name": secret_name}
+        )
     except Exception as err:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
         _LOGGER.critical(msg)
@@ -78,8 +79,8 @@ def get(secret_name: str) -> str:
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
-def _secret_client() -> secretmanager.SecretManagerServiceClient:
-    return secretmanager.SecretManagerServiceClient()
+def _secret_client() -> secretmanager.SecretManagerServiceAsyncClient:
+    return secretmanager.SecretManagerServiceAsyncClient()
 
 
 def validate_secret_resource_name(

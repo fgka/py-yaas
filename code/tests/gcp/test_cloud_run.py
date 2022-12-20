@@ -112,6 +112,8 @@ async def test_can_be_deployed_ok(
     monkeypatch.setattr(cloud_run, cloud_run._run_client.__name__, lambda: client)
     # When
     result, _ = await cloud_run.can_be_deployed(_TEST_SERVICE_NAME)
+    # Then
+    assert result == expected
 
 
 @pytest.mark.asyncio
@@ -172,9 +174,7 @@ async def test_update_service_nok_raises(
     )
     # When/Then
     with pytest.raises(cloud_run.CloudRunServiceError):
-        await cloud_run.update_service(
-            name=_TEST_SERVICE_NAME, path=path, value=value
-        )
+        await cloud_run.update_service(name=_TEST_SERVICE_NAME, path=path, value=value)
 
 
 @pytest.mark.parametrize(

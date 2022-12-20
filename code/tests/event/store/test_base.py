@@ -74,7 +74,7 @@ class _MyStore(base.Store):
         self.called = {}
         self.to_raise = set()
 
-    def _read(
+    async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         self.called[base.Store.read.__name__] = (
@@ -85,7 +85,7 @@ class _MyStore(base.Store):
             raise RuntimeError
         return self._result_snapshot
 
-    def _write(
+    async def _write(
         self,
         value: event.EventSnapshot,
     ) -> None:
@@ -93,7 +93,7 @@ class _MyStore(base.Store):
         if base.Store.write.__name__ in self.to_raise:
             raise RuntimeError
 
-    def _remove(
+    async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         self.called[base.Store.remove.__name__] = (
@@ -104,7 +104,7 @@ class _MyStore(base.Store):
             raise RuntimeError
         return self._result_snapshot
 
-    def _archive(
+    async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
         self.called[base.Store.archive.__name__] = (
@@ -215,22 +215,24 @@ class TestStore:
         # Then
         assert result == expected
 
-    def test_read_nok_start_gt_end(self):
+    @pytest.mark.asyncion
+    async def test_read_nok_start_gt_end(self):
         # Given
         start = 123
         end = start - 1
         # When/Then
         with pytest.raises(ValueError):
-            self.object.read(start_ts_utc=start, end_ts_utc=end)
+            await self.object.read(start_ts_utc=start, end_ts_utc=end)
 
-    def test_read_nok_raises(self):
+    @pytest.mark.asyncion
+    async def test_read_nok_raises(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
         self.object.to_raise.add(base.Store.read.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            self.object.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.object.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
         called = self._assert_called_only(base.Store.read.__name__)
         assert called
@@ -248,20 +250,22 @@ class TestStore:
         assert len(self.object.called) == amount
         return result
 
-    def test_write_ok_empty_request(self):
+    @pytest.mark.asyncion
+    async def test_write_ok_empty_request(self):
         # Given
         value = _TEST_EVENT_SNAPSHOT_EMPTY
         # When
-        self.object.write(value, overwrite_within_range=True)
+        await self.object.write(value, overwrite_within_range=True)
         # Then
         called = self._assert_called_only(base.Store.write.__name__)
         assert called == value
 
-    def test_write_ok_non_empty_request(self):
+    @pytest.mark.asyncion
+    async def test_write_ok_non_empty_request(self):
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
         # When
-        self.object.write(value, overwrite_within_range=True)
+        await self.object.write(value, overwrite_within_range=True)
         # Then
         called = self._assert_called_only(
             base.Store.write.__name__, base.Store.remove.__name__
@@ -269,13 +273,14 @@ class TestStore:
         assert called == value
 
     @pytest.mark.parametrize("overwrite", [True, False])
-    def test_write_nok_raises(self, overwrite: bool):
+    @pytest.mark.asyncion
+    async def test_write_nok_raises(self, overwrite: bool):
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
         self.object.to_raise.add(base.Store.write.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            self.object.write(value, overwrite_within_range=overwrite)
+            await self.object.write(value, overwrite_within_range=overwrite)
         # Then: write
         called = self.object.called.get(base.Store.write.__name__)
         assert called == value
@@ -286,14 +291,15 @@ class TestStore:
             self.object.called.get(base.Store.remove.__name__) is not None
         ) == overwrite
 
-    def test_remove_nok_raises(self):
+    @pytest.mark.asyncion
+    async def test_remove_nok_raises(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
         self.object.to_raise.add(base.Store.remove.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            self.object.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.object.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
         called = self._assert_called_only(base.Store.remove.__name__)
         assert called
@@ -301,12 +307,15 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    def test_remove_ok(self):
+    @pytest.mark.asyncion
+    async def test_remove_ok(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
         # When
-        result = self.object.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        result = await self.object.remove(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+        )
         # Then
         assert isinstance(result, event.EventSnapshot)
         called = self._assert_called_only(base.Store.remove.__name__)
@@ -315,14 +324,15 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    def test_archive_nok_raises(self):
+    @pytest.mark.asyncion
+    async def test_archive_nok_raises(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
         self.object.to_raise.add(base.Store.archive.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
         called = self._assert_called_only(base.Store.archive.__name__)
         assert called
@@ -330,12 +340,13 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    def test_archive_ok(self):
+    @pytest.mark.asyncion
+    async def test_archive_ok(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
         # When
-        self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
         called = self._assert_called_only(base.Store.archive.__name__)
         assert called
@@ -352,7 +363,7 @@ class _MyReadOnlyStore(base.ReadOnlyStore):
         self.called = False
         self._read_result = read_result
 
-    def _read(
+    async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         self.called = True
@@ -361,12 +372,13 @@ class _MyReadOnlyStore(base.ReadOnlyStore):
 
 class TestReadOnlyStore:
     @pytest.mark.parametrize("overwrite", [True, False])
-    def test_write_ok(self, overwrite: bool):
+    @pytest.mark.asyncion
+    async def test_write_ok(self, overwrite: bool):
         # Given
         obj = _MyReadOnlyStore()
         # When/Then
         with pytest.raises(base.StoreError):
-            obj.write(
+            await obj.write(
                 _TEST_EVENT_SNAPSHOT_WITH_REQUEST, overwrite_within_range=overwrite
             )
 
@@ -380,11 +392,12 @@ class TestReadOnlyStore:
             (1, 0),
         ],
     )
-    def test_remove_and_archive_ok(self, start_ts_utc: int, end_ts_utc: int):
+    @pytest.mark.asyncion
+    async def test_remove_and_archive_ok(self, start_ts_utc: int, end_ts_utc: int):
         # Given
         obj = _MyReadOnlyStore()
         # When/Then
         with pytest.raises(base.StoreError):
-            obj.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await obj.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         with pytest.raises(base.StoreError):
-            obj.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await obj.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)

@@ -50,7 +50,7 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
         """
         return self._credentials_json
 
-    def _read(
+    async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         event_lst: List[Dict[str, Any]] = google_cal.list_upcoming_events(

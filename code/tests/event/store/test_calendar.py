@@ -46,7 +46,8 @@ class TestReadOnlyGoogleCalendarStore:
         assert self.obj.calendar_id == _TEST_CALENDAR_ID
         assert self.obj.credentials_json == _TEST_CREDENTIALS_JSON
 
-    def test_read_ok(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_read_ok(self, monkeypatch):
         start_ts_utc = 0
         end_ts_utc = start_ts_utc + 123
         event_lst = [{"key": "value"}]
@@ -72,7 +73,7 @@ class TestReadOnlyGoogleCalendarStore:
         )
 
         # When
-        result = self.obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        result = await self.obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
         assert isinstance(result, event.EventSnapshot)
         assert result.source == _TEST_CALENDAR_ID

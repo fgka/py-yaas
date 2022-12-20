@@ -55,15 +55,17 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
                 archive_json_line_file=_TEST_JSON_LINE_FILE,
             )
 
-    def test_read_nok_file_does_not_exist(self):
+    @pytest.mark.asyncio
+    async def test_read_nok_file_does_not_exist(self):
         with pytest.raises(base.StoreError):
-            self.obj.read()
+            await self.obj.read()
 
-    def test_read_ok_file_empty(self):
+    @pytest.mark.asyncio
+    async def test_read_ok_file_empty(self):
         # Given
         self._create_file_with_content()
         # When
-        result = self.obj.read()
+        result = await self.obj.read()
         # Then
         assert isinstance(result, event.EventSnapshot)
         assert result.source == self.obj.json_line_file.name
@@ -77,11 +79,12 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
                 lines = [f"\n{val.as_json()}" for val in values]
                 out_file.writelines(lines)
 
-    def test_read_ok(self):
+    @pytest.mark.asyncio
+    async def test_read_ok(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         # When
-        result = self.obj.read(
+        result = await self.obj.read(
             start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
             end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
         )
@@ -153,55 +156,63 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
         assert isinstance(result, list)
         assert not result
 
-    def test__read_all_ok_file_does_not_exist(self):
+    @pytest.mark.asyncio
+    async def test__read_all_ok_file_does_not_exist(self):
         # Given/When
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         # Then
         assert isinstance(result, list)
         assert not result
 
-    def test__read_all_ok_file_empty(self):
+    @pytest.mark.asyncio
+    async def test__read_all_ok_file_empty(self):
         # Given
         self._create_file_with_content()
         # When
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         # Then
         assert isinstance(result, list)
         assert not result
 
-    def test__read_all_ok(self):
+    @pytest.mark.asyncio
+    async def test__read_all_ok(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST, _TEST_SCALE_REQUEST)
         # When
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         # Then
         assert len(result) == 2
         for val in result:
             assert val == _TEST_SCALE_REQUEST
 
-    def test_remove_ok_empty(self):
+    @pytest.mark.asyncio
+    async def test_remove_ok_empty(self):
         # Given/When
-        result = self.obj.remove()
+        result = await self.obj.remove()
         # Then
         assert result
         assert result.source == self.obj.json_line_file.name
         assert not result.timestamp_to_request
 
-    def test_remove_ok_start_not_in_range(self):
+    @pytest.mark.asyncio
+    async def test_remove_ok_start_not_in_range(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         # When
-        result = self.obj.remove(start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc + 1)
+        result = await self.obj.remove(
+            start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc + 1
+        )
         # Then
         assert result
         assert result.source == self.obj.json_line_file.name
         assert not result.timestamp_to_request
 
-    def test_remove_ok_end_not_in_range(self):
+    @pytest.mark.asyncio
+    async def test_remove_ok_end_not_in_range(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         # When
-        result = self.obj.remove(
+        result = await self.obj.remove(
             start_ts_utc=0, end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc - 1
         )
         # Then
@@ -209,11 +220,12 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
         assert result.source == self.obj.json_line_file.name
         assert not result.timestamp_to_request
 
-    def test_remove_ok(self):
+    @pytest.mark.asyncio
+    async def test_remove_ok(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         # When
-        result = self.obj.remove(
+        result = await self.obj.remove(
             start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
             end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
         )
@@ -226,56 +238,61 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
             == _TEST_SCALE_REQUEST
         )
         # Then: read
-        request_lst = self.obj._read_all()
+        request_lst = await self.obj._read_all()
         assert not request_lst
 
-    def test_write_ok_empty(self):
+    @pytest.mark.asyncio
+    async def test_write_ok_empty(self):
         # Given
         value = event.EventSnapshot(source="TEST_SOURCE")
         # When
-        self.obj.write(value)
+        await self.obj.write(value)
         # Then
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         assert not result
 
-    def test_write_ok(self):
+    @pytest.mark.asyncio
+    async def test_write_ok(self):
         # Given
         value = event.EventSnapshot.from_list_requests(
             source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
         )
         # When
-        self.obj.write(value)
+        await self.obj.write(value)
         # Then
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         assert len(result) == 1
         assert result[0] == _TEST_SCALE_REQUEST
 
-    def test_write_ok_overwrite(self):
+    @pytest.mark.asyncio
+    async def test_write_ok_overwrite(self):
         # Given
         value = event.EventSnapshot.from_list_requests(
             source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
         )
         # When
-        self.obj.write(value, overwrite_within_range=False)
+        await self.obj.write(value, overwrite_within_range=False)
         # Then
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         assert len(result) == 1
         assert result[0] == _TEST_SCALE_REQUEST
 
-    def test_write_ok_already_exist(self):
+    @pytest.mark.asyncio
+    async def test_write_ok_already_exist(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         value = event.EventSnapshot.from_list_requests(
             source="TEST_SOURCE", request_lst=[_TEST_SCALE_REQUEST]
         )
         # When
-        self.obj.write(value, overwrite_within_range=False)
+        await self.obj.write(value, overwrite_within_range=False)
         # Then
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         assert len(result) == 1
         assert result[0] == _TEST_SCALE_REQUEST
 
-    def test_write_ok_overwrite_with_existing(self):
+    @pytest.mark.asyncio
+    async def test_write_ok_overwrite_with_existing(self):
         # Given
         existing_value = request.ScaleRequest(
             topic="TEST_TOPIC", resource="TEST_RESOURCE_EXIST", timestamp_utc=13
@@ -289,38 +306,41 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
             source="TEST_SOURCE", request_lst=[new_value]
         )
         # When
-        self.obj.write(value, overwrite_within_range=True)
+        await self.obj.write(value, overwrite_within_range=True)
         # Then
-        result = self.obj._read_all()
+        result = await self.obj._read_all()
         assert len(result) == 1
         assert result[0] == new_value
 
-    def test_archive_ok_no_file(self):
+    @pytest.mark.asyncio
+    async def test_archive_ok_no_file(self):
         # Given/When
-        self.obj.archive()
+        await self.obj.archive()
         # Then
-        assert not self.obj._read_all(is_archive=True)
+        assert not await self.obj._read_all(is_archive=True)
 
-    def test_archive_ok_empty(self):
+    @pytest.mark.asyncio
+    async def test_archive_ok_empty(self):
         # Given
         self._create_file_with_content()
         # When
-        self.obj.archive()
+        await self.obj.archive()
         # Then
-        assert not self.obj._read_all(is_archive=True)
+        assert not await self.obj._read_all(is_archive=True)
 
-    def test_archive_ok(self):
+    @pytest.mark.asyncio
+    async def test_archive_ok(self):
         # Given
         self._create_file_with_content(_TEST_SCALE_REQUEST)
         # When
-        self.obj.archive(
+        await self.obj.archive(
             start_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
             end_ts_utc=_TEST_SCALE_REQUEST.timestamp_utc,
         )
         # Then: archive
-        result = self.obj._read_all(is_archive=True)
+        result = await self.obj._read_all(is_archive=True)
         assert len(result) == 1
         assert result[0] == _TEST_SCALE_REQUEST
         # Then: store
-        current = self.obj._read_all(is_archive=False)
+        current = await self.obj._read_all(is_archive=False)
         assert not current

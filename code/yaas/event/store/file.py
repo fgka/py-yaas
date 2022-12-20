@@ -7,6 +7,8 @@ import pathlib
 import threading
 from typing import List, Optional
 
+import aiofiles
+
 from yaas.dto import event, request
 from yaas.event.store import base
 from yaas import const, logger
@@ -64,15 +66,15 @@ class JsonLineFileStore(base.Store):
         """
         return self._archive_json_line_file
 
-    def _read(
+    async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         request_lst = None
         with self._file_lock:
-            with open(
+            async with aiofiles.open(
                 self._json_line_file, "r", encoding=const.ENCODING_UTF8
             ) as in_file:
-                for line in in_file.readlines():
+                async for line in in_file:
                     if line.strip():
                         req = request.ScaleRequest.from_json(line.strip())
                         request_lst = self._populate_timestamp_to_request(
@@ -108,19 +110,21 @@ class JsonLineFileStore(base.Store):
             request_lst.append(req)
         return request_lst
 
-    def _write(self, value: event.EventSnapshot) -> None:
-        self._write_only_new(value, is_archive=False)
+    async def _write(self, value: event.EventSnapshot) -> None:
+        await self._write_only_new(value, is_archive=False)
 
-    def _write_only_new(
+    async def _write_only_new(
         self, value: event.EventSnapshot, *, is_archive: Optional[bool] = False
     ) -> None:
-        all_existent = set(self._read_all(is_archive=is_archive))
+        all_existent = set(await self._read_all(is_archive=is_archive))
         path = self._json_line_file if not is_archive else self._archive_json_line_file
         with self._file_lock:
-            with open(path, "a", encoding=const.ENCODING_UTF8) as out_file:
+            async with aiofiles.open(
+                path, "a", encoding=const.ENCODING_UTF8
+            ) as out_file:
                 for req_lst in value.timestamp_to_request.values():
                     # only add non-existent
-                    out_file.writelines(
+                    await out_file.writelines(
                         [
                             f"\n{val.as_json()}"
                             for val in req_lst
@@ -128,43 +132,45 @@ class JsonLineFileStore(base.Store):
                         ]
                     )
 
-    def _read_all(
+    async def _read_all(
         self, *, is_archive: Optional[bool] = False
     ) -> List[request.ScaleRequest]:
         result = []
         path = self._json_line_file if not is_archive else self._archive_json_line_file
         if path.exists():
             with self._file_lock:
-                with open(path, "r", encoding=const.ENCODING_UTF8) as in_file:
+                async with aiofiles.open(
+                    path, "r", encoding=const.ENCODING_UTF8
+                ) as in_file:
                     result = [
                         request.ScaleRequest.from_json(line.strip())
-                        for line in in_file.readlines()
+                        async for line in in_file
                         if line.strip()
                     ]
         return result
 
-    def _remove(
+    async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         request_lst = []
-        all_request_lst = self._read_all()
+        all_request_lst = await self._read_all()
         with self._file_lock:
-            with open(
+            async with aiofiles.open(
                 self._json_line_file, "w", encoding=const.ENCODING_UTF8
             ) as out_file:
                 for req in all_request_lst:
                     if start_ts_utc <= req.timestamp_utc <= end_ts_utc:
                         request_lst.append(req)
                     else:
-                        out_file.write(f"\n{req.as_json()}")
+                        await out_file.write(f"\n{req.as_json()}")
         return self._snapshot_from_request_lst(request_lst)
 
-    def _archive(
+    async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
-        to_archive = self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        to_archive = await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         try:
-            self._write_only_new(to_archive, is_archive=True)
+            await self._write_only_new(to_archive, is_archive=True)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error(
                 "Could not archive into <%s> snapshot <%s>. Error: %s",
@@ -173,7 +179,7 @@ class JsonLineFileStore(base.Store):
                 err,
             )
             try:
-                self._write_only_new(to_archive, is_archive=False)
+                await self._write_only_new(to_archive, is_archive=False)
             except Exception as err_roll_back:
                 raise RuntimeError(
                     f"[DATA LOSS] Removed snapshot <{to_archive} for store, "

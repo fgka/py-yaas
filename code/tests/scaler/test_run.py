@@ -129,7 +129,9 @@ class TestCloudRunScaler:
         update_value = None
         can_be_value = None
 
-        async def mocked_update_service(*, name: str, path: str, value: Optional[Any]) -> Any:
+        async def mocked_update_service(
+            *, name: str, path: str, value: Optional[Any]
+        ) -> Any:
             nonlocal update_name, update_path, update_value
             update_name = name
             update_path = path

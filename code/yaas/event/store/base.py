@@ -83,7 +83,7 @@ class Store(abc.ABC):
             )
         return result
 
-    def read(
+    async def read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         """
@@ -110,7 +110,7 @@ class Store(abc.ABC):
                 f"Start value <{start_ts_utc}> must be greater or equal end value <{end_ts_utc}>. Got start - end = {start_ts_utc - end_ts_utc}"
             )
         try:
-            result = self._read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            result = await self._read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         except Exception as err:
             raise StoreError(
                 f"Could not read {event.EventSnapshot.__name__} for effective range [{start_ts_utc}, {end_ts_utc}]. Error: {err}"
@@ -122,12 +122,12 @@ class Store(abc.ABC):
         return result
 
     @abc.abstractmethod
-    def _read(
+    async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
-    def write(
+    async def write(
         self,
         value: event.EventSnapshot,
         *,
@@ -152,19 +152,19 @@ class Store(abc.ABC):
             )
         if overwrite_within_range and value.timestamp_to_request:
             start_ts_utc, end_ts_utc = value.range()
-            self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         try:
-            self._write(value)
+            await self._write(value)
         except Exception as err:
             raise StoreError(f"Could not write {value} to store. Error: {err}") from err
 
-    def _write(
+    async def _write(
         self,
         value: event.EventSnapshot,
     ) -> None:
         raise NotImplementedError
 
-    def remove(
+    async def remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         """
@@ -186,7 +186,9 @@ class Store(abc.ABC):
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
-            result = self._remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            result = await self._remove(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
         except Exception as err:
             raise StoreError(
                 f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. "
@@ -200,12 +202,12 @@ class Store(abc.ABC):
         return result
 
     @abc.abstractmethod
-    def _remove(
+    async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
-    def archive(
+    async def archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
         """
@@ -228,7 +230,7 @@ class Store(abc.ABC):
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
-            self._archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self._archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         except Exception as err:
             raise StoreError(
                 f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. "
@@ -236,7 +238,7 @@ class Store(abc.ABC):
             ) from err
 
     @abc.abstractmethod
-    def _archive(
+    async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
         raise NotImplementedError
@@ -247,7 +249,7 @@ class ReadOnlyStore(Store, abc.ABC):
     To be implemented by read-only stores.
     """
 
-    def _write(
+    async def _write(
         self,
         value: event.EventSnapshot,
     ) -> None:
@@ -255,14 +257,14 @@ class ReadOnlyStore(Store, abc.ABC):
             f"This is a {self.__class__.__name__} instance which is also read-only."
         )
 
-    def _remove(
+    async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         raise StoreError(
             f"This is a {self.__class__.__name__} instance which is also read-only."
         )
 
-    def _archive(
+    async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
         raise StoreError(

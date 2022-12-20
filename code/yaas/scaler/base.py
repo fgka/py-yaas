@@ -118,7 +118,7 @@ class Scaler(abc.ABC):
             ``value`` converted to a py:cls:`Scaler`.
         """
 
-    def enact(self) -> bool:
+    async def enact(self) -> bool:
         """
         Apply the required scaling command onto the given resource.
 
@@ -126,9 +126,9 @@ class Scaler(abc.ABC):
             :py:obj:`True` if successfully enacted.
         """
         result = False
-        can_enact, reason = self.can_enact()
+        can_enact, reason = await self.can_enact()
         if can_enact:
-            self._safe_enact()
+            await self._safe_enact()
             result = True
         else:
             _LOGGER.warning(
@@ -141,13 +141,13 @@ class Scaler(abc.ABC):
         return result
 
     @abc.abstractmethod
-    def _safe_enact(self) -> None:
+    async def _safe_enact(self) -> None:
         """
         When this is call, :py:meth:`can_enact` has been called.
         """
 
     @abc.abstractmethod
-    def can_enact(self) -> Tuple[bool, str]:
+    async def can_enact(self) -> Tuple[bool, str]:
         """
         Informs if the resource is ready for enacting the scaling.
         Reasons for returning :py:obj:`False` are:

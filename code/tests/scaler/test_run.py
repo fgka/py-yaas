@@ -121,20 +121,21 @@ class TestCloudRunScaler:
         # Then
         assert obj is not None
 
-    def test_enact_ok(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_enact_ok(self, monkeypatch):
         # Given
         update_name = None
         update_path = None
         update_value = None
         can_be_value = None
 
-        def mocked_update_service(*, name: str, path: str, value: Optional[Any]) -> Any:
+        async def mocked_update_service(*, name: str, path: str, value: Optional[Any]) -> Any:
             nonlocal update_name, update_path, update_value
             update_name = name
             update_path = path
             update_value = value
 
-        def mocked_can_be_deployed(value: str) -> Tuple[bool, str]:
+        async def mocked_can_be_deployed(value: str) -> Tuple[bool, str]:
             nonlocal can_be_value
             can_be_value = value
             return True, None
@@ -157,7 +158,7 @@ class TestCloudRunScaler:
             )
             obj = run.CloudRunScaler(definition)
             # When
-            result = obj.enact()
+            result = await obj.enact()
             # Then
             assert result
             assert can_be_value == obj.definition.resource

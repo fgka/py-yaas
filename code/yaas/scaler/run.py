@@ -121,18 +121,18 @@ class CloudRunScaler(base.Scaler):
     def from_request(cls, value: request.ScaleRequest) -> "CloudRunScaler":
         return CloudRunScaler(definition=CloudRunScalingDefinition.from_request(value))
 
-    def _safe_enact(self) -> None:
-        CloudRunScaler._enact(
+    async def _safe_enact(self) -> None:
+        await CloudRunScaler._enact(
             resource=self.definition.resource,
             field=self.definition.command.parameter,
             target=self.definition.command.target,
         )
 
-    def can_enact(self) -> Tuple[bool, str]:
-        return cloud_run.can_be_deployed(self.definition.resource)
+    async def can_enact(self) -> Tuple[bool, str]:
+        return await cloud_run.can_be_deployed(self.definition.resource)
 
     @classmethod
-    def _enact(cls, *, resource: str, field: str, target: int) -> None:
+    async def _enact(cls, *, resource: str, field: str, target: int) -> None:
         _LOGGER.info("Scaling <%s> to <%d> for instance <%s>", field, target, resource)
         if CloudRunCommandTypes.MIN_INSTANCES.value == field:
             path = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
@@ -142,5 +142,5 @@ class CloudRunScaler(base.Scaler):
             path = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
         else:
             raise ValueError(f"Scaling {field} is not supported in {cls.__name__}")
-        cloud_run.update_service(name=resource, path=path, value=target)
+        await cloud_run.update_service(name=resource, path=path, value=target)
         _LOGGER.info("Scaled %s to %d for instance %s", field, target, resource)

@@ -6,6 +6,8 @@
 # type: ignore
 from typing import Any, Dict, List, Tuple
 
+import pytest
+
 from yaas.dto import request
 from yaas.scaler import base
 
@@ -96,10 +98,10 @@ class _MyScaler(base.Scaler):
         definition = _MyScalingDefinition.from_request(value)
         return _MyScaler(definition=definition)
 
-    def _safe_enact(self) -> None:
+    async def _safe_enact(self) -> None:
         self.called[base.Scaler._safe_enact.__name__] = True
 
-    def can_enact(self) -> Tuple[bool, str]:
+    async def can_enact(self) -> Tuple[bool, str]:
         self.called[base.Scaler.can_enact.__name__] = True
         return self._can_enact, self._reason
 
@@ -116,26 +118,28 @@ class TestScaler:
         assert not result.called.get(base.Scaler._safe_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
 
-    def test_enact_ok(self):
+    @pytest.mark.asyncio
+    async def test_enact_ok(self):
         # Given
         req, _ = _create_request_and_definition()
         obj = _MyScaler.from_request(req)
         obj._can_enact = True
         # When
-        result = obj.enact()
+        result = await obj.enact()
         # Then
         assert result
         assert obj.called.get(base.Scaler.can_enact.__name__)
         assert obj.called.get(base.Scaler._safe_enact.__name__)
 
-    def test_enact_nok(self):
+    @pytest.mark.asyncio
+    async def test_enact_nok(self):
         # Given
         req, _ = _create_request_and_definition()
         obj = _MyScaler.from_request(req)
         obj._can_enact = False
         obj._reason = "TEST_REASON"
         # When
-        result = obj.enact()
+        result = await obj.enact()
         # Then
         assert not result
         assert obj.called.get(base.Scaler.can_enact.__name__)

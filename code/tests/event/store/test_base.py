@@ -215,7 +215,7 @@ class TestStore:
         # Then
         assert result == expected
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_read_nok_start_gt_end(self):
         # Given
         start = 123
@@ -224,7 +224,7 @@ class TestStore:
         with pytest.raises(ValueError):
             await self.object.read(start_ts_utc=start, end_ts_utc=end)
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_read_nok_raises(self):
         # Given
         start_ts_utc = 13
@@ -250,7 +250,7 @@ class TestStore:
         assert len(self.object.called) == amount
         return result
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_write_ok_empty_request(self):
         # Given
         value = _TEST_EVENT_SNAPSHOT_EMPTY
@@ -260,7 +260,7 @@ class TestStore:
         called = self._assert_called_only(base.Store.write.__name__)
         assert called == value
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_write_ok_non_empty_request(self):
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
@@ -273,7 +273,7 @@ class TestStore:
         assert called == value
 
     @pytest.mark.parametrize("overwrite", [True, False])
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_write_nok_raises(self, overwrite: bool):
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
@@ -291,7 +291,7 @@ class TestStore:
             self.object.called.get(base.Store.remove.__name__) is not None
         ) == overwrite
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_remove_nok_raises(self):
         # Given
         start_ts_utc = 13
@@ -307,7 +307,7 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_remove_ok(self):
         # Given
         start_ts_utc = 13
@@ -324,7 +324,7 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_archive_nok_raises(self):
         # Given
         start_ts_utc = 13
@@ -340,7 +340,7 @@ class TestStore:
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_archive_ok(self):
         # Given
         start_ts_utc = 13
@@ -372,7 +372,7 @@ class _MyReadOnlyStore(base.ReadOnlyStore):
 
 class TestReadOnlyStore:
     @pytest.mark.parametrize("overwrite", [True, False])
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_write_ok(self, overwrite: bool):
         # Given
         obj = _MyReadOnlyStore()
@@ -392,7 +392,7 @@ class TestReadOnlyStore:
             (1, 0),
         ],
     )
-    @pytest.mark.asyncion
+    @pytest.mark.asyncio
     async def test_remove_and_archive_ok(self, start_ts_utc: int, end_ts_utc: int):
         # Given
         obj = _MyReadOnlyStore()

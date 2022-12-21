@@ -49,7 +49,9 @@ _TEST_EVENT: Dict[str, Any] = {
     "reminders": {"useDefault": False},
     "eventType": "default",
 }
+_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE: str = "Description event repeat daily<br> yaas | projects/src-bq/locations/europe-west3/services/hello | min_instances&nbsp; &nbsp;10.<br> standard | projects/src-bq/locations/europe-west3/services/hello | min_instances 11.<br>yaas. | projects/src-bq/locations/europe-west3/services/hello|min_instances  12  <br>    standard. |. projects/src-bq/locations/europe-west3/services/hello. | min_instances 13. <br>yaas |CloudRun / hello@  src-bq/europe-west3 | min_instances 14<br>standard | CloudRun/hello@src-bq/europe-west3 | min_instances 15    <br><br><br>  yaas|CloudRun hello   @  src-bq europe-west3   | min_instances&nbsp; &nbsp;16<br><br>standard | CloudRun hello   @  src-bq europe-west3    | min_instances 17<br><u></u><u></u>"
 # pylint: enable=line-too-long
+_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE_AMOUNT: int = 8
 
 
 def _str_to_timestamp(value: str) -> int:
@@ -135,6 +137,19 @@ def test_to_request_ok_multiple():
     for ndx, req in enumerate(result):
         assert req.topic == f"{_TEST_SCALE_REQUEST.topic}_{ndx}"
         assert req.original_json_event == json.dumps(event)
+
+
+def test_to_request_ok_real_example():
+    # Given
+    event = {
+        **_TEST_EVENT,
+        **dict(description=_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE),
+    }
+    # When
+    result = parser.to_request(event)
+    # Then
+    assert isinstance(result, list)
+    assert len(result) == _TEST_FULL_EVENT_DESCRIPTION_EXAMPLE_AMOUNT
 
 
 def _generate_event_start_and_expected(

@@ -127,7 +127,7 @@ async def list_upcoming_events(
     """
     # pylint: enable=line-too-long
     # Normalize input
-    service = _calendar_service(credentials_json=credentials_json)
+    service = await _calendar_service(credentials_json=credentials_json)
     if end is None:
         if not isinstance(amount, int):
             amount = DEFAULT_LIST_EVENTS_AMOUNT
@@ -216,7 +216,9 @@ async def _calendar_service(
             "Creating cal credentials service for client ID %s",
             cal_creds.client_id,
         )
-        result = discovery.build("cal", "v3", credentials=cal_creds)
+        result = discovery.build(
+            "calendar", "v3", credentials=cal_creds, cache_discovery=False
+        )
         _LOGGER.info(
             "Created cal credentials service for client ID %s", cal_creds.client_id
         )
@@ -385,13 +387,6 @@ def _create_request() -> requests.Request:
     return requests.Request()
 
 
-_CREDENTIALS_JSON_FILE_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_JSON_FILENAME"
-_DEFAULT_CREDENTIALS_JSON_FILE: str = "calendar_credentials.json"
-_CALENDAR_SCOPES: List[str] = [
-    "https://www.googleapis.com/auth/calendar.readonly",
-]
-
-
 async def _json_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
@@ -415,6 +410,11 @@ async def _json_credentials(
     return result
 
 
+_CALENDAR_SCOPES: List[str] = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
+
+
 def _app_flow_from_client_secrets_file(
     value: Optional[pathlib.Path],
 ) -> flow.InstalledAppFlow:
@@ -427,6 +427,10 @@ def _app_flow_run_local_server(
 ) -> credentials.Credentials:
     """To make async"""
     return app_flow.run_local_server(**kwargs)
+
+
+_CREDENTIALS_JSON_FILE_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_JSON_FILENAME"
+_DEFAULT_CREDENTIALS_JSON_FILE: str = f"{os.getcwd()}/calendar_credentials.json"
 
 
 def _json_filepath(value: Optional[pathlib.Path] = None) -> pathlib.Path:

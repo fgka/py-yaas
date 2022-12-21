@@ -18,7 +18,7 @@ from yaas.scaler import base
 _LOGGER = logger.get(__name__)
 
 _CLOUD_RUN_COMMAND_REGEX: re.Pattern = re.compile(
-    pattern=r"^\s*([^\s]+)\s+([\d]+)\s*$", flags=re.IGNORECASE
+    pattern=r"^\s*([^\s\.]+)\.?\s+\.?\s*([\d]+)\s*$", flags=re.IGNORECASE
 )
 """
 Example input::

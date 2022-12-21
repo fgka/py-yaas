@@ -14,6 +14,7 @@ import pytest
 
 from google.auth.transport import requests
 from google.oauth2 import credentials
+from googleapiclient import discovery, http  # pylint: disable=unused-import
 
 from yaas.cal import google_cal
 
@@ -64,7 +65,7 @@ async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
     amount_used = None
     expected = ["TEST"]
 
-    def mocked_calendar_service(**kwargs) -> Any:
+    async def mocked_calendar_service(**kwargs) -> Any:
         nonlocal credentials_json_arg
         credentials_json_arg = kwargs.get("credentials_json")
         return service_arg
@@ -101,27 +102,39 @@ async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
         assert kwargs_for_list_arg.get(key) == val
 
 
-class _StubExecutable:
+class _StubHttpRequest:
+    """
+    Stub of :py:class:`http.HttpRequest`.
+    """
+
     def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
         self._result = result
         self.called = {}
 
     def execute(self) -> Dict[str, Any]:
-        self.called[_StubExecutable.execute.__name__] = True
+        self.called[_StubHttpRequest.execute.__name__] = True
         return dict(items=self._result)
 
 
 class _StubEvents:
+    """
+    Stub of :py:class:`discovery.Resource`.
+    """
+
     def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
-        self._executable = _StubExecutable(result=result)
+        self._executable = _StubHttpRequest(result=result)
         self.called = {}
 
-    def list(self, **kwargs) -> _StubExecutable:
+    def list(self, **kwargs) -> _StubHttpRequest:
         self.called[_StubEvents.list.__name__] = kwargs
         return self._executable
 
 
 class _StubGoogleCalServiceResource:
+    """
+    Stub of :py:class:`discovery.Resource`.
+    """
+
     def __init__(self, *, result: Optional[List[Dict[str, Any]]] = None):
         self._events = _StubEvents(result=result)
         self.called = {}
@@ -148,7 +161,7 @@ async def test__list_all_events_ok_amount_given():
     assert len(result) == amount
     assert service.called.get(_StubGoogleCalServiceResource.events.__name__)
     assert service._events.called.get(_StubEvents.list.__name__) == kwargs_for_list
-    assert service._events._executable.called.get(_StubExecutable.execute.__name__)
+    assert service._events._executable.called.get(_StubHttpRequest.execute.__name__)
 
 
 @pytest.mark.parametrize(

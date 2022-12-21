@@ -4,10 +4,12 @@
 CLI entry point to test individual parts of the code.
 """
 # pylint: enable=line-too-long
+import asyncio
 from datetime import datetime
+import functools
 import io
 import pathlib
-from typing import Optional
+from typing import Callable, Optional
 
 # From: https://cloud.google.com/logging/docs/setup/python
 
@@ -38,6 +40,25 @@ from yaas.scaler import run, standard
 _LOGGER = logger.get(__name__)
 
 
+def coro(func: Callable):
+    """
+    A decorator to allow :py:module:`click` to play well with :py:module:`asyncio`.
+
+    Source: https://github.com/pallets/click/issues/85#issuecomment-503464628
+    Args:
+        func:
+
+    Returns:
+
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(func(*args, **kwargs))
+
+    return wrapper
+
+
 @click.group(help="CLI entry point -- Description here.")
 def cli() -> None:
     """
@@ -46,14 +67,17 @@ def cli() -> None:
 
 
 @cli.command(help="List upcoming events")
-@click.option("--cal-id", required=True, type=str, help="Which calendar ID to read")
+@click.option(
+    "--calendar-id", required=True, type=str, help="Which calendar ID to read"
+)
 @click.option(
     "--json-creds", required=False, type=click.File("r"), help="JSON credentials file"
 )
 @click.option(
     "--start-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
 )
-def list_events(
+@coro
+async def list_events(
     calendar_id: str,
     json_creds: Optional[io.TextIOWrapper] = None,
     start_day: Optional[str] = None,
@@ -72,7 +96,7 @@ def list_events(
             credentials_json = pathlib.Path(json_creds.name).absolute()
         if start_day:
             start = datetime.fromisoformat(start_day)
-        events = google_cal.list_upcoming_events(
+        events = await google_cal.list_upcoming_events(
             calendar_id=calendar_id, credentials_json=credentials_json, start=start
         )
 
@@ -106,7 +130,8 @@ def list_events(
 @click.option(
     "--value", required=True, type=int, help="Value to be set to the parameter"
 )
-def scale_cloud_run(name: str, param: str, value: int) -> None:
+@coro
+async def scale_cloud_run(name: str, param: str, value: int) -> None:
     """
     Create a :py:cls:`request.ScaleRequest` and, from this request, a :py:cls:`run.CloudRunScaler`
         based on the arguments.
@@ -123,7 +148,7 @@ def scale_cloud_run(name: str, param: str, value: int) -> None:
         command=f"{param} {value}",
     )
     scaler = run.CloudRunScaler.from_request(req)
-    scaler.enact()
+    await scaler.enact()
 
 
 @cli.command(help="Get Cloud Run service definition")
@@ -133,14 +158,15 @@ def scale_cloud_run(name: str, param: str, value: int) -> None:
     help="Cloud Run service full resource name in the form:"
     "projects/MY_PROJECT/locations/MY_LOCATION/services/MY_SERVICE",
 )
-def get_cloud_run(name: str) -> None:
+@coro
+async def get_cloud_run(name: str) -> None:
     """
     Retrieves the service definition based on its name
 
     Args:
         name: service full-qualified name
     """
-    result = cloud_run.get_service(name)
+    result = await cloud_run.get_service(name)
     print(f"Service {name} resulted in:\n{result}\n")
 
 

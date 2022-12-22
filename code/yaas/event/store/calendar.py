@@ -53,7 +53,7 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
     async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        event_lst: List[Dict[str, Any]] = google_cal.list_upcoming_events(
+        event_lst: List[Dict[str, Any]] = await google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,
             credentials_json=self._credentials_json,
             start=start_ts_utc,
@@ -62,7 +62,8 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
         request_lst: List[request.ScaleRequest] = []
         for item in event_lst:
             for req in parser.to_request(item):
-                request_lst.append(req)
+                if start_ts_utc <= req.timestamp_utc <= end_ts_utc:
+                    request_lst.append(req)
         return event.EventSnapshot.from_list_requests(
             source=self._calendar_id, request_lst=request_lst
         )

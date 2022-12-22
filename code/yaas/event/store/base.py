@@ -5,7 +5,7 @@ Basic definition of event stores.
 """
 import abc
 from datetime import datetime, timedelta
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 from yaas.dto import event
 from yaas import logger
@@ -59,8 +59,10 @@ class Store(abc.ABC):
         self._default_end_ts_utc_fn = default_end_ts_utc_fn
         self._max_end_ts_utc_fn = max_end_ts_utc_fn
 
-    def _effective_start_ts_utc(self, value: Optional[int] = None) -> Optional[int]:
-        result = value
+    def _effective_start_ts_utc(
+        self, value: Optional[Union[int, float, datetime]] = None
+    ) -> Optional[Any]:
+        result = self._get_int_ts(value)
         if result is None:
             result = self._default_start_ts_utc_fn()
         if isinstance(result, int):
@@ -71,8 +73,19 @@ class Store(abc.ABC):
             )
         return result
 
-    def _effective_end_ts_utc(self, value: Optional[int] = None) -> Optional[int]:
+    @staticmethod
+    def _get_int_ts(value: Optional[Union[int, float, datetime]] = None) -> int:
         result = value
+        if isinstance(value, float):
+            result = int(value)
+        elif isinstance(value, datetime):
+            result = int(value.timestamp())
+        return result
+
+    def _effective_end_ts_utc(
+        self, value: Optional[Union[int, float, datetime]] = None
+    ) -> Optional[int]:
+        result = self._get_int_ts(value)
         if result is None:
             result = self._default_end_ts_utc_fn()
         if isinstance(result, int):
@@ -84,7 +97,10 @@ class Store(abc.ABC):
         return result
 
     async def read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[Union[int, float, datetime]] = None,
+        end_ts_utc: Optional[Union[int, float, datetime]] = None,
     ) -> event.EventSnapshot:
         """
         Will retrieve a snapshot from the store that contains all events
@@ -107,17 +123,21 @@ class Store(abc.ABC):
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         if start_ts_utc > end_ts_utc:
             raise ValueError(
-                f"Start value <{start_ts_utc}> must be greater or equal end value <{end_ts_utc}>. Got start - end = {start_ts_utc - end_ts_utc}"
+                f"Start value <{start_ts_utc}> must be greater or equal end value <{end_ts_utc}>. "
+                f"Got start - end = {start_ts_utc - end_ts_utc}"
             )
         try:
             result = await self._read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         except Exception as err:
             raise StoreError(
-                f"Could not read {event.EventSnapshot.__name__} for effective range [{start_ts_utc}, {end_ts_utc}]. Error: {err}"
+                f"Could not read {event.EventSnapshot.__name__} "
+                f"for effective range [{start_ts_utc}, {end_ts_utc}]. "
+                f"Error: {err}"
             ) from err
         if not isinstance(result, event.EventSnapshot):
             raise StoreError(
-                f"Read did not return a valid {event.EventSnapshot.__name__} instance. Got <{result}>({type(result)})"
+                f"Read did not return a valid {event.EventSnapshot.__name__} instance. "
+                f"Got <{result}>({type(result)})"
             )
         return result
 
@@ -165,7 +185,10 @@ class Store(abc.ABC):
         raise NotImplementedError
 
     async def remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[Union[int, float, datetime]] = None,
+        end_ts_utc: Optional[Union[int, float, datetime]] = None,
     ) -> event.EventSnapshot:
         """
         Will remove all events within the range specified by ``[start_ts_utc, end_ts_utc]``
@@ -208,7 +231,10 @@ class Store(abc.ABC):
         raise NotImplementedError
 
     async def archive(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[Union[int, float, datetime]] = None,
+        end_ts_utc: Optional[Union[int, float, datetime]] = None,
     ) -> None:
         """
         Similar to :py:meth:`remove` but will move the data out of the current store into a

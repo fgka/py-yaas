@@ -115,9 +115,28 @@ class _MyStore(base.Store):
             raise RuntimeError
 
 
-class TestStore:
+_TEST_DATETIME: datetime = datetime.utcnow()
+
+
+class TestStore:  # pylint: disable=too-many-public-methods
     def setup(self):
         self.object = _MyStore()
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (None, None),
+            ("", ""),
+            (123, 123),
+            (123.5, 123),
+            (_TEST_DATETIME, int(_TEST_DATETIME.timestamp())),
+        ],
+    )
+    def test__get_int_ts_ok(self, value: Any, expected: Any):
+        # Given/When
+        result = self.object._get_int_ts(value)
+        # Then
+        assert result == expected
 
     def test__effective_start_ts_utc_ok_value_none(self):
         # Given

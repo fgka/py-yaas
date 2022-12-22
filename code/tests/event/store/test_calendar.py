@@ -52,7 +52,7 @@ class TestReadOnlyGoogleCalendarStore:
         end_ts_utc = start_ts_utc + 123
         event_lst = [{"key": "value"}]
 
-        def mocked_list_upcoming_events(**kwargs) -> List[Dict[str, Any]]:
+        async def mocked_list_upcoming_events(**kwargs) -> List[Dict[str, Any]]:
             assert kwargs.get("calendar_id") == _TEST_CALENDAR_ID
             assert kwargs.get("credentials_json") == _TEST_CREDENTIALS_JSON
             assert kwargs.get("start") == start_ts_utc

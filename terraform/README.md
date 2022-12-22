@@ -56,7 +56,8 @@ Without integration test data:
 TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
-  -var "project_id=${PROJECT_ID}"
+  -var "project_id=${PROJECT_ID}" \
+  -var "region=${REGION}"
 ```
 
 ## Apply

@@ -7,9 +7,10 @@
 from typing import Any, Dict, Optional, Tuple
 import pytest
 
-from yaas.dto import request
 from yaas.gcp import cloud_run_const
 from yaas.scaler import run
+
+from tests import common
 
 _CALLED: Dict[str, bool] = {}
 
@@ -88,8 +89,7 @@ class TestCloudRunScalingDefinition:
 
     def test_from_request(self):
         # Given
-        req = request.ScaleRequest(
-            topic="TEST_TOPIC",
+        req = common.create_scale_request(
             resource=_TEST_CLOUD_RUN_RESOURCE_STR,
             command=f"{run.CloudRunCommandTypes.CONCURRENCY.value} 123",
         )
@@ -111,8 +111,7 @@ class TestCloudRunScaler:
 
     def test_from_request_ok(self):
         # Given
-        req = request.ScaleRequest(
-            topic="TEST_TOPIC",
+        req = common.create_scale_request(
             resource=_TEST_CLOUD_RUN_RESOURCE_STR,
             command=f"{run.CloudRunCommandTypes.CONCURRENCY.value} 123",
         )

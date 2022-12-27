@@ -11,6 +11,8 @@ import pytest
 from yaas.dto import request
 from yaas.scaler import base
 
+from tests import common
+
 _CALLED: Dict[str, bool] = {}
 
 
@@ -72,7 +74,7 @@ def _create_request_and_definition(
     obj = _MyScalingDefinition(
         resource=resource, command=command, timestamp_utc=timestamp_utc
     )
-    req = request.ScaleRequest(
+    req = common.create_scale_request(
         topic=topic,
         resource=obj.resource,
         command=command_str,
@@ -146,44 +148,46 @@ class TestScaler:
         assert not obj.called.get(base.Scaler._safe_enact.__name__)
 
 
-class _MyCategoryTypes(base.CategoryTypes):
+class _MyCategoryTypes(base.CategoryType):
     CATEGORY_A = "Category_1"
     CATEGORY_B = "Category_2"
 
 
-class _MyCategoryScalingCommandParser(base.CategoryScalingCommandParser):
+class _MyCategoryScaleRequestProcessor(base.CategoryScaleRequestProcessor):
 
     called = {}
 
     @classmethod
     def _create_scaler(cls, value: request.ScaleRequest) -> base.Scaler:
-        cls.called[_MyCategoryScalingCommandParser._create_scaler.__name__] = True
+        cls.called[_MyCategoryScaleRequestProcessor._create_scaler.__name__] = True
         return _MyScaler.from_request(value)
 
     @classmethod
-    def supported_categories(cls) -> List[base.CategoryTypes]:
-        cls.called[_MyCategoryScalingCommandParser.supported_categories.__name__] = True
+    def supported_categories(cls) -> List[base.CategoryType]:
+        cls.called[
+            _MyCategoryScaleRequestProcessor.supported_categories.__name__
+        ] = True
         return list(_MyCategoryTypes)
 
 
-class TestCategoryScalingCommandParser:
+class TestCategoryScaleRequestProcessor:
     def test_ctor_ok(self):
         # Given
         req, _ = _create_request_and_definition()
         # When
-        obj = _MyCategoryScalingCommandParser(req)
+        obj = _MyCategoryScaleRequestProcessor(req)
         # Then
         assert obj is not None
         assert obj.request == req
-        assert _MyCategoryScalingCommandParser.called.get(
-            base.CategoryScalingCommandParser._create_scaler.__name__
+        assert _MyCategoryScaleRequestProcessor.called.get(
+            base.CategoryScaleRequestProcessor._create_scaler.__name__
         )
         assert obj.scaler is not None
-        assert not _MyCategoryScalingCommandParser.called.get(
-            base.CategoryScalingCommandParser.supported_categories.__name__
+        assert not _MyCategoryScaleRequestProcessor.called.get(
+            base.CategoryScaleRequestProcessor.supported_categories.__name__
         )
 
     def test_is_supported_ok(self):
         for item in _MyCategoryTypes:
-            assert _MyCategoryScalingCommandParser.is_supported(item.name)
-            assert not _MyCategoryScalingCommandParser.is_supported(item.value)
+            assert _MyCategoryScaleRequestProcessor.is_supported(item.name)
+            assert not _MyCategoryScaleRequestProcessor.is_supported(item.value)

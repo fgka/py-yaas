@@ -6,10 +6,9 @@ Events are expected to come out of `list API`_.
 
 .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
 """
-import json
-
 # pylint: enable=line-too-long
 from datetime import datetime
+import json
 import re
 from typing import Any, Dict, List, Optional
 
@@ -74,7 +73,10 @@ Groups on matching are::
 # pylint: enable=line-too-long
 
 
-def to_request(event: Optional[Dict[str, Any]] = None) -> List[request.ScaleRequest]:
+def to_request(
+    *,
+    event: Optional[Dict[str, Any]] = None,
+) -> List[request.ScaleRequest]:
     """
     Parses the event for scaling targets. It uses `start` for the start time
         and `description` to get the resources and values to be scaled.
@@ -141,7 +143,9 @@ def _parse_start_to_utc(value: Dict[str, str]) -> datetime:
 
 
 def _parse_event_description(
-    value: str, start_utc: datetime, json_event: str
+    value: str,
+    start_utc: datetime,
+    json_event: str,
 ) -> List[request.ScaleRequest]:
     # pylint: disable=line-too-long
     """
@@ -173,7 +177,9 @@ def _extract_text_from_html(value: str) -> str:
 
 
 def _parse_description_target_line(
-    value: str, timestamp_utc: int, json_event: str
+    value: str,
+    timestamp_utc: int,
+    json_event: str,
 ) -> Optional[request.ScaleRequest]:
     result = None
     resource_spec_value_match = (

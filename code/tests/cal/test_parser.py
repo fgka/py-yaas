@@ -15,6 +15,9 @@ import pytest
 from yaas.cal import parser
 from yaas.dto import request
 
+from tests import common
+
+
 _TEST_EVENT_START_TIME: str = "2022-10-18T16:00:00+02:00"
 _TEST_EVENT_DESCRIPTION_TMPL: str = "Description event repeat daily<br>%s<br>"
 # pylint: disable=line-too-long
@@ -58,10 +61,7 @@ def _str_to_timestamp(value: str) -> int:
     return int(datetime.fromisoformat(value).astimezone(pytz.UTC).timestamp())
 
 
-_TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
-    topic="TEST_TOPIC",
-    resource="TEST_RESOURCE",
-    command="TEST_COMMAND",
+_TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request(
     timestamp_utc=_str_to_timestamp(_TEST_EVENT_START_TIME),
 )
 
@@ -104,7 +104,7 @@ def test_to_request_ok(scaling_str: str):
         **dict(description=scaling_str),
     }
     # When
-    result = parser.to_request(event)
+    result = parser.to_request(event=event)
     # Then
     assert isinstance(result, list)
     assert len(result) == 1
@@ -130,7 +130,7 @@ def test_to_request_ok_multiple():
         **dict(description=_TEST_EVENT_DESCRIPTION_TMPL % "\n".join(lines)),
     }
     # When
-    result = parser.to_request(event)
+    result = parser.to_request(event=event)
     # Then
     assert isinstance(result, list)
     assert len(result) == total
@@ -146,7 +146,7 @@ def test_to_request_ok_real_example():
         **dict(description=_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE),
     }
     # When
-    result = parser.to_request(event)
+    result = parser.to_request(event=event)
     # Then
     assert isinstance(result, list)
     assert len(result) == _TEST_FULL_EVENT_DESCRIPTION_EXAMPLE_AMOUNT

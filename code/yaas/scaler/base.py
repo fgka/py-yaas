@@ -159,15 +159,15 @@ class Scaler(abc.ABC):
         """
 
 
-class CategoryTypes(dto_defaults.EnumWithFromStrIgnoreCase):
+class CategoryType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
     Base type for encoding supported categories.
     """
 
 
-class CategoryScalingCommandParser(abc.ABC):
+class CategoryScaleRequestProcessor(abc.ABC):
     """
-    For a given category provide the corresponding scaler.
+    For a given category process all :py:class:`request.ScaleRequest`.
     """
 
     def __init__(self, value: request.ScaleRequest) -> None:
@@ -213,7 +213,7 @@ class CategoryScalingCommandParser(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def supported_categories(cls) -> List[CategoryTypes]:
+    def supported_categories(cls) -> List[CategoryType]:
         """
         Returns the :py:cls:`list` of :py:cls:`str` that this class supports for scaling.
 

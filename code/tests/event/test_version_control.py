@@ -9,7 +9,9 @@ from typing import Callable, List, Optional
 import pytest
 
 from yaas.event import version_control
-from yaas.dto import event, request
+from yaas.dto import event
+
+from tests import common
 
 _TEST_SNAPSHOT_A: event.EventSnapshot = event.EventSnapshot(source="A")
 _TEST_SNAPSHOT_B: event.EventSnapshot = event.EventSnapshot(source="B")
@@ -173,7 +175,7 @@ def _create_event_snapshot(
     if ts_list:
         for ts in ts_list:
             timestamp_to_request[ts] = [
-                request.ScaleRequest(
+                common.create_scale_request(
                     topic="topic", resource="resource", command=f"{source} = {ts}"
                 )
             ]

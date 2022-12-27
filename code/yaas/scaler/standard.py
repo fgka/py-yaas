@@ -7,13 +7,12 @@ from typing import List
 
 from yaas import logger
 from yaas.dto import request
-from yaas.cal import resource_name_parser
-from yaas.scaler import base, run
+from yaas.scaler import base, run, resource_name_parser
 
 _LOGGER = logger.get(__name__)
 
 
-class StandardCategoryType(base.CategoryTypes):
+class StandardCategoryType(base.CategoryType):
     """
     Base type for encoding supported categories.
     """
@@ -31,7 +30,7 @@ class StandardCategoryType(base.CategoryTypes):
         return StandardCategoryType.STANDARD
 
 
-class StandardScalingCommandParser(base.CategoryScalingCommandParser):
+class StandardScalingCommandParser(base.CategoryScaleRequestProcessor):
     """
     Standard category supported by YAAS.
     """
@@ -54,5 +53,5 @@ class StandardScalingCommandParser(base.CategoryScalingCommandParser):
         )
 
     @classmethod
-    def supported_categories(cls) -> List[base.CategoryTypes]:
+    def supported_categories(cls) -> List[base.CategoryType]:
         return list(StandardCategoryType)

@@ -13,19 +13,21 @@ import pytest
 from yaas.dto import event, request
 from yaas.event.store import calendar
 
+from tests import common
+
+
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
 # pylint: disable=consider-using-with
 _TEST_CREDENTIALS_JSON: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
 # pylint: enable=consider-using-with
-_TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
-    topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=13
-)
+_TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 
 
 class TestReadOnlyGoogleCalendarStore:
     def setup(self):
         self.obj = calendar.ReadOnlyGoogleCalendarStore(
-            calendar_id=_TEST_CALENDAR_ID, credentials_json=_TEST_CREDENTIALS_JSON
+            calendar_id=_TEST_CALENDAR_ID,
+            credentials_json=_TEST_CREDENTIALS_JSON,
         )
 
     @pytest.mark.parametrize(
@@ -39,7 +41,8 @@ class TestReadOnlyGoogleCalendarStore:
     def test_ctor_nok(self, calendar_id: str, credentials_json: pathlib.Path):
         with pytest.raises(TypeError):
             calendar.ReadOnlyGoogleCalendarStore(
-                calendar_id=calendar_id, credentials_json=credentials_json
+                calendar_id=calendar_id,
+                credentials_json=credentials_json,
             )
 
     def test_properties_ok(self):
@@ -59,8 +62,8 @@ class TestReadOnlyGoogleCalendarStore:
             assert kwargs.get("end") == end_ts_utc
             return event_lst
 
-        def mocked_to_request(value: Dict[str, Any]) -> List[request.ScaleRequest]:
-            assert value == event_lst[0]
+        def mocked_to_request(*, event: Dict[str, Any]) -> List[request.ScaleRequest]:
+            assert event == event_lst[0]
             return [_TEST_SCALE_REQUEST]
 
         monkeypatch.setattr(

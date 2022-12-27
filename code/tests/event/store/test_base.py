@@ -12,9 +12,10 @@ import pytest
 from yaas.dto import event, request
 from yaas.event.store import base
 
-_TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
-    topic="TEST_TOPIC", resource="TEST_RESOURCE"
-)
+from tests import common
+
+
+_TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 _TEST_EVENT_SNAPSHOT_WITH_REQUEST: event.EventSnapshot = event.EventSnapshot(
     source="A", timestamp_to_request={0: [_TEST_SCALE_REQUEST]}
 )

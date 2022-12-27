@@ -14,13 +14,14 @@ from yaas import const
 from yaas.dto import event, request
 from yaas.event.store import base, file
 
+from tests import common
+
+
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
 # pylint: disable=consider-using-with
 _TEST_JSON_LINE_FILE: pathlib.Path = pathlib.Path(tempfile.NamedTemporaryFile().name)
 # pylint: enable=consider-using-with
-_TEST_SCALE_REQUEST: request.ScaleRequest = request.ScaleRequest(
-    topic="TEST_TOPIC", resource="TEST_RESOURCE", timestamp_utc=13
-)
+_TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 
 
 class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
@@ -294,10 +295,10 @@ class TestJsonLineFileStore:  # pylint: disable=too-many-public-methods
     @pytest.mark.asyncio
     async def test_write_ok_overwrite_with_existing(self):
         # Given
-        existing_value = request.ScaleRequest(
+        existing_value = common.create_scale_request(
             topic="TEST_TOPIC", resource="TEST_RESOURCE_EXIST", timestamp_utc=13
         )
-        new_value = request.ScaleRequest(
+        new_value = common.create_scale_request(
             topic="TEST_TOPIC", resource="TEST_RESOURCE_NEW", timestamp_utc=13
         )
 

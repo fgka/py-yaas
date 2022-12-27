@@ -9,6 +9,8 @@ import pytest
 from yaas.dto import request
 from yaas.scaler import run, standard
 
+from tests import common
+
 
 _TEST_CLOUD_RUN_RESOURCE_STR: str = (
     "projects/my-project-123/locations/my-location-123/services/my-service-123"
@@ -27,7 +29,7 @@ def _create_request(
     resource: str = _TEST_CLOUD_RUN_RESOURCE_STR,
     command: str = _TEST_DEFAULT_CLOUD_RUN_COMMAND_STR,
 ) -> request.ScaleRequest:
-    return request.ScaleRequest(
+    return common.create_scale_request(
         topic=topic,
         resource=resource,
         command=command,

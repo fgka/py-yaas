@@ -1,0 +1,104 @@
+title YAAS
+
+fontawesome f017 "Scheduler" as sched
+fontawesome f121 "YAAS - Caching" as yaas_cache
+fontawesome5brands f1a0 "Calendar Calendar" as cal
+database "Gooble Cache" as cache
+fontawesome f121 "YAAS - Scaling" as yaas_scale
+participant "Pub/Sub Default" as pubsub_default
+participant "Pub/Sub Extension" as pubsub_ext
+participant "Pub/Sub Error" as pubsub_err
+fontawesome f121 "YAAS - Scaling Default" as yaas_default
+fontawesome f121 "YAAS - Scaling Extension" as yaas_ext
+fontawesome f0c2 "Google Cloud" as gcp
+
+group Update Cache
+note over sched: Executed every hour
+sched-->yaas_cache: update_cache()
+activate yaas_cache
+yaas_cache->cal: read_upcoming_events(1day)
+activate cal
+cal->>yaas_cache: cal_events
+deactivate cal
+yaas_cache->cache: read_upcoming_events(1day)
+activate cache
+cache->>yaas_cache: cache_events
+deactivate cache
+yaas_cache->yaas_cache: merge_events(cal_events, cache_events)
+activate yaas_cache
+yaas_cache->>yaas_cache: merged_events
+deactivate yaas_cache
+yaas_cache->cache: persist_events(merged_events)
+activate cache
+cache->>yaas_cache:
+deactivate cache
+deactivate yaas_cache
+end 
+
+group Scale Routing
+note over sched: Executed every minute
+sched-->yaas_scale: process_upcoming_events(1 minute)
+activate yaas_scale
+yaas_scale->cache: read_all_until(next_minute)
+activate cache
+cache->>yaas_scale:events
+deactivate cache
+yaas_scale->yaas_scale:route_by_topic(events)
+activate yaas_scale
+loop e in events
+alt e.topic == standard
+yaas_scale->pubsub_default: publish(e)
+activate pubsub_default
+pubsub_default->>yaas_scale:
+deactivate pubsub_default
+else e.topic == extension
+yaas_scale->pubsub_ext: publish(e)
+activate pubsub_ext
+pubsub_ext->>yaas_scale:
+deactivate pubsub_ext
+end
+end
+yaas_scale->>yaas_scale:
+deactivate yaas_scale
+yaas_scale->cache:archive(events)
+activate cache
+cache->>yaas_scale:
+deactivate cache
+deactivate yaas_scale
+end 
+
+group Scale Default
+pubsub_default-->yaas_default: scale_request
+activate yaas_default
+yaas_default->yaas_default:parse_request(scale_request)
+activate yaas_default
+alt is_resource_supported(scale_request) == True
+yaas_default->yaas_default: enact(scale_request)
+activate yaas_default
+yaas_default->yaas_default: get_scaler(scale_request.resource)
+activate yaas_default
+yaas_default->>yaas_default: scaler
+deactivate yaas_default
+yaas_default->yaas_default: scaler.enact(scale_request)
+yaas_default->gcp: scale(scale_requests.resource, scale_request.command)
+activate gcp
+gcp->>yaas_default:
+deactivate gcp
+deactivate yaas_default
+else unsupported resource
+yaas_default->pubsub_err: publish(unsupported)
+activate pubsub_err
+pubsub_err->>yaas_default:
+deactivate pubsub_err
+yaas_default->yaas_default: log_error()
+end
+deactivate yaas_default
+deactivate yaas_default
+end
+
+group Scale Extension
+pubsub_ext-->yaas_ext: scale_request
+activate yaas_ext
+yaas_ext->yaas_ext: third_party_scaler(scale_request)
+deactivate yaas_ext
+end

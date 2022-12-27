@@ -157,9 +157,8 @@ class _MyCategoryScaleRequestProcessor(base.CategoryScaleRequestProcessor):
 
     called = {}
 
-    @classmethod
-    def _create_scaler(cls, value: request.ScaleRequest) -> base.Scaler:
-        cls.called[_MyCategoryScaleRequestProcessor._create_scaler.__name__] = True
+    def _scaler(self, value: request.ScaleRequest) -> base.Scaler:
+        self.called[_MyCategoryScaleRequestProcessor._scaler.__name__] = True
         return _MyScaler.from_request(value)
 
     @classmethod
@@ -171,19 +170,20 @@ class _MyCategoryScaleRequestProcessor(base.CategoryScaleRequestProcessor):
 
 
 class TestCategoryScaleRequestProcessor:
-    def test_ctor_ok(self):
+    def setup(self):
+        self.obj = _MyCategoryScaleRequestProcessor()
+
+    def test_scaler_ok(self):
         # Given
-        req, _ = _create_request_and_definition()
+        req, _ = _create_request_and_definition(topic=_MyCategoryTypes.CATEGORY_A.name)
         # When
-        obj = _MyCategoryScaleRequestProcessor(req)
+        scaler = self.obj.scaler(req)
         # Then
-        assert obj is not None
-        assert obj.request == req
+        assert scaler is not None
         assert _MyCategoryScaleRequestProcessor.called.get(
-            base.CategoryScaleRequestProcessor._create_scaler.__name__
+            base.CategoryScaleRequestProcessor._scaler.__name__
         )
-        assert obj.scaler is not None
-        assert not _MyCategoryScaleRequestProcessor.called.get(
+        assert _MyCategoryScaleRequestProcessor.called.get(
             base.CategoryScaleRequestProcessor.supported_categories.__name__
         )
 

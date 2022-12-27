@@ -165,51 +165,56 @@ class CategoryType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
 
 
+class CategoryScaleRequestProcessorError(Exception):
+    """
+    Wrapper for all errors creating a :py:class:`Scaler`
+    for a given :py:class:`request.ScaleRequest`.
+    """
+
+
 class CategoryScaleRequestProcessor(abc.ABC):
     """
     For a given category process all :py:class:`request.ScaleRequest`.
     """
 
-    def __init__(self, value: request.ScaleRequest) -> None:
-        if not isinstance(value, request.ScaleRequest):
-            raise TypeError(
-                f"Request argument must be an instance of {request.ScaleRequest.__name__}. "
-                f"Got: <{value}>({type(value)})"
-            )
-        self._request = value
-        self._scaler = self.__class__._create_scaler(value)
-        super().__init__()
-
-    @classmethod
-    @abc.abstractmethod
-    def _create_scaler(cls, value: request.ScaleRequest) -> Scaler:
-        """
-        To be overwritten to add ctor arguments' validation.
-        It should raise an exception if invalid.
-
-        Args:
-            value: scale request
-        """
-
-    @property
-    def request(self) -> str:
-        """
-        Resource original :py:cls:`str`.
-
-        Returns:
-            Resource definition.
-        """
-        return self._request
-
-    @property
-    def scaler(self) -> Scaler:
+    def scaler(self, value: request.ScaleRequest) -> Scaler:
         """
         Returns the :py:cls:`Scaler` instance corresponding to the resource and command.
 
         Returns:
             Instance of :py:cls:`Scaler`.
         """
-        return self._scaler
+        # validate input
+        if not isinstance(value, request.ScaleRequest):
+            raise TypeError(
+                f"The argument must be an instance of {request.ScaleRequest.__name__}. "
+                f"Got: <{value}>({type(value)})"
+            )
+        if not self.is_supported(value.topic):
+            raise ValueError(
+                f"The request topic {value.topic} is not supported. "
+                f"Valid values are: {self.supported_categories()}"
+            )
+        # logic
+        try:
+            result = self._scaler(value)
+        except Exception as err:
+            raise CategoryScaleRequestProcessorError(
+                f"Could not create {Scaler.__name__} for request: {value}. Error: {err}"
+            ) from err
+        if result is None:
+            raise ValueError(
+                f"Resulting scaler for request: {value} is None. "
+                f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}"
+            )
+        return result
+
+    @abc.abstractmethod
+    def _scaler(self, value: request.ScaleRequest) -> Scaler:
+        """
+        Only called with a pre-validated request.
+        It should raise an exception if any specific is invalid.
+        """
 
     @classmethod
     @abc.abstractmethod

@@ -3,7 +3,7 @@
 """
 Produce Google Cloud supported resources' scalers.
 """
-from typing import List
+from typing import List, Tuple
 
 from yaas import logger
 from yaas.dto import request
@@ -35,22 +35,35 @@ class StandardScalingCommandParser(base.CategoryScaleRequestProcessor):
     Standard category supported by YAAS.
     """
 
-    @classmethod
-    def _create_scaler(cls, value: request.ScaleRequest) -> base.Scaler:
-        if not cls.is_supported(value.topic):
+    def _scaler(self, value: request.ScaleRequest) -> base.Scaler:
+        resource_type, canonical_request = self._create_canonical_request(value)
+        try:
+            if resource_type == resource_name_parser.ResourceType.CLOUD_RUN:
+                result = run.CloudRunScaler.from_request(canonical_request)
+        except Exception as err:
+            raise RuntimeError(
+                f"Could not create {base.Scaler.__name__} for type {resource_type.value}. "
+                f"Got: {err}"
+            ) from err
+        if result is None:
             raise ValueError(
-                f"The request topic {value.topic} is not supported by {cls.__name__}. "
-                f"Check request: {value}"
+                f"Resource <{value.resource}> (canonical resource: <{canonical_request.resource}>)"
+                f"in request {value} (canonical: {canonical_request}) "
+                "cannot be parsed or is not supported"
             )
-        res_type, res_name = resource_name_parser.canonical_resource_name_and_type(
-            value.resource
-        )
-        if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
-            return run.CloudRunScaler.from_request(value)
-        raise ValueError(
-            f"Resource <{value.resource}> (parsed name: <{res_name}>)"
-            f"in request {value} cannot be parsed or is not supported"
-        )
+        return result
+
+    @staticmethod
+    def _create_canonical_request(
+        value: request.ScaleRequest,
+    ) -> Tuple[resource_name_parser.ResourceType, request.ScaleRequest]:
+        (
+            resource_type,
+            canonical_resource,
+        ) = resource_name_parser.canonical_resource_name_and_type(value.resource)
+        value_dict = value.as_dict()
+        value_dict[request.ScaleRequest.resource.__name__] = canonical_resource
+        return resource_type, request.ScaleRequest.from_dict(value_dict)
 
     @classmethod
     def supported_categories(cls) -> List[base.CategoryType]:

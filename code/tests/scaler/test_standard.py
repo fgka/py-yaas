@@ -7,7 +7,7 @@
 import pytest
 
 from yaas.dto import request
-from yaas.scaler import run, standard
+from yaas.scaler import base, run, standard
 
 from tests import common
 
@@ -37,26 +37,29 @@ def _create_request(
 
 
 class TestStandardScalingCommandParser:
-    def test_ctor_ok(self):
+    def setup(self):
+        self.obj = standard.StandardScalingCommandParser()
+
+    def test_scaler_ok(self):
         for topic in standard.StandardCategoryType:
             # Given
             req = _create_request(topic=topic.value)
             # When
-            obj = standard.StandardScalingCommandParser(req)
+            result = self.obj.scaler(req)
             # Then
-            assert obj is not None
+            assert result is not None
 
-    def test_ctor_nok_wrong_topic(self):
+    def test_scaler_nok_wrong_topic(self):
         for topic in standard.StandardCategoryType:
             # Given
             req = _create_request(topic=topic.value + "_NOT")
             # When/Then
             with pytest.raises(ValueError):
-                standard.StandardScalingCommandParser(req)
+                self.obj.scaler(req)
 
-    def test_ctor_nok_wrong_resource(self):
+    def test_scaler_nok_wrong_resource(self):
         # Given
         req = _create_request(resource=_TEST_CLOUD_FUNCTION_RESOURCE_STR)
         # When/Then
-        with pytest.raises(ValueError):
-            standard.StandardScalingCommandParser(req)
+        with pytest.raises(base.CategoryScaleRequestProcessorError):
+            self.obj.scaler(req)

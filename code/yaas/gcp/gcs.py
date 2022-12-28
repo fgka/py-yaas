@@ -8,8 +8,9 @@ Reads an object from `Cloud Storage API`_ and `examples`_.
 """
 # pylint: enable=line-too-long
 import logging
+import pathlib
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import cachetools
 
@@ -33,15 +34,21 @@ class CloudStorageError(Exception):
 
 
 def read_object(
-    *, bucket_name: str, path: str, warn_read_failure: Optional[bool] = True
-) -> bytes:
+    *,
+    bucket_name: str,
+    object_path: str,
+    filename: Optional[pathlib.Path] = None,
+    warn_read_failure: Optional[bool] = True,
+) -> Optional[bytes]:
     """
 
     Args:
         bucket_name:
             Bucket name
-        path:
+        object_path:
             Path to the object to read from (**WITHOUT** leading `/`)
+        filename:
+            If provided, will download the content into the file and return :py:obj:`None`.
         warn_read_failure:
             If :py:obj:`True` will warn about failure to read,
             if :py:obj:`False` will just inform about it.
@@ -50,49 +57,101 @@ def read_object(
         Content of the object
 
     """
-    bucket_name, path = _validate_and_clean_bucket_and_path(bucket_name, path)
-    return _read_object(bucket_name, path, warn_read_failure)
+    bucket_name, object_path = validate_and_clean_bucket_and_path(
+        bucket_name, object_path
+    )
+    if filename is not None and not isinstance(filename, pathlib.Path):
+        raise TypeError(
+            f"If filename is given, it must an instance of {pathlib.Path.__name__}. Got <{filename}>({type(filename)})"
+        )
+    return _read_object(bucket_name, object_path, filename, warn_read_failure)
 
 
-def _validate_and_clean_bucket_and_path(bucket_name: str, path: str) -> Tuple[str, str]:
+def validate_and_clean_bucket_and_path(
+    bucket_name: str, object_path: str
+) -> Tuple[str, str]:
+    """
+    Validate and clean-up bucket name and object path.
+
+    Args:
+        bucket_name:
+        object_path:
+
+    Returns:
+        Cleaned up versions of the bucket name and object path.
+    """
+    return validate_and_clean_bucket_name(bucket_name), validate_and_clean_object_path(
+        object_path
+    )
+
+
+def validate_and_clean_bucket_name(value: str) -> str:
+    """
+    Validates the argument as a bucket name and returns the cleaned up version of it.
+    Args:
+        value:
+            Bucket name
+
+    Returns:
+        Cleaned up version of the argument.
+    """
     # validate input
-    if not isinstance(bucket_name, str) or not bucket_name.strip():
+    if not isinstance(value, str) or not value.strip():
         raise TypeError(
-            f"Bucket name must be a non-empty string. Got: <{bucket_name}>({type(bucket_name)})"
+            f"Bucket name must be a non-empty string. " f"Got: <{value}>({type(value)})"
         )
-    if not isinstance(path, str) or not path.strip():
-        raise TypeError(
-            f"Path name must be a non-empty string. Got: <{path}>({type(path)})"
-        )
-    if not _BUCKET_NAME_REGEX.match(bucket_name):
+    if not _BUCKET_NAME_REGEX.match(value):
         raise ValueError(
-            f"Bucket name does not comply wiht {_BUCKET_NAME_REGEX}. Got: <{bucket_name}>"
+            f"Bucket name does not comply with {_BUCKET_NAME_REGEX}. " f"Got: <{value}>"
         )
-    # removing '/' affixes from bucket name
-    bucket_name = bucket_name.strip()
+    return value.strip()
+
+
+def validate_and_clean_object_path(value: str) -> str:
+    """
+    Validates the argument as an object path and returns the cleaned up version of it.
+    Args:
+        value:
+            Object path
+
+    Returns:
+        Cleaned up version of the argument.
+    """
+    # validate input
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError(
+            f"Object path must be a non-empty string. " f"Got: <{value}>({type(value)})"
+        )
     # cleaning leading '/' from path
-    path = path.strip().lstrip(_GCS_PATH_SEP).strip()
-    for segment in path.split(_GCS_PATH_SEP):
+    value = value.strip().lstrip(_GCS_PATH_SEP).strip()
+    for segment in value.split(_GCS_PATH_SEP):
         if not _PATH_SEGMENT_REGEX.match(segment):
             raise ValueError(
-                f"Path part <{segment}> does not comply with {_PATH_SEGMENT_REGEX}. Path: <{path}>"
+                f"Path part <{segment}> does not comply with {_PATH_SEGMENT_REGEX}. "
+                f"Path: <{value}>"
             )
-    return bucket_name.strip(), path
+    return value
 
 
 def _read_object(
-    bucket_name: str, path: str, warn_read_failure: Optional[bool] = True
-) -> bytes:
-    gcs_uri = f"gs://{bucket_name}/{path}"
+    bucket_name: str,
+    object_path: str,
+    filename: Optional[pathlib.Path] = None,
+    warn_read_failure: Optional[bool] = True,
+) -> Optional[bytes]:
+    result = None
+    gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Reading <%s>", gcs_uri)
     try:
         bucket_obj = _bucket(bucket_name)
-        blob = bucket_obj.get_blob(path)
-        if blob is not None:
-            result = blob.download_as_bytes()
+        blob = bucket_obj.blob(object_path)
+        if blob.exists():
+            if filename:
+                blob.download_to_filename(filename)
+            else:
+                result = blob.download_as_bytes()
             _LOGGER.debug("Read <%s>", gcs_uri)
         else:
-            result = None
             _LOGGER.log(
                 logging.WARN if warn_read_failure else logging.INFO,
                 "Object %s does not exist or does not contain data. Returning %s",
@@ -115,37 +174,46 @@ def _bucket(bucket_name: str) -> storage.Bucket:
     return _client().get_bucket(bucket_name)
 
 
-def write_object(*, bucket_name: str, path: str, content: bytes) -> None:
+def write_object(
+    *, bucket_name: str, object_path: str, content: Union[bytes, pathlib.Path]
+) -> None:
     """
     Will write the ``content`` on the object in ``path`` into the bucket ``bucket_name``.
 
     Args:
         bucket_name:
             Bucket name
-        path:
+        object_path:
             Path to the object to read from (**WITHOUT** leading `/`)
         content:
-            What to write
+            What to write, either :py:class:`bytes` or :py:class:`pathlib.Path`.
     """
     # validate input
-    bucket_name, path = _validate_and_clean_bucket_and_path(bucket_name, path)
+    bucket_name, object_path = validate_and_clean_bucket_and_path(
+        bucket_name, object_path
+    )
     if not isinstance(content, bytes):
         raise TypeError(
             f"Content must be {bytes.__name__}. Got: <{content}>({type(content)})"
         )
     # logic
-    _write_object(bucket_name, path, content)
+    _write_object(bucket_name, object_path, content)
 
 
-def _write_object(bucket_name: str, path: str, content: bytes) -> None:
-    gcs_uri = f"gs://{bucket_name}/{path}"
+def _write_object(
+    bucket_name: str, object_path: str, content: Union[bytes, pathlib.Path]
+) -> None:
+    gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Writing <%s>", gcs_uri)
     try:
         bucket_obj = _bucket(bucket_name)
-        blob = bucket_obj.blob(path)
-        with blob.open("wb") as out_blob:
-            out_blob.write(content)
-            _LOGGER.debug("Wrote <%s>", gcs_uri)
+        blob = bucket_obj.blob(object_path)
+        if isinstance(content, pathlib.Path):
+            blob.upload_from_filename(content)
+        else:
+            with blob.open("wb") as out_blob:
+                out_blob.write(content)
+                _LOGGER.debug("Wrote <%s>", gcs_uri)
     except Exception as err:
         raise CloudStorageError(
             f"Could not download content from <{gcs_uri}>. Error: {err}"

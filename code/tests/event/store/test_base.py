@@ -64,7 +64,7 @@ def test__default_max_end_ts_utc_ok():
     _assert_ts_in_range(result, min_result)
 
 
-class _MyStore(base.Store):
+class _MyStoreContextManager(base.StoreContextManager):
     def __init__(
         self,
         result_snapshot: event.EventSnapshot = _TEST_EVENT_SNAPSHOT_EMPTY,
@@ -75,14 +75,20 @@ class _MyStore(base.Store):
         self.called = {}
         self.to_raise = set()
 
+    async def _open(self) -> None:
+        self.called[base.StoreContextManager._open.__name__] = True
+
+    async def _close(self) -> None:
+        self.called[base.StoreContextManager._close.__name__] = True
+
     async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        self.called[base.Store.read.__name__] = (
+        self.called[base.StoreContextManager.read.__name__] = (
             start_ts_utc,
             end_ts_utc,
         )
-        if base.Store.read.__name__ in self.to_raise:
+        if base.StoreContextManager.read.__name__ in self.to_raise:
             raise RuntimeError
         return self._result_snapshot
 
@@ -90,29 +96,29 @@ class _MyStore(base.Store):
         self,
         value: event.EventSnapshot,
     ) -> None:
-        self.called[base.Store.write.__name__] = value
-        if base.Store.write.__name__ in self.to_raise:
+        self.called[base.StoreContextManager.write.__name__] = value
+        if base.StoreContextManager.write.__name__ in self.to_raise:
             raise RuntimeError
 
     async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        self.called[base.Store.remove.__name__] = (
+        self.called[base.StoreContextManager.remove.__name__] = (
             start_ts_utc,
             end_ts_utc,
         )
-        if base.Store.remove.__name__ in self.to_raise:
+        if base.StoreContextManager.remove.__name__ in self.to_raise:
             raise RuntimeError
         return self._result_snapshot
 
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> None:
-        self.called[base.Store.archive.__name__] = (
+        self.called[base.StoreContextManager.archive.__name__] = (
             start_ts_utc,
             end_ts_utc,
         )
-        if base.Store.archive.__name__ in self.to_raise:
+        if base.StoreContextManager.archive.__name__ in self.to_raise:
             raise RuntimeError
 
 
@@ -121,7 +127,7 @@ _TEST_DATETIME: datetime = datetime.utcnow()
 
 class TestStore:  # pylint: disable=too-many-public-methods
     def setup(self):
-        self.object = _MyStore()
+        self.object = _MyStoreContextManager()
 
     @pytest.mark.parametrize(
         "value,expected",
@@ -242,19 +248,26 @@ class TestStore:  # pylint: disable=too-many-public-methods
         end = start - 1
         # When/Then
         with pytest.raises(ValueError):
-            await self.object.read(start_ts_utc=start, end_ts_utc=end)
+            async with self.object:
+                await self.object.read(start_ts_utc=start, end_ts_utc=end)
+        self._assert_context_called()
+
+    def _assert_context_called(self) -> None:
+        assert self.object.called.get(base.StoreContextManager._open.__name__)
+        assert self.object.called.get(base.StoreContextManager._close.__name__)
 
     @pytest.mark.asyncio
     async def test_read_nok_raises(self):
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
-        self.object.to_raise.add(base.Store.read.__name__)
+        self.object.to_raise.add(base.StoreContextManager.read.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            await self.object.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            async with self.object:
+                await self.object.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
-        called = self._assert_called_only(base.Store.read.__name__)
+        called = self._assert_called_only(base.StoreContextManager.read.__name__)
         assert called
         res_start, res_end = called
         assert res_start == start_ts_utc
@@ -263,11 +276,12 @@ class TestStore:  # pylint: disable=too-many-public-methods
     def _assert_called_only(self, value: str, secondary: Optional[str] = None) -> Any:
         result = self.object.called.get(value)
         assert result
-        amount = 1
+        amount = 3
         if secondary is not None:
             assert self.object.called.get(secondary)
-            amount = 2
+            amount = 4
         assert len(self.object.called) == amount
+        self._assert_context_called()
         return result
 
     @pytest.mark.asyncio
@@ -275,9 +289,10 @@ class TestStore:  # pylint: disable=too-many-public-methods
         # Given
         value = _TEST_EVENT_SNAPSHOT_EMPTY
         # When
-        await self.object.write(value, overwrite_within_range=True)
+        async with self.object:
+            await self.object.write(value, overwrite_within_range=True)
         # Then
-        called = self._assert_called_only(base.Store.write.__name__)
+        called = self._assert_called_only(base.StoreContextManager.write.__name__)
         assert called == value
 
     @pytest.mark.asyncio
@@ -285,10 +300,12 @@ class TestStore:  # pylint: disable=too-many-public-methods
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
         # When
-        await self.object.write(value, overwrite_within_range=True)
+        async with self.object:
+            await self.object.write(value, overwrite_within_range=True)
         # Then
         called = self._assert_called_only(
-            base.Store.write.__name__, base.Store.remove.__name__
+            base.StoreContextManager.write.__name__,
+            base.StoreContextManager.remove.__name__,
         )
         assert called == value
 
@@ -297,18 +314,16 @@ class TestStore:  # pylint: disable=too-many-public-methods
     async def test_write_nok_raises(self, overwrite: bool):
         # Given
         value = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        self.object.to_raise.add(base.Store.write.__name__)
+        self.object.to_raise.add(base.StoreContextManager.write.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            await self.object.write(value, overwrite_within_range=overwrite)
+            async with self.object:
+                await self.object.write(value, overwrite_within_range=overwrite)
         # Then: write
-        called = self.object.called.get(base.Store.write.__name__)
-        assert called == value
-        # Then: read/remove
-        assert self.object.called.get(base.Store.read.__name__) is None
-        assert self.object.called.get(base.Store.archive.__name__) is None
+        assert self.object.called.get(base.StoreContextManager.write.__name__) == value
+        # Then: remove
         assert (
-            self.object.called.get(base.Store.remove.__name__) is not None
+            self.object.called.get(base.StoreContextManager.remove.__name__) is not None
         ) == overwrite
 
     @pytest.mark.asyncio
@@ -316,12 +331,15 @@ class TestStore:  # pylint: disable=too-many-public-methods
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
-        self.object.to_raise.add(base.Store.remove.__name__)
+        self.object.to_raise.add(base.StoreContextManager.remove.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            await self.object.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            async with self.object:
+                await self.object.remove(
+                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                )
         # Then
-        called = self._assert_called_only(base.Store.remove.__name__)
+        called = self._assert_called_only(base.StoreContextManager.remove.__name__)
         assert called
         res_start, res_end = called
         assert res_start == start_ts_utc
@@ -333,12 +351,13 @@ class TestStore:  # pylint: disable=too-many-public-methods
         start_ts_utc = 13
         end_ts_utc = 23
         # When
-        result = await self.object.remove(
-            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-        )
+        async with self.object:
+            result = await self.object.remove(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
         # Then
         assert isinstance(result, event.EventSnapshot)
-        called = self._assert_called_only(base.Store.remove.__name__)
+        called = self._assert_called_only(base.StoreContextManager.remove.__name__)
         assert called
         res_start, res_end = called
         assert res_start == start_ts_utc
@@ -349,12 +368,15 @@ class TestStore:  # pylint: disable=too-many-public-methods
         # Given
         start_ts_utc = 13
         end_ts_utc = 23
-        self.object.to_raise.add(base.Store.archive.__name__)
+        self.object.to_raise.add(base.StoreContextManager.archive.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
-            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            async with self.object:
+                await self.object.archive(
+                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                )
         # Then
-        called = self._assert_called_only(base.Store.archive.__name__)
+        called = self._assert_called_only(base.StoreContextManager.archive.__name__)
         assert called
         res_start, res_end = called
         assert res_start == start_ts_utc
@@ -366,41 +388,55 @@ class TestStore:  # pylint: disable=too-many-public-methods
         start_ts_utc = 13
         end_ts_utc = 23
         # When
-        await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        async with self.object:
+            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         # Then
-        called = self._assert_called_only(base.Store.archive.__name__)
+        called = self._assert_called_only(base.StoreContextManager.archive.__name__)
         assert called
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
 
 
-class _MyReadOnlyStore(base.ReadOnlyStore):
+class _MyReadOnlyStore(base.ReadOnlyStoreContextManager):
     def __init__(
         self, read_result: event.EventSnapshot = _TEST_EVENT_SNAPSHOT_EMPTY, **kwargs
     ):
         super().__init__(**kwargs)
-        self.called = False
+        self.called = {}
         self._read_result = read_result
+
+    async def _open(self) -> None:
+        self.called[base.StoreContextManager._open.__name__] = True
+
+    async def _close(self) -> None:
+        self.called[base.StoreContextManager._close.__name__] = True
 
     async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        self.called = True
+        self.called[base.StoreContextManager._read.__name__] = True
         return self._read_result
 
 
 class TestReadOnlyStore:
+    def setup(self):
+        self.object = _MyReadOnlyStore()
+
     @pytest.mark.parametrize("overwrite", [True, False])
     @pytest.mark.asyncio
     async def test_write_ok(self, overwrite: bool):
-        # Given
-        obj = _MyReadOnlyStore()
-        # When/Then
+        # Given/When/Then
         with pytest.raises(base.StoreError):
-            await obj.write(
-                _TEST_EVENT_SNAPSHOT_WITH_REQUEST, overwrite_within_range=overwrite
-            )
+            async with self.object:
+                await self.object.write(
+                    _TEST_EVENT_SNAPSHOT_WITH_REQUEST, overwrite_within_range=overwrite
+                )
+        self._assert_context_called()
+
+    def _assert_context_called(self) -> None:
+        assert self.object.called.get(base.StoreContextManager._open.__name__)
+        assert self.object.called.get(base.StoreContextManager._close.__name__)
 
     @pytest.mark.parametrize(
         "start_ts_utc,end_ts_utc",
@@ -414,10 +450,15 @@ class TestReadOnlyStore:
     )
     @pytest.mark.asyncio
     async def test_remove_and_archive_ok(self, start_ts_utc: int, end_ts_utc: int):
-        # Given
-        obj = _MyReadOnlyStore()
-        # When/Then
+        # Given/When/Then
         with pytest.raises(base.StoreError):
-            await obj.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            async with self.object:
+                await self.object.remove(
+                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                )
         with pytest.raises(base.StoreError):
-            await obj.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            async with self.object:
+                await self.object.archive(
+                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                )
+        self._assert_context_called()

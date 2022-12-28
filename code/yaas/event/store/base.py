@@ -3,7 +3,9 @@
 """
 Basic definition of event stores.
 """
+# pylint: enable=line-too-long
 import abc
+from collections import abc as collections_abc
 from datetime import datetime, timedelta
 from typing import Any, Callable, Optional, Union
 
@@ -43,10 +45,20 @@ class StoreError(Exception):
     """To code Store errors"""
 
 
-class Store(abc.ABC):
+class StoreContextManager(collections_abc.Coroutine, abc.ABC):
+    # pylint: disable=line-too-long
     """
-    Generic class to define a :py:class:`event.EventSnapshot` store.
+    Generic class to define a :py:class:`event.EventSnapshot` store
+        as an `Asynchronous Context Manager`_.
+
+    Usage::
+        my_store = MyStore()
+        async with my_store:
+            result = await my_store.read(start_ts_utc=0, end_ts_utc=1)
+
+    .. _Asynchronous Context Manager: https://peps.python.org/pep-0492/#asynchronous-context-managers-and-async-with
     """
+    # pylint: enable=line-too-long
 
     def __init__(
         self,
@@ -55,6 +67,7 @@ class Store(abc.ABC):
         default_end_ts_utc_fn: Optional[Callable[[], int]] = _default_end_ts_utc,
         max_end_ts_utc_fn: Optional[Callable[[], int]] = _default_max_end_ts_utc,
     ):
+        _LOGGER.debug("New %s with <%s>", self.__class__.__name__, locals())
         self._default_start_ts_utc_fn = default_start_ts_utc_fn
         self._default_end_ts_utc_fn = default_end_ts_utc_fn
         self._max_end_ts_utc_fn = max_end_ts_utc_fn
@@ -96,6 +109,50 @@ class Store(abc.ABC):
             )
         return result
 
+    def __await__(self):
+        _LOGGER.debug("Called %s", self.__await__.__name__)
+        return None
+
+    async def __aenter__(self) -> "StoreContextManager":
+        await self._open()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self._close()
+
+    def send(self, value: Any) -> None:
+        """
+        From :py:class:`collections_abc.Coroutine`
+        """
+        _LOGGER.debug("Called %s with <%s>", self.send.__name__, value)
+
+    def throw(self, err_type: Any, err_value: Any, err_traceback: Any) -> None:
+        """
+        From :py:class:`collections_abc.Coroutine`
+        """
+        _LOGGER.debug(
+            "Called throw with <%s>, <%s>, and <%s>", err_type, err_value, err_traceback
+        )
+        raise err_type(err_value, err_traceback)
+
+    def close(self) -> None:
+        """
+        From :py:class:`collections_abc.Coroutine`
+        """
+        _LOGGER.debug("Called %s", self.close.__name__)
+
+    async def _open(self) -> None:
+        """
+        To be overwritten in case of resource allocation,
+        like opening files or database connections.
+        """
+
+    async def _close(self) -> None:
+        """
+        To be overwritten in case of resource disposal,
+        like closing files or database connections.
+        """
+
     async def read(
         self,
         *,
@@ -119,6 +176,7 @@ class Store(abc.ABC):
         Raises:
             :py:class:`StoreError`
         """
+        _LOGGER.debug("Read with %s", locals())
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         if start_ts_utc > end_ts_utc:
@@ -165,6 +223,7 @@ class Store(abc.ABC):
         Raises:
             :py:class:`StoreError`
         """
+        _LOGGER.debug("Write with %s", locals())
         if not isinstance(value, event.EventSnapshot):
             raise TypeError(
                 f"Value argument must be an instance of {event.EventSnapshot.__name__}. "
@@ -206,6 +265,7 @@ class Store(abc.ABC):
         Raises:
             :py:class:`StoreError`
         """
+        _LOGGER.debug("Remove with %s", locals())
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
@@ -253,6 +313,7 @@ class Store(abc.ABC):
         Raises:
             :py:class:`StoreError`
         """
+        _LOGGER.debug("Archive with %s", locals())
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
@@ -270,7 +331,7 @@ class Store(abc.ABC):
         raise NotImplementedError
 
 
-class ReadOnlyStore(Store, abc.ABC):
+class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
     """
     To be implemented by read-only stores.
     """

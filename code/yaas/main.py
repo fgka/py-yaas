@@ -123,7 +123,7 @@ async def list_events(
             print(f"Caching events into <{cache_file}>")
             json_line_file = pathlib.Path(cache_file).absolute()
             archive_json_line_file = pathlib.Path(f"{cache_file}.archive").absolute()
-            file_store = file.JsonLineFileStore(
+            file_store = file.JsonLineFileStoreContextManager(
                 json_line_file=json_line_file,
                 archive_json_line_file=archive_json_line_file,
             )

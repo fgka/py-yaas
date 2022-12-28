@@ -25,7 +25,7 @@ _TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 
 class TestReadOnlyGoogleCalendarStore:
     def setup(self):
-        self.obj = calendar.ReadOnlyGoogleCalendarStore(
+        self.object = calendar.ReadOnlyGoogleCalendarStore(
             calendar_id=_TEST_CALENDAR_ID,
             credentials_json=_TEST_CREDENTIALS_JSON,
         )
@@ -46,8 +46,8 @@ class TestReadOnlyGoogleCalendarStore:
             )
 
     def test_properties_ok(self):
-        assert self.obj.calendar_id == _TEST_CALENDAR_ID
-        assert self.obj.credentials_json == _TEST_CREDENTIALS_JSON
+        assert self.object.calendar_id == _TEST_CALENDAR_ID
+        assert self.object.credentials_json == _TEST_CREDENTIALS_JSON
 
     @pytest.mark.asyncio
     async def test_read_ok(self, monkeypatch):
@@ -76,7 +76,10 @@ class TestReadOnlyGoogleCalendarStore:
         )
 
         # When
-        result = await self.obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        async with self.object:
+            result = await self.object.read(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
         # Then
         assert isinstance(result, event.EventSnapshot)
         assert result.source == _TEST_CALENDAR_ID

@@ -3,6 +3,7 @@
 """
 Store interface for Google Calendar as event source.
 """
+# pylint: enable=line-too-long
 import pathlib
 from typing import Any, Dict, List, Optional
 
@@ -14,7 +15,7 @@ from yaas import logger
 _LOGGER = logger.get(__name__)
 
 
-class ReadOnlyGoogleCalendarStore(base.ReadOnlyStore):
+class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
     """
     This class bridge the :py:module:`yaas.cal.google_cal` calls
         to comply with :py:class:`base.Store` interface.

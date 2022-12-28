@@ -29,7 +29,7 @@ def test__validate_and_clean_bucket_and_path_nok_wrong_type(
     bucket_name: str, path: str
 ):
     with pytest.raises(TypeError):
-        gcs._validate_and_clean_bucket_and_path(bucket_name, path)
+        gcs.validate_and_clean_bucket_and_path(bucket_name, path)
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ def test__validate_and_clean_bucket_and_path_nok_wrong_value(
     bucket_name: str, path: str
 ):
     with pytest.raises(ValueError):
-        gcs._validate_and_clean_bucket_and_path(bucket_name, path)
+        gcs.validate_and_clean_bucket_and_path(bucket_name, path)
 
 
 @pytest.mark.parametrize(
@@ -60,7 +60,7 @@ def test__validate_and_clean_bucket_and_path_nok_wrong_value(
 )
 def test__validate_and_clean_bucket_and_path_ok(bucket_name: str, path: str):
     # Given/When
-    res_bucket_name, res_path = gcs._validate_and_clean_bucket_and_path(
+    res_bucket_name, res_path = gcs.validate_and_clean_bucket_and_path(
         bucket_name, path
     )
     # Then
@@ -84,13 +84,20 @@ class _MyBlobWriter:
 
 
 class _MyBlob:
-    def __init__(self, content: Optional[bytes] = _TEST_CONTENT):
+    def __init__(
+        self, content: Optional[bytes] = _TEST_CONTENT, exists: Optional[bool] = True
+    ):
         self._content = content
+        self._exists = exists
         self.called = {}
 
     def download_as_bytes(self) -> bytes:
         self.called[_MyBlob.download_as_bytes.__name__] = True
         return self._content
+
+    def exists(self) -> bool:
+        self.called[_MyBlob.exists.__name__] = True
+        return self._exists
 
     def open(self, mode: str) -> _MyBlobWriter:
         result = _MyBlobWriter()
@@ -103,15 +110,8 @@ class _MyBucket:
         self._content = content
         self.called = {}
 
-    def get_blob(self, path: str) -> _MyBlob:
-        result = None
-        if self._content:
-            result = _MyBlob(self._content)
-        self.called[_MyBucket.get_blob.__name__] = path, result
-        return result
-
     def blob(self, path: str) -> _MyBlob:
-        result = _MyBlob()
+        result = _MyBlob(self._content, self._content is not None)
         self.called[_MyBucket.blob.__name__] = path, result
         return result
 
@@ -119,8 +119,8 @@ class _MyBucket:
 @pytest.mark.parametrize(
     "expected",
     [
-        (None,),
-        (_TEST_CONTENT,),
+        None,
+        _TEST_CONTENT,
     ],
 )
 def test_read_object_ok(monkeypatch, expected: bytes):
@@ -135,16 +135,16 @@ def test_read_object_ok(monkeypatch, expected: bytes):
 
     monkeypatch.setattr(gcs, gcs._bucket.__name__, mocked_bucket)
     # When
-    result = gcs.read_object(bucket_name=_TEST_BUCKET_NAME, path=_TEST_PATH)
+    result = gcs.read_object(bucket_name=_TEST_BUCKET_NAME, object_path=_TEST_PATH)
     # Then
     assert result == expected
     assert called.get(gcs._bucket.__name__) == _TEST_BUCKET_NAME
-    path, blob = bucket.called.get(_MyBucket.get_blob.__name__)
+    path, blob = bucket.called.get(_MyBucket.blob.__name__)
     assert path == _TEST_PATH
-    if expected is None:
-        assert blob is None
-    else:
-        assert blob.called.get(_MyBlob.download_as_bytes.__name__)
+    assert blob.called.get(_MyBlob.exists.__name__)
+    assert bool(blob.called.get(_MyBlob.download_as_bytes.__name__)) == bool(
+        expected is not None
+    )
 
 
 def test_write_object_ok(monkeypatch):
@@ -160,7 +160,7 @@ def test_write_object_ok(monkeypatch):
     monkeypatch.setattr(gcs, gcs._bucket.__name__, mocked_bucket)
     # When
     gcs.write_object(
-        bucket_name=_TEST_BUCKET_NAME, path=_TEST_PATH, content=_TEST_CONTENT
+        bucket_name=_TEST_BUCKET_NAME, object_path=_TEST_PATH, content=_TEST_CONTENT
     )
     # Then
     assert called.get(gcs._bucket.__name__) == _TEST_BUCKET_NAME

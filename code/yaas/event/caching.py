@@ -116,8 +116,8 @@ def _validate_callable(name: str, value: Any) -> None:
 
 async def update_cache(
     *,
-    source: base.Store,
-    cache: base.Store,
+    source: base.StoreContextManager,
+    cache: base.StoreContextManager,
     merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
     start: Optional[datetime] = None,
     time_span_in_days: Optional[int] = DEFAULT_UPDATE_REQUEST_TIME_SPAN_IN_DAYS,
@@ -142,14 +142,14 @@ async def update_cache(
 
     """
     # input validation
-    if not isinstance(source, base.Store):
+    if not isinstance(source, base.StoreContextManager):
         raise TypeError(
-            f"Source must be an instance of {base.Store.__name__}. "
+            f"Source must be an instance of {base.StoreContextManager.__name__}. "
             f"Got: <{cache}>({type(cache)})"
         )
-    if not isinstance(cache, base.Store):
+    if not isinstance(cache, base.StoreContextManager):
         raise TypeError(
-            f"Cache must be an instance of {base.Store.__name__}. "
+            f"Cache must be an instance of {base.StoreContextManager.__name__}. "
             f"Got: <{cache}>({type(cache)})"
         )
     if not callable(merge_strategy):
@@ -181,8 +181,8 @@ async def update_cache(
 
 async def _update_cache(
     *,
-    source: base.Store,
-    cache: base.Store,
+    source: base.StoreContextManager,
+    cache: base.StoreContextManager,
     merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
     start: datetime,
     time_span_in_days: int,

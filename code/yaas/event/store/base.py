@@ -5,7 +5,7 @@ Basic definition of event stores.
 """
 # pylint: enable=line-too-long
 import abc
-from collections import abc as collections_abc
+import contextlib
 from datetime import datetime, timedelta
 from typing import Any, Callable, List, Optional, Union
 
@@ -45,7 +45,7 @@ class StoreError(Exception):
     """To code Store errors"""
 
 
-class StoreContextManager(collections_abc.Coroutine, abc.ABC):
+class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
     # pylint: disable=line-too-long
     """
     Generic class to define a :py:class:`event.EventSnapshot` store
@@ -120,37 +120,14 @@ class StoreContextManager(collections_abc.Coroutine, abc.ABC):
             )
         return result
 
-    def __await__(self):
-        _LOGGER.debug("Called %s", self.__await__.__name__)
-        return None
-
     async def __aenter__(self) -> "StoreContextManager":
         await self._open()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(  # pylint: disable=invalid-name
+        self, exc_type: Any, exc: Any, tb: Any
+    ) -> None:
         await self._close()
-
-    def send(self, value: Any) -> None:
-        """
-        From :py:class:`collections_abc.Coroutine`
-        """
-        _LOGGER.debug("Called %s with <%s>", self.send.__name__, value)
-
-    def throw(self, err_type: Any, err_value: Any, err_traceback: Any) -> None:
-        """
-        From :py:class:`collections_abc.Coroutine`
-        """
-        _LOGGER.debug(
-            "Called throw with <%s>, <%s>, and <%s>", err_type, err_value, err_traceback
-        )
-        raise err_type(err_value, err_traceback)
-
-    def close(self) -> None:
-        """
-        From :py:class:`collections_abc.Coroutine`
-        """
-        _LOGGER.debug("Called %s", self.close.__name__)
 
     async def _open(self) -> None:
         """

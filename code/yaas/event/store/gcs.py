@@ -30,9 +30,11 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         db_object_path: str,
         **kwargs,
     ):
-        super().__init__(sqlite_file=self._temporary_file(), **kwargs)
         self._bucket_name = gcs.validate_and_clean_bucket_name(bucket_name)
         self._db_object_path = gcs.validate_and_clean_object_path(db_object_path)
+        super().__init__(
+            sqlite_file=self._temporary_file(), source=self.gcs_uri, **kwargs
+        )
 
     @staticmethod
     def _temporary_file() -> pathlib.Path:
@@ -51,6 +53,13 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         Remote GCS DB object path
         """
         return self._db_object_path
+
+    @property
+    def gcs_uri(self) -> str:
+        """
+        GCS URI
+        """
+        return f"gs://{self._bucket_name}/{self._db_object_path}"
 
     async def _open(self) -> None:
         gcs.read_object(

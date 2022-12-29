@@ -16,7 +16,7 @@ import pytest
 
 from yaas import const
 from yaas.dto import event, request
-from yaas.event.store import base, file
+from yaas.event.store import file
 
 from tests import common
 
@@ -33,7 +33,7 @@ _TEST_SCALE_REQUEST_AFTER: request.ScaleRequest = common.create_scale_request(
 
 
 class _MyBaseFileStoreContextManager(file.BaseFileStoreContextManager):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current = []
         self.archived = []
@@ -366,6 +366,10 @@ class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-me
                     archive_json_line_file=pathlib.Path(tmp_archive.name),
                 )
 
+    def test_properties_ok(self):
+        assert self.instance.source == self.instance.json_line_file.name
+        assert self.instance.json_line_file != self.instance.archive_json_line_file
+
     @pytest.mark.parametrize(
         "json_line_file,archive_json_line_file",
         [
@@ -488,7 +492,7 @@ class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-me
             result = []
             async for req in obj._read_scale_requests(is_archive=is_archive):
                 result.append(req)
-            assert len(result)
+            assert len(result) == 2
 
     @pytest.mark.parametrize("is_archive", [True, False])
     @pytest.mark.asyncio
@@ -507,7 +511,7 @@ class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-me
             result = []
             async for req in obj._read_scale_requests(is_archive=is_archive):
                 result.append(req)
-            assert len(result)
+            assert len(result) == 1
             assert result[0] == _TEST_SCALE_REQUEST_AFTER
 
 
@@ -545,6 +549,9 @@ class TestSQLiteStoreContextManager:
             self.instance = file.SQLiteStoreContextManager(
                 sqlite_file=pathlib.Path(tmp_file.name),
             )
+
+    def test_properties_ok(self):
+        assert self.instance.source == self.instance.sqlite_file.name
 
     @pytest.mark.parametrize(
         "sqlite_file",

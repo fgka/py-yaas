@@ -68,7 +68,6 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         The start and end timestamps are here to help guide the read,
             the requests will be properly filtered out if the result does not comply.
         """
-        pass
 
     @staticmethod
     def _is_request_in_range(
@@ -102,7 +101,6 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         """
         Persists all :py:class:`request.ScaleRequest` into current or archive file.
         """
-        pass
 
     async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
@@ -134,7 +132,6 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         """
         Removes all :py:class:`request.ScaleRequest` from current or archive file.
         """
-        pass
 
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
@@ -146,8 +143,7 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             await self._write_scale_requests(to_archive, is_archive=True)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error(
-                "Could not archive into <%s> snapshot <%s>. Error: %s",
-                self._archive_json_line_file,
+                "Could not archive snapshot <%s>. Error: %s",
                 to_archive,
                 err,
             )
@@ -156,8 +152,7 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             except Exception as err_roll_back:
                 raise RuntimeError(
                     f"[DATA LOSS] Removed snapshot <{to_archive} for store, "
-                    f"failed to archive <{self._archive_json_line_file}>(see logs), "
-                    f"and failed to reinsert into <{self._json_line_file}>. "
+                    "failed to archive (see logs), and failed to reinsert. "
                     f"Archive error: {err}. "
                     f"Error: {err_roll_back}"
                 ) from err_roll_back
@@ -252,7 +247,9 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
     async def _remove_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
     ) -> None:
+        # pylint: disable=consider-using-with
         tmp_file = pathlib.Path(tempfile.NamedTemporaryFile().name)
+        # pylint: enable=consider-using-with
         async with aiofiles.open(
             tmp_file, "w", encoding=const.ENCODING_UTF8
         ) as out_file:
@@ -333,7 +330,6 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
         sqlite_file: pathlib.Path,
         **kwargs,
     ):
-        super().__init__(**kwargs)
         if not isinstance(sqlite_file, pathlib.Path):
             raise TypeError(
                 f"SQLite file must be a {pathlib.Path.__name__}. "
@@ -341,6 +337,9 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
             )
         sqlite_file = sqlite_file.absolute()
         self._sqlite_file = sqlite_file
+        if "source" not in kwargs:
+            kwargs["source"] = self._sqlite_file.name
+        super().__init__(**kwargs)
         self._connection = None
 
     @property
@@ -445,9 +444,7 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
 
     @staticmethod
     def _dto_from_row(row: Tuple) -> request.ScaleRequest:
-        kwargs = {
-            key: val for key, val in zip(SQLiteStoreContextManager._column_names(), row)
-        }
+        kwargs = dict(zip(SQLiteStoreContextManager._column_names(), row))
         return request.ScaleRequest.from_dict(kwargs)
 
     @staticmethod
@@ -473,6 +470,7 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
     @staticmethod
     def _to_row(value: request.ScaleRequest) -> tuple:
         value_dict = value.as_dict()
+        # pylint: disable=consider-using-generator
         return tuple([value_dict.get(key) for key in sorted(value_dict.keys())])
 
     async def _remove_scale_requests_in_range(
@@ -524,7 +522,8 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
     ) -> None:
         raise NotImplementedError(
-            f"This method {SQLiteStoreContextManager._remove_scale_requests.__name__} should be called."
+            f"This method {SQLiteStoreContextManager._remove_scale_requests.__name__} "
+            "should be called."
         )
 
 

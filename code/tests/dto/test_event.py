@@ -22,7 +22,7 @@ class TestEventSnapshot:
         # When
         result = obj.range()
         # Then
-        assert result is None
+        assert result == (None, None)
 
     def test_range_ok_empty_timestamp_to_request(self):
         # Given
@@ -30,7 +30,7 @@ class TestEventSnapshot:
         # When
         result = obj.range()
         # Then
-        assert result is None
+        assert result == (None, None)
 
     @pytest.mark.parametrize(
         "timestamp_to_request,min_ts,max_ts",

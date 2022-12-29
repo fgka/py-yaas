@@ -34,18 +34,15 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
         ),
     )
 
-    def range(self) -> Optional[Tuple[int, int]]:
+    def range(self) -> Tuple[Optional[int], Optional[int]]:
         """
         Returns the range ot timestamps present here
             or :py:obj:`None` if ``timestamp_to_request`` is empty.
         """
-        result = None
+        result = None, None
         if self.timestamp_to_request:
             ts_lst = sorted(self.timestamp_to_request)
-            result = (
-                ts_lst[0],
-                ts_lst[-1],
-            )
+            result = ts_lst[0], ts_lst[-1]
         return result
 
     @staticmethod

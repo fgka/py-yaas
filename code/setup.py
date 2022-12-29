@@ -57,6 +57,7 @@ CODE_QUALITY_REQUIRED = [
     "pytest>=7.1.2",
     "pytest-asyncio>=0.20.3",
     "pytest-cov>=3.0.0",
+    "pytest-lazy-fixture>=0.6.3",
     "pytest-mock>=3.8.2",
     "pytest-pudb>=0.7.0",
     "pytest-pylint>=0.18.0",

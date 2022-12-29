@@ -4,11 +4,13 @@
 Store interface for using local files.
 """
 # pylint: enable=line-too-long
+import abc
+import tempfile
 from datetime import datetime
 import pathlib
 import sqlite3
 import threading
-from typing import List, Optional, Tuple, Type
+from typing import Generator, List, Optional, Tuple, Type
 
 import aiofiles
 import attrs
@@ -21,7 +23,147 @@ from yaas import const, logger
 _LOGGER = logger.get(__name__)
 
 
-class JsonLineFileStoreContextManager(base.StoreContextManager):
+class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
+    """
+    Basic functionality for file based :py:class:`base.StoreContextManager`
+    """
+
+    async def _read(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> event.EventSnapshot:
+        request_lst = []
+        async for req in self._read_scale_requests_in_range(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=False
+        ):
+            if self._is_request_in_range(
+                req=req, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            ):
+                request_lst.append(req)
+        return self._snapshot_from_request_lst(request_lst)
+
+    async def _read_scale_requests_in_range(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
+    ) -> Generator[request.ScaleRequest, None, None]:
+        async for result in self._read_scale_requests(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+        ):
+            if self._is_request_in_range(
+                req=result, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            ):
+                yield result
+
+    @abc.abstractmethod
+    async def _read_scale_requests(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
+    ) -> Generator[request.ScaleRequest, None, None]:
+        """
+        The start and end timestamps are here to help guide the read,
+            the requests will be properly filtered out if the result does not comply.
+        """
+        pass
+
+    @staticmethod
+    def _is_request_in_range(
+        *,
+        req: request.ScaleRequest,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+    ) -> bool:
+        return (
+            not isinstance(start_ts_utc, int) or req.timestamp_utc >= start_ts_utc
+        ) and (not isinstance(end_ts_utc, int) or req.timestamp_utc <= end_ts_utc)
+
+    async def _write(self, value: event.EventSnapshot) -> None:
+        start_ts_utc, end_ts_utc = value.range()
+        all_existent = set()
+        async for req in self._read_scale_requests_in_range(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=False
+        ):
+            all_existent.add(req)
+        to_write = []
+        for req_lst in value.timestamp_to_request.values():
+            for req in req_lst:
+                if req not in all_existent:
+                    to_write.append(req)
+        await self._write_scale_requests(to_write, is_archive=False)
+
+    @abc.abstractmethod
+    async def _write_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> None:
+        """
+        Persists all :py:class:`request.ScaleRequest` into current or archive file.
+        """
+        pass
+
+    async def _remove(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> event.EventSnapshot:
+        to_remove = await self._remove_scale_requests_in_range(
+            start_ts_utc, end_ts_utc, is_archive=False
+        )
+        return self._snapshot_from_request_lst(to_remove)
+
+    async def _remove_scale_requests_in_range(
+        self,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        *,
+        is_archive: Optional[bool] = False,
+    ) -> List[request.ScaleRequest]:
+        result = []
+        async for req in self._read_scale_requests_in_range(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+        ):
+            result.append(req)
+        await self._remove_scale_requests(result, is_archive=is_archive)
+        return result
+
+    @abc.abstractmethod
+    async def _remove_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> None:
+        """
+        Removes all :py:class:`request.ScaleRequest` from current or archive file.
+        """
+        pass
+
+    async def _archive(
+        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    ) -> None:
+        to_archive = await self._remove_scale_requests_in_range(
+            start_ts_utc, end_ts_utc, is_archive=False
+        )
+        try:
+            await self._write_scale_requests(to_archive, is_archive=True)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.error(
+                "Could not archive into <%s> snapshot <%s>. Error: %s",
+                self._archive_json_line_file,
+                to_archive,
+                err,
+            )
+            try:
+                await self._write_scale_requests(to_archive, is_archive=False)
+            except Exception as err_roll_back:
+                raise RuntimeError(
+                    f"[DATA LOSS] Removed snapshot <{to_archive} for store, "
+                    f"failed to archive <{self._archive_json_line_file}>(see logs), "
+                    f"and failed to reinsert into <{self._json_line_file}>. "
+                    f"Archive error: {err}. "
+                    f"Error: {err_roll_back}"
+                ) from err_roll_back
+
+
+class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
     """
     A very inefficient version of a text file store,
     using the `JSON Lines`_ format, where each line is a JSON entry representing a scale request.
@@ -42,7 +184,6 @@ class JsonLineFileStoreContextManager(base.StoreContextManager):
         archive_json_line_file: pathlib.Path,
         **kwargs,
     ):
-        super().__init__(**kwargs)
         if not isinstance(json_line_file, pathlib.Path):
             raise TypeError(
                 f"JSON line file must be a {pathlib.Path.__name__}. "
@@ -61,6 +202,7 @@ class JsonLineFileStoreContextManager(base.StoreContextManager):
                 f"can *NOT* be the same as <{archive_json_line_file}>"
             )
         self._json_line_file = json_line_file
+        super().__init__(source=self._json_line_file.name, **kwargs)
         self._archive_json_line_file = archive_json_line_file
         # required to make it thread-safe
         self._file_lock = threading.Lock()
@@ -79,128 +221,53 @@ class JsonLineFileStoreContextManager(base.StoreContextManager):
         """
         return self._archive_json_line_file
 
-    async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
-        request_lst = None
-        with self._file_lock:
-            async with aiofiles.open(
-                self._json_line_file, "r", encoding=const.ENCODING_UTF8
-            ) as in_file:
-                async for line in in_file:
-                    if line.strip():
-                        req = request.ScaleRequest.from_json(line.strip())
-                        request_lst = self._populate_timestamp_to_request(
-                            request_lst=request_lst,
-                            req=req,
-                            start_ts_utc=start_ts_utc,
-                            end_ts_utc=end_ts_utc,
-                        )
-        return self._snapshot_from_request_lst(request_lst)
-
-    def _snapshot_from_request_lst(
-        self, request_lst: Optional[List[request.ScaleRequest]] = None
-    ) -> event.EventSnapshot:
-        return event.EventSnapshot.from_list_requests(
-            source=self._json_line_file.name,
-            request_lst=request_lst,
-        )
-
-    @staticmethod
-    def _populate_timestamp_to_request(
+    async def _read_scale_requests(
+        self,
         *,
-        request_lst: List[request.ScaleRequest],
-        req: request.ScaleRequest,
         start_ts_utc: Optional[int] = None,
         end_ts_utc: Optional[int] = None,
-    ) -> List[request.ScaleRequest]:
-        to_add = (
-            not isinstance(start_ts_utc, int) or req.timestamp_utc >= start_ts_utc
-        ) and (not isinstance(end_ts_utc, int) or req.timestamp_utc <= end_ts_utc)
-        if request_lst is None:
-            request_lst = []
-        if to_add:
-            request_lst.append(req)
-        return request_lst
-
-    async def _write(self, value: event.EventSnapshot) -> None:
-        await self._write_only_new(value, is_archive=False)
-
-    async def _write_only_new(
-        self, value: event.EventSnapshot, *, is_archive: Optional[bool] = False
-    ) -> None:
-        all_existent = set(await self._read_all(is_archive=is_archive))
-        path = self._json_line_file if not is_archive else self._archive_json_line_file
-        with self._file_lock:
-            async with aiofiles.open(
-                path, "a", encoding=const.ENCODING_UTF8
-            ) as out_file:
-                for req_lst in value.timestamp_to_request.values():
-                    # only add non-existent
-                    await out_file.writelines(
-                        [
-                            f"\n{val.as_json()}"
-                            for val in req_lst
-                            if val not in all_existent
-                        ]
-                    )
-
-    async def _read_all(
-        self, *, is_archive: Optional[bool] = False
-    ) -> List[request.ScaleRequest]:
-        result = []
+        is_archive: Optional[bool] = False,
+    ) -> Generator[request.ScaleRequest, None, None]:
         path = self._json_line_file if not is_archive else self._archive_json_line_file
         if path.exists():
             with self._file_lock:
                 async with aiofiles.open(
                     path, "r", encoding=const.ENCODING_UTF8
                 ) as in_file:
-                    result = [
-                        request.ScaleRequest.from_json(line.strip())
-                        async for line in in_file
-                        if line.strip()
-                    ]
-        return result
+                    async for line in in_file:
+                        line = line.strip()
+                        if line:
+                            yield request.ScaleRequest.from_json(line)
 
-    async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
-        request_lst = []
-        all_request_lst = await self._read_all()
+    async def _write_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> None:
+        path = self._json_line_file if not is_archive else self._archive_json_line_file
         with self._file_lock:
             async with aiofiles.open(
-                self._json_line_file, "w", encoding=const.ENCODING_UTF8
+                path, "a", encoding=const.ENCODING_UTF8
             ) as out_file:
-                for req in all_request_lst:
-                    if start_ts_utc <= req.timestamp_utc <= end_ts_utc:
-                        request_lst.append(req)
-                    else:
-                        await out_file.write(f"\n{req.as_json()}")
-        return self._snapshot_from_request_lst(request_lst)
+                await out_file.writelines([f"\n{val.as_json()}" for val in value])
 
-    async def _archive(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    async def _remove_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
     ) -> None:
-        to_archive = await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        tmp_file = pathlib.Path(tempfile.NamedTemporaryFile().name)
+        async with aiofiles.open(
+            tmp_file, "w", encoding=const.ENCODING_UTF8
+        ) as out_file:
+            async for req in self._read_scale_requests(is_archive=is_archive):
+                if req not in value:
+                    await out_file.write(f"\n{req.as_json()}")
+        json_file = self._archive_json_line_file if is_archive else self._json_line_file
         try:
-            await self._write_only_new(to_archive, is_archive=True)
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.error(
-                "Could not archive into <%s> snapshot <%s>. Error: %s",
-                self._archive_json_line_file,
-                to_archive,
-                err,
-            )
-            try:
-                await self._write_only_new(to_archive, is_archive=False)
-            except Exception as err_roll_back:
-                raise RuntimeError(
-                    f"[DATA LOSS] Removed snapshot <{to_archive} for store, "
-                    f"failed to archive <{self._archive_json_line_file}>(see logs), "
-                    f"and failed to reinsert into <{self._json_line_file}>. "
-                    f"Archive error: {err}. "
-                    f"Error: {err_roll_back}"
-                ) from err_roll_back
+            with self._file_lock:
+                tmp_file.rename(json_file)
+        except Exception as err:
+            raise RuntimeError(
+                f"[DATA LOSS] Could not move content from {tmp_file} into {json_file}. "
+                f"Error: {err}"
+            ) from err
 
 
 def _sqlite_column_type_from_attr(attribute: attrs.Attribute) -> str:
@@ -253,7 +320,7 @@ _SQLITE_CURRENT_SCHEMA_NAME: str = "current"
 _SQLITE_ARCHIVE_SCHEMA_NAME: str = "archive"
 
 
-class SQLiteStoreContextManager(base.StoreContextManager):
+class SQLiteStoreContextManager(BaseFileStoreContextManager):
     """
     Uses a `SQLite`_ database to back the store.
 
@@ -264,7 +331,6 @@ class SQLiteStoreContextManager(base.StoreContextManager):
         self,
         *,
         sqlite_file: pathlib.Path,
-        source_name: Optional[str] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -275,9 +341,6 @@ class SQLiteStoreContextManager(base.StoreContextManager):
             )
         sqlite_file = sqlite_file.absolute()
         self._sqlite_file = sqlite_file
-        if not isinstance(source_name, str):
-            source_name = sqlite_file.name
-        self._source_name = source_name
         self._connection = None
 
     @property
@@ -302,9 +365,7 @@ class SQLiteStoreContextManager(base.StoreContextManager):
     @staticmethod
     def _create_tables(cursor: sqlite3.Cursor) -> None:
         # template
-        create_stmt = _sqlite_schema_from_dto(
-            request.ScaleRequest, request.ScaleRequest.timestamp_utc.__name__
-        )
+        create_stmt = _sqlite_schema_from_dto(request.ScaleRequest)
         # current
         cursor.execute(
             create_stmt.replace(_SQLITE_SCHEMA_NAME_TOKEN, _SQLITE_CURRENT_SCHEMA_NAME)
@@ -329,17 +390,20 @@ class SQLiteStoreContextManager(base.StoreContextManager):
         self._connection.close()
         self._connection = None
 
-    async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
+    async def _read_scale_requests(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
+    ) -> Generator[request.ScaleRequest, None, None]:
         cursor = self._create_cursor()
         cursor.execute(
-            self._select_stmt_by_timestamp_utc(start_ts_utc, end_ts_utc, False)
+            self._select_stmt_by_timestamp_utc(start_ts_utc, end_ts_utc, is_archive)
         )
-        request_lst = []
         for row in cursor.fetchall():
-            request_lst.append(self._dto_from_row(row))
-        return self._snapshot_from_request_lst(request_lst)
+            yield self._dto_from_row(row)
+        cursor.close()
 
     @staticmethod
     def _select_stmt_by_timestamp_utc(
@@ -350,16 +414,26 @@ class SQLiteStoreContextManager(base.StoreContextManager):
         # table name
         table_name = SQLiteStoreContextManager._table_name(is_archive)
         # where clause
-        where_clause = ""
-        if start_ts_utc is not None or end_ts_utc is not None:
-            where_clause = f"WHERE {request.ScaleRequest.timestamp_utc.__name__}"
-            if start_ts_utc is not None and end_ts_utc is not None:
-                where_clause = f"{where_clause} BETWEEN {start_ts_utc} AND {end_ts_utc}"
-            elif start_ts_utc is not None:
-                where_clause = f"{where_clause} >= {start_ts_utc}"
-            elif end_ts_utc is not None:
-                where_clause = f"{where_clause} <= {end_ts_utc}"
+        where_clause = SQLiteStoreContextManager._ts_where_clause(
+            start_ts_utc, end_ts_utc
+        )
         return f"SELECT * FROM {table_name} {where_clause};"
+
+    @staticmethod
+    def _ts_where_clause(
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+    ) -> str:
+        result = ""
+        if start_ts_utc is not None or end_ts_utc is not None:
+            result = f"WHERE {request.ScaleRequest.timestamp_utc.__name__}"
+            if start_ts_utc is not None and end_ts_utc is not None:
+                result = f"{result} BETWEEN {start_ts_utc} AND {end_ts_utc}"
+            elif start_ts_utc is not None:
+                result = f"{result} >= {start_ts_utc}"
+            elif end_ts_utc is not None:
+                result = f"{result} <= {end_ts_utc}"
+        return result
 
     @staticmethod
     def _table_name(is_archive: Optional[bool] = False) -> str:
@@ -380,16 +454,13 @@ class SQLiteStoreContextManager(base.StoreContextManager):
     def _column_names() -> List[str]:
         return sorted([field.name for field in attrs.fields(request.ScaleRequest)])
 
-    def _snapshot_from_request_lst(
-        self, request_lst: Optional[List[request.ScaleRequest]] = None
-    ) -> event.EventSnapshot:
-        return event.EventSnapshot.from_list_requests(
-            source=self._source_name,
-            request_lst=request_lst,
-        )
-
-    async def _write(self, value: event.EventSnapshot) -> None:
-        pass
+    async def _write_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> None:
+        insert_stmt = self._insert_stmt_tmpl(is_archive)
+        cursor = self._create_cursor()
+        cursor.executemany(insert_stmt, [self._to_row(val) for val in value])
+        cursor.close()
 
     @staticmethod
     def _insert_stmt_tmpl(is_archive: Optional[bool] = False) -> str:
@@ -404,15 +475,57 @@ class SQLiteStoreContextManager(base.StoreContextManager):
         value_dict = value.as_dict()
         return tuple([value_dict.get(key) for key in sorted(value_dict.keys())])
 
-    async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
-        pass
+    async def _remove_scale_requests_in_range(
+        self,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        *,
+        is_archive: Optional[bool] = False,
+    ) -> List[request.ScaleRequest]:
+        result = []
+        async for req in self._read_scale_requests_in_range(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+        ):
+            result.append(req)
+        await self._remove_scale_requests_in_range_from_db(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+        )
+        return result
 
-    async def _archive(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    async def _remove_scale_requests_in_range_from_db(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> None:
-        pass
+        delete_stmt = self._delete_stmt_by_timestamp_utc(
+            start_ts_utc, end_ts_utc, is_archive
+        )
+        cursor = self._create_cursor()
+        cursor.execute(delete_stmt)
+        cursor.close()
+
+    @staticmethod
+    def _delete_stmt_by_timestamp_utc(
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
+    ) -> str:
+        # table name
+        table_name = SQLiteStoreContextManager._table_name(is_archive)
+        # where clause
+        where_clause = SQLiteStoreContextManager._ts_where_clause(
+            start_ts_utc, end_ts_utc
+        )
+        return f"DELETE FROM {table_name} {where_clause};"
+
+    async def _remove_scale_requests(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> None:
+        raise NotImplementedError(
+            f"This method {SQLiteStoreContextManager._remove_scale_requests.__name__} should be called."
+        )
 
 
 def _sqlite_connection(database: Optional[pathlib.Path] = None) -> sqlite3.Connection:

@@ -7,9 +7,9 @@ Basic definition of event stores.
 import abc
 from collections import abc as collections_abc
 from datetime import datetime, timedelta
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
-from yaas.dto import event
+from yaas.dto import event, request
 from yaas import logger
 
 _LOGGER = logger.get(__name__)
@@ -63,14 +63,25 @@ class StoreContextManager(collections_abc.Coroutine, abc.ABC):
     def __init__(
         self,
         *,
+        source: Optional[str] = None,
         default_start_ts_utc_fn: Optional[Callable[[], int]] = _default_start_ts_utc,
         default_end_ts_utc_fn: Optional[Callable[[], int]] = _default_end_ts_utc,
         max_end_ts_utc_fn: Optional[Callable[[], int]] = _default_max_end_ts_utc,
     ):
         _LOGGER.debug("New %s with <%s>", self.__class__.__name__, locals())
+        if not isinstance(source, str):
+            source = self.__class__.__name__
+        self._source = source
         self._default_start_ts_utc_fn = default_start_ts_utc_fn
         self._default_end_ts_utc_fn = default_end_ts_utc_fn
         self._max_end_ts_utc_fn = max_end_ts_utc_fn
+
+    @property
+    def source(self) -> str:
+        """
+        How are the snapshots source identified.
+        """
+        return self._source
 
     def _effective_start_ts_utc(
         self, value: Optional[Union[int, float, datetime]] = None
@@ -152,6 +163,17 @@ class StoreContextManager(collections_abc.Coroutine, abc.ABC):
         To be overwritten in case of resource disposal,
         like closing files or database connections.
         """
+
+    def _snapshot_from_request_lst(
+        self, request_lst: Optional[List[request.ScaleRequest]] = None
+    ) -> event.EventSnapshot:
+        """
+        Utility to create :py:class:`event.EventSnapshot`s.
+        """
+        return event.EventSnapshot.from_list_requests(
+            source=self._source,
+            request_lst=request_lst,
+        )
 
     async def read(
         self,

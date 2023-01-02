@@ -30,7 +30,7 @@ _TEST_DEFAULT_PATH_VALUE: pathlib.Path = pathlib.Path(
 # pylint: enable=consider-using-with
 
 
-def _create_credentials(expired: bool = False):
+def _create_credentials(expired: bool = False) -> credentials.Credentials:
     return credentials.Credentials(
         token="TEST_TOKEN",
         refresh_token="TEST_REFRESH_TOKEN",
@@ -39,6 +39,7 @@ def _create_credentials(expired: bool = False):
 
 
 _TEST_CREDENTIALS: credentials.Credentials = _create_credentials()
+_TEST_CREDENTIALS_JSON: str = _TEST_CREDENTIALS.to_json()
 _TEST_CALENDAR_ID: str = "TEST_CALENDAR_ID"
 
 
@@ -58,7 +59,7 @@ async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
     # Given
     amount_arg = 10
     calendar_id = _TEST_CALENDAR_ID
-    credentials_json = _TEST_CREDENTIALS
+    credentials_json = _TEST_CREDENTIALS_JSON
     service_arg = "TEST_SERVICE"
     credentials_json_arg = None
     kwargs_for_list_arg = None
@@ -240,7 +241,7 @@ async def test__persist_credentials_pickle_ok():
     # Then
     assert result
     content = await google_cal._pickle_credentials(credentials_pickle)
-    assert content.token == _TEST_CREDENTIALS.token
+    assert content.token == value.token
 
 
 @pytest.mark.asyncio
@@ -285,61 +286,6 @@ async def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
         assert isinstance(called.get("refresh"), requests.Request)
 
 
-@pytest.mark.asyncio
-async def test__secret_credentials_ok(monkeypatch):
-    secret_name = "TEST_SECRET"
-    called = {}
-
-    async def mocked_get(value: str) -> credentials.Credentials:
-        nonlocal called
-        called["get"] = value
-        return _TEST_CREDENTIALS
-
-    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
-    # When
-    result = await google_cal._secret_credentials(secret_name)
-    # Then
-    assert result == _TEST_CREDENTIALS
-    assert called.get("get") == secret_name
-
-
-@pytest.mark.asyncio
-async def test__secret_credentials_ok_env_secret_name(monkeypatch):
-    secret_name = "TEST_SECRET"
-    called = {}
-
-    async def mocked_get(value: str) -> credentials.Credentials:
-        nonlocal called
-        called["get"] = value
-        return _TEST_CREDENTIALS
-
-    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
-    monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, secret_name)
-    # When
-    result = await google_cal._secret_credentials(None)
-    # Then
-    assert result == _TEST_CREDENTIALS
-    assert called.get("get") == secret_name
-
-
-@pytest.mark.asyncio
-async def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
-    called = {}
-
-    async def mocked_get(value: str) -> credentials.Credentials:
-        nonlocal called
-        called["get"] = value
-        return _TEST_CREDENTIALS
-
-    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
-    monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, "")
-    # When
-    result = await google_cal._secret_credentials(None)
-    # Then
-    assert result is None
-    assert called.get("get") is None
-
-
 class _StubInstalledAppFlow:
     def __init__(self, creds: credentials.Credentials = _TEST_CREDENTIALS):
         self._creds = creds
@@ -351,11 +297,95 @@ class _StubInstalledAppFlow:
 
 
 @pytest.mark.asyncio
+async def test__secret_credentials_ok(monkeypatch):
+    secret_name = "TEST_SECRET"
+    expected = _TEST_CREDENTIALS
+    app_flow = _StubInstalledAppFlow(expected)
+    called = {}
+
+    def mocked_from_client_secrets_file(
+        in_file: pathlib.Path, scopes: List[str]
+    ) -> credentials.Credentials:
+        nonlocal called
+        called["from_client_secrets_file"] = (in_file, scopes)
+        return app_flow
+
+    async def mocked_get(value: str) -> str:
+        nonlocal called
+        called["get"] = value
+        return expected.to_json()
+
+    monkeypatch.setattr(
+        google_cal.flow.InstalledAppFlow,
+        google_cal.flow.InstalledAppFlow.from_client_secrets_file.__name__,
+        mocked_from_client_secrets_file,
+    )
+    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
+    # When
+    result = await google_cal._secret_credentials(secret_name)
+    # Then
+    assert result == expected
+    assert called.get("get") == secret_name
+
+
+@pytest.mark.asyncio
+async def test__secret_credentials_ok_env_secret_name(monkeypatch):
+    secret_name = "TEST_SECRET"
+    expected = _TEST_CREDENTIALS
+    app_flow = _StubInstalledAppFlow(expected)
+    called = {}
+
+    def mocked_from_client_secrets_file(
+        in_file: pathlib.Path, scopes: List[str]
+    ) -> credentials.Credentials:
+        nonlocal called
+        called["from_client_secrets_file"] = (in_file, scopes)
+        return app_flow
+
+    async def mocked_get(value: str) -> str:
+        nonlocal called
+        called["get"] = value
+        return expected.to_json()
+
+    monkeypatch.setattr(
+        google_cal.flow.InstalledAppFlow,
+        google_cal.flow.InstalledAppFlow.from_client_secrets_file.__name__,
+        mocked_from_client_secrets_file,
+    )
+    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
+    monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, secret_name)
+    # When
+    result = await google_cal._secret_credentials(None)
+    # Then
+    assert result == expected
+    assert called.get("get") == secret_name
+
+
+@pytest.mark.asyncio
+async def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
+    called = {}
+
+    async def mocked_get(value: str) -> credentials.Credentials:
+        nonlocal called
+        called["get"] = value
+        return _TEST_CREDENTIALS_JSON
+
+    monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
+    monkeypatch.setenv(google_cal._CREDENTIALS_SECRET_ENV_VAR_NAME, "")
+    # When
+    result = await google_cal._secret_credentials(None)
+    # Then
+    assert result is None
+    assert called.get("get") is None
+
+
+@pytest.mark.asyncio
 async def test__json_credentials_ok(monkeypatch):
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
-    app_flow = _StubInstalledAppFlow(_TEST_CREDENTIALS)
+    creds = _TEST_CREDENTIALS
+    app_flow = _StubInstalledAppFlow(creds)
     called = {}
 
     def mocked_from_client_secrets_file(
@@ -373,7 +403,7 @@ async def test__json_credentials_ok(monkeypatch):
     # When
     result = await google_cal._json_credentials(value)
     # Then
-    assert result == _TEST_CREDENTIALS
+    assert result == creds
     assert called.get("from_client_secrets_file") == (
         value,
         google_cal._CALENDAR_SCOPES,

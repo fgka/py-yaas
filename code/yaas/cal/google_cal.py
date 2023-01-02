@@ -6,6 +6,7 @@ Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python
 """
 # pylint: enable=line-too-long
 import asyncio
+import json
 from datetime import datetime
 import os
 import pathlib
@@ -32,6 +33,7 @@ async def list_upcoming_events(
     *,
     calendar_id: str,
     credentials_json: Optional[pathlib.Path] = None,
+    secret_name: Optional[str] = None,
     amount: Optional[int] = None,
     start: Optional[Union[datetime, int]] = None,
     end: Optional[Union[datetime, int]] = None,
@@ -116,7 +118,8 @@ async def list_upcoming_events(
 
     Args:
         calendar_id: which cal to list.
-        credentials_json: cal JSON credentials, if existing.
+        credentials_json: calendar JSON credentials, if existing.
+        secret_name: secret name containing the calendar credentials, if existing.
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
         end: up until when to list, if given, will discard ``amount``.
@@ -127,7 +130,9 @@ async def list_upcoming_events(
     """
     # pylint: enable=line-too-long
     # Normalize input
-    service = await _calendar_service(credentials_json=credentials_json)
+    service = await _calendar_service(
+        secret_name=secret_name, credentials_json=credentials_json
+    )
     if end is None:
         if not isinstance(amount, int):
             amount = DEFAULT_LIST_EVENTS_AMOUNT
@@ -249,7 +254,7 @@ async def _calendar_credentials(
     result: credentials.Credentials = await _pickle_credentials(credentials_pickle)
     # Second: Cloud Secrets
     if not result:
-        result = await _secret_credentials(secret_name)
+        result = await _secret_credentials(secret_name, credentials_json)
     # Third: JSON
     if not result:
         result = await _json_credentials(credentials_json)
@@ -329,7 +334,7 @@ async def _persist_credentials_pickle(
         content = pickle.dumps(value)
         async with aiofiles.open(credentials_pickle, "wb") as out_file:
             await out_file.write(content)
-            result = True
+        result = True
         _LOGGER.info(
             "Persisted cal credentials with client ID %s into pickle file: %s",
             value.client_id,
@@ -341,7 +346,9 @@ async def _persist_credentials_pickle(
 _CREDENTIALS_SECRET_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_SECRET_NAME"
 
 
-async def _secret_credentials(value: Optional[str] = None) -> credentials.Credentials:
+async def _secret_credentials(
+    value: Optional[str] = None, credentials_json: Optional[pathlib.Path] = None
+) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
         "Retrieving cal credentials from cloud secret name: <%s>(%s)",
@@ -357,7 +364,8 @@ async def _secret_credentials(value: Optional[str] = None) -> credentials.Creden
             value,
             type(value),
         )
-        result = await _refresh_credentials_if_needed(result)
+        await _persist_json_credentials(json.loads(result), credentials_json)
+        result = await _json_credentials(credentials_json)
     return result
 
 
@@ -385,6 +393,33 @@ def _refresh_credentials(value: credentials.Credentials, req: requests.Request) 
 def _create_request() -> requests.Request:
     """To make async"""
     return requests.Request()
+
+
+async def _persist_json_credentials(
+    value: Dict[str, Any], credentials_json: Optional[pathlib.Path] = None
+) -> bool:
+    _LOGGER.debug(
+        "Persisting cal credentials into JSON file: <%s>(%s)",
+        credentials_json,
+        type(credentials_json),
+    )
+    result = False
+    if isinstance(value, dict):
+        credentials_json = _json_filepath(credentials_json)
+        if not isinstance(credentials_json, pathlib.Path):
+            raise TypeError(
+                f"Expecting a {pathlib.Path.__name__} as credentials JSON file path."
+                f" Got <{credentials_json}>({type(credentials_json)})"
+            )
+        async with aiofiles.open(credentials_json, "w") as out_file:
+            await out_file.write(json.dumps(value))
+        result = True
+        _LOGGER.info(
+            "Persisted cal credentials with client ID %s into JSON file: %s",
+            value.get("client_id"),
+            credentials_json,
+        )
+    return result
 
 
 async def _json_credentials(

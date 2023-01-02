@@ -7,9 +7,7 @@ CLI entry point to test individual parts of the code.
 import asyncio
 from datetime import datetime, timedelta
 import functools
-import io
-import pathlib
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 # From: https://cloud.google.com/logging/docs/setup/python
 
@@ -29,8 +27,8 @@ import click
 from googleapiclient import errors
 
 from yaas import logger
-from yaas.dto import request
-from yaas.event.store import calendar, file
+from yaas.dto import event, request
+from yaas.event.store import calendar, gcs
 from yaas.gcp import cloud_run
 from yaas.scaler import run, standard
 
@@ -71,7 +69,7 @@ def cli() -> None:
     "--calendar-id", required=True, type=str, help="Which calendar ID to read"
 )
 @click.option(
-    "--json-creds", required=False, type=click.File("r"), help="JSON credentials file"
+    "--secret-name", required=False, type=str, help="Secret name with credentials"
 )
 @click.option(
     "--start-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
@@ -79,91 +77,142 @@ def cli() -> None:
 @click.option(
     "--end-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
 )
-@click.option("--cache-file", required=False, type=str, help="Cache filename.")
+@click.option("--project", required=False, type=str, help="Google Cloud project")
+@click.option(
+    "--bucket-name", required=False, type=str, help="Bucket where to store the cache."
+)
+@click.option(
+    "--db-object",
+    required=False,
+    type=str,
+    help="Path in the bucket where to store the cache object.",
+)
 @coro
-async def list_events(
+async def list_events(  # pylint: disable=too-many-arguments
     calendar_id: str,
-    json_creds: Optional[io.TextIOWrapper] = None,
+    secret_name: Optional[str] = None,
     start_day: Optional[str] = None,
     end_day: Optional[str] = None,
-    cache_file: Optional[str] = None,
+    project: Optional[str] = None,
+    bucket_name: Optional[str] = None,
+    db_object: Optional[str] = None,
 ) -> None:
     """
     List calendar events.
 
     Args:
         calendar_id: Google calendar ID
-        json_creds: Google calendar JSON credentials
+        secret_name: Google calendar JSON credentials
         start_day: From when to start listing the events
         end_day: Up until when to list events
-        cache_file: Where to persist locally
+        project:
+        bucket_name: Where to persist in GCS
+        db_object: Where to persist locally
     """
     # pylint: disable=too-many-locals,invalid-name,too-many-branches
     try:
-        credentials_json = None
-        if json_creds:
-            credentials_json = pathlib.Path(json_creds.name).absolute()
-        if start_day:
-            start = datetime.fromisoformat(start_day)
-        else:
-            start = datetime.utcnow() - timedelta(days=2)
-        if end_day:
-            end = datetime.fromisoformat(end_day)
-        else:
-            end = datetime.utcnow()
-
-        print(f"Date range: {start} {end}")
-
-        cal_store = calendar.ReadOnlyGoogleCalendarStore(
-            calendar_id=calendar_id, credentials_json=credentials_json
+        start_ts_utc, end_ts_utc = await _start_end_ts_utc_from_iso_str(
+            start_iso_format=start_day, end_iso_format=end_day
         )
-        cal_snapshot = await cal_store.read(start_ts_utc=start, end_ts_utc=end)
-
-        if cache_file:
-            print(f"Caching events into <{cache_file}>")
-            json_line_file = pathlib.Path(cache_file).absolute()
-            archive_json_line_file = pathlib.Path(f"{cache_file}.archive").absolute()
-            file_store = file.JsonLineFileStoreContextManager(
-                json_line_file=json_line_file,
-                archive_json_line_file=archive_json_line_file,
-            )
-            await file_store.write(cal_snapshot, overwrite_within_range=True)
-            await file_store.archive(
-                start_ts_utc=0, end_ts_utc=start - timedelta(seconds=1)
-            )
-            cache_snapshot = await file_store.read(start_ts_utc=start, end_ts_utc=end)
-
+        print(f"Date range: {start_ts_utc} {end_ts_utc}")
+        cal_snapshot = await _calendar_snapshot(
+            calendar_id=calendar_id,
+            secret_name=secret_name,
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+        )
         print(f"Snapshot {cal_snapshot.source} has")
+        cache_snapshot = await _cache_snapshot(
+            project=project,
+            bucket_name=bucket_name,
+            db_object=db_object,
+            cal_snapshot=cal_snapshot,
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+        )
         for ts, lst_req in cal_snapshot.timestamp_to_request.items():
             print(f"Timestamp {datetime.fromtimestamp(ts)} has {len(lst_req)} requests")
-        if cache_file:
-            print(f"Cache {cache_snapshot.source} has")
-            for ts, lst_req in cache_snapshot.timestamp_to_request.items():
-                print(
-                    f"Timestamp {datetime.fromtimestamp(ts)} has {len(lst_req)} requests"
-                )
-            comp = (
-                cache_snapshot.timestamp_to_request == cal_snapshot.timestamp_to_request
+        if cache_snapshot:
+            await _compare_snapshots(
+                cal_snapshot=cal_snapshot, cache_snapshot=cache_snapshot
             )
-            print("Comparison between calendar and cache: " f"{comp}")
-            if not comp:
-                print(f"Calendar: {cal_snapshot.source}")
-                for ts, lst_req in cal_snapshot.timestamp_to_request.items():
-                    print(
-                        f"Timestamp {datetime.fromtimestamp(ts)} has {len(lst_req)} requests"
-                    )
-                    for req in lst_req:
-                        print(f"\t{req}")
-                print(f"Cache: {cache_snapshot.source}")
-                for ts, lst_req in cache_snapshot.timestamp_to_request.items():
-                    print(
-                        f"Timestamp {datetime.fromtimestamp(ts)} has {len(lst_req)} requests"
-                    )
-                    for req in lst_req:
-                        print(f"\t{req}")
-
     except errors.HttpError as error:
         print(f"An error occurred: {error}")
+
+
+async def _start_end_ts_utc_from_iso_str(
+    *, start_iso_format: Optional[str] = None, end_iso_format: Optional[str] = None
+) -> Tuple[int, int]:
+    if start_iso_format:
+        start_ts_utc = datetime.fromisoformat(start_iso_format)
+    else:
+        start_ts_utc = datetime.utcnow() - timedelta(days=2)
+    if end_iso_format:
+        end_ts_utc = datetime.fromisoformat(end_iso_format)
+    else:
+        end_ts_utc = datetime.utcnow()
+    return start_ts_utc, end_ts_utc
+
+
+async def _calendar_snapshot(
+    *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
+) -> event.EventSnapshot:
+    result = calendar.ReadOnlyGoogleCalendarStore(
+        calendar_id=calendar_id, secret_name=secret_name
+    )
+    async with result as obj:
+        cal_snapshot = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+    return cal_snapshot
+
+
+async def _cache_snapshot(
+    *,
+    project: str,
+    bucket_name: str,
+    db_object: str,
+    cal_snapshot: event.EventSnapshot,
+    start_ts_utc: int,
+    end_ts_utc: int,
+) -> event.EventSnapshot:
+    if bucket_name and db_object:
+        print(f"Caching events into bucket <{bucket_name}> and object <{db_object}>")
+        gcs_store = gcs.GcsObjectStoreContextManager(
+            bucket_name=bucket_name,
+            db_object_path=db_object,
+            project=project,
+        )
+        async with gcs_store as obj:
+            await obj.write(cal_snapshot, overwrite_within_range=True)
+            await obj.archive(
+                start_ts_utc=0, end_ts_utc=start_ts_utc - timedelta(seconds=1)
+            )
+            result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+    return result
+
+
+async def _compare_snapshots(
+    *, cal_snapshot: event.EventSnapshot, cache_snapshot: event.EventSnapshot
+) -> None:
+    print(f"Cache {cache_snapshot.source} has")
+    for ts_utc, lst_req in cache_snapshot.timestamp_to_request.items():
+        print(f"Timestamp {datetime.fromtimestamp(ts_utc)} has {len(lst_req)} requests")
+    comp = cache_snapshot.timestamp_to_request == cal_snapshot.timestamp_to_request
+    print("Comparison between calendar and cache: " f"{comp}")
+    if not comp:
+        print(f"Calendar: {cal_snapshot.source}")
+        for ts_utc, lst_req in cal_snapshot.timestamp_to_request.items():
+            print(
+                f"Timestamp {datetime.fromtimestamp(ts_utc)} has {len(lst_req)} requests"
+            )
+            for req in lst_req:
+                print(f"\t{req}")
+        print(f"Cache: {cache_snapshot.source}")
+        for ts_utc, lst_req in cache_snapshot.timestamp_to_request.items():
+            print(
+                f"Timestamp {datetime.fromtimestamp(ts_utc)} has {len(lst_req)} requests"
+            )
+            for req in lst_req:
+                print(f"\t{req}")
 
 
 @cli.command(help="Set Cloud Run scaling")

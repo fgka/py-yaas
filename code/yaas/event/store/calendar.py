@@ -27,7 +27,8 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
         self,
         *,
         calendar_id: str,
-        credentials_json: pathlib.Path,
+        credentials_json: Optional[pathlib.Path] = None,
+        secret_name: Optional[str] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -35,13 +36,17 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
             raise TypeError(
                 f"Calendar ID must be a string. Got: <{calendar_id}>({type(calendar_id)})"
             )
-        if not isinstance(credentials_json, pathlib.Path):
+        if not isinstance(credentials_json, pathlib.Path) and not isinstance(
+            secret_name, str
+        ):
             raise TypeError(
-                f"Credentials JSON must be a {pathlib.Path.__name__}. "
-                f"Got: <{credentials_json}>({type(credentials_json)})"
+                f"Either the secret name or JSON file for credentials be provided. "
+                f"Got: <{credentials_json}>({type(credentials_json)}) "
+                f"and <{secret_name}>({type(secret_name)})"
             )
         self._calendar_id = calendar_id
         self._credentials_json = credentials_json
+        self._secret_name = secret_name
 
     @property
     def calendar_id(self) -> str:
@@ -57,12 +62,20 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
         """
         return self._credentials_json
 
+    @property
+    def secret_name(self) -> str:
+        """
+        Secret Manager secret name for Google Calendar credentials.
+        """
+        return self._secret_name
+
     async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         event_lst: List[Dict[str, Any]] = await google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,
             credentials_json=self._credentials_json,
+            secret_name=self._secret_name,
             start=start_ts_utc,
             end=end_ts_utc,
         )

@@ -37,6 +37,7 @@ def read_object(
     *,
     bucket_name: str,
     object_path: str,
+    project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
 ) -> Optional[bytes]:
@@ -47,6 +48,8 @@ def read_object(
             Bucket name
         object_path:
             Path to the object to read from (**WITHOUT** leading `/`)
+        project:
+            Which project to use to create the GCS client, optional.
         filename:
             If provided, will download the content into the file and return :py:obj:`None`.
         warn_read_failure:
@@ -65,7 +68,13 @@ def read_object(
             f"If filename is given, it must an instance of {pathlib.Path.__name__}. "
             f"Got <{filename}>({type(filename)})"
         )
-    return _read_object(bucket_name, object_path, filename, warn_read_failure)
+    return _read_object(
+        bucket_name=bucket_name,
+        object_path=object_path,
+        project=project,
+        filename=filename,
+        warn_read_failure=warn_read_failure,
+    )
 
 
 def validate_and_clean_bucket_and_path(
@@ -135,8 +144,10 @@ def validate_and_clean_object_path(value: str) -> str:
 
 
 def _read_object(
+    *,
     bucket_name: str,
     object_path: str,
+    project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
 ) -> Optional[bytes]:
@@ -144,7 +155,7 @@ def _read_object(
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Reading <%s>", gcs_uri)
     try:
-        bucket_obj = _bucket(bucket_name)
+        bucket_obj = _bucket(bucket_name, project)
         blob = bucket_obj.blob(object_path)
         if blob.exists():
             if filename:
@@ -161,22 +172,45 @@ def _read_object(
             )
     except Exception as err:
         raise CloudStorageError(
-            f"Could not download content from <{gcs_uri}>. Error: {err}"
+            f"Could not download content from <{gcs_uri}> in project <{project}> "
+            f"into <{filename}>. "
+            f"Error: {err}"
         ) from err
     return result
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
-def _client() -> storage.Client:
-    return storage.Client()
+def _client(project: Optional[str] = None) -> storage.Client:
+    try:
+        result = storage.Client(project)
+    except Exception as err:
+        raise CloudStorageError(
+            f"Could not create storage client for project <{project}>. Error: {err}"
+        ) from err
+    return result
 
 
-def _bucket(bucket_name: str) -> storage.Bucket:
-    return _client().get_bucket(bucket_name)
+def _bucket(bucket_name: str, project: Optional[str] = None) -> storage.Bucket:
+    try:
+        result = _client(project).get_bucket(bucket_name)
+    except Exception as err:
+        raise CloudStorageError(
+            f"Could not get bucket <{bucket_name}> with client in project <{project}>. "
+            f"Error: {err}"
+        ) from err
+    if not isinstance(result, storage.Bucket) or not result.exists():
+        raise CloudStorageError(
+            f"Bucket <{bucket_name}> in project <{project}> does not exist."
+        )
+    return result
 
 
 def write_object(
-    *, bucket_name: str, object_path: str, content: Union[bytes, pathlib.Path]
+    *,
+    bucket_name: str,
+    object_path: str,
+    content_source: Union[bytes, pathlib.Path],
+    project: Optional[str] = None,
 ) -> None:
     """
     Will write the ``content`` on the object in ``path`` into the bucket ``bucket_name``.
@@ -186,36 +220,53 @@ def write_object(
             Bucket name
         object_path:
             Path to the object to read from (**WITHOUT** leading `/`)
-        content:
+        project:
+            Which project to use to create the GCS client, optional.
+        content_source:
             What to write, either :py:class:`bytes` or :py:class:`pathlib.Path`.
     """
     # validate input
     bucket_name, object_path = validate_and_clean_bucket_and_path(
         bucket_name, object_path
     )
-    if not isinstance(content, bytes):
+    if not isinstance(content_source, bytes) and not isinstance(
+        content_source, pathlib.Path
+    ):
         raise TypeError(
-            f"Content must be {bytes.__name__}. Got: <{content}>({type(content)})"
+            f"Content must be {bytes.__name__} or {pathlib.Path.__name__}. "
+            f"Got: <{content_source}>({type(content_source)})"
         )
     # logic
-    _write_object(bucket_name, object_path, content)
+    _write_object(
+        bucket_name=bucket_name,
+        object_path=object_path,
+        content_source=content_source,
+        project=project,
+    )
 
 
 def _write_object(
-    bucket_name: str, object_path: str, content: Union[bytes, pathlib.Path]
+    *,
+    bucket_name: str,
+    object_path: str,
+    content_source: Union[bytes, pathlib.Path],
+    project: Optional[str] = None,
 ) -> None:
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Writing <%s>", gcs_uri)
     try:
-        bucket_obj = _bucket(bucket_name)
+        bucket_obj = _bucket(bucket_name, project)
         blob = bucket_obj.blob(object_path)
-        if isinstance(content, pathlib.Path):
-            blob.upload_from_filename(content)
+        if isinstance(content_source, pathlib.Path):
+            blob.upload_from_filename(content_source)
         else:
             with blob.open("wb") as out_blob:
-                out_blob.write(content)
+                out_blob.write(content_source)
                 _LOGGER.debug("Wrote <%s>", gcs_uri)
     except Exception as err:
         raise CloudStorageError(
-            f"Could not download content from <{gcs_uri}>. Error: {err}"
+            "Could not upload content from "
+            f"<{content_source if isinstance(content_source, pathlib.Path) else 'bytes content'}> "
+            f"into <{gcs_uri}> in project <{project}>. "
+            f"Error: {err}"
         ) from err

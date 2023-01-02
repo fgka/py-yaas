@@ -8,6 +8,7 @@ Store interface for `Google Cloud Storage`_.
 # pylint: enable=line-too-long
 import pathlib
 import tempfile
+from typing import Optional
 
 from yaas import logger
 from yaas.event.store import file
@@ -28,6 +29,7 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         *,
         bucket_name: str,
         db_object_path: str,
+        project: Optional[str] = None,
         **kwargs,
     ):
         self._bucket_name = gcs.validate_and_clean_bucket_name(bucket_name)
@@ -35,6 +37,7 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         super().__init__(
             sqlite_file=self._temporary_file(), source=self.gcs_uri, **kwargs
         )
+        self._project = project
 
     @staticmethod
     def _temporary_file() -> pathlib.Path:
@@ -61,11 +64,19 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         """
         return f"gs://{self._bucket_name}/{self._db_object_path}"
 
+    @property
+    def project(self) -> str:
+        """
+        Google Cloud project ID.
+        """
+        return self._project
+
     async def _open(self) -> None:
         gcs.read_object(
             bucket_name=self._bucket_name,
             object_path=self._db_object_path,
             filename=self.sqlite_file,
+            project=self._project,
         )
         await super()._open()
 
@@ -74,5 +85,6 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         gcs.write_object(
             bucket_name=self._bucket_name,
             object_path=self._db_object_path,
-            content=self.sqlite_file,
+            content_source=self.sqlite_file,
+            project=self._project,
         )

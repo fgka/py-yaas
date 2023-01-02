@@ -39,6 +39,7 @@ class TestGcsObjectStoreContextManager:
             *,
             bucket_name: str,
             object_path: str,
+            project: Optional[str] = None,
             filename: Optional[pathlib.Path] = None,
             warn_read_failure: Optional[bool] = True,
         ) -> Optional[bytes]:
@@ -47,13 +48,17 @@ class TestGcsObjectStoreContextManager:
             assert object_path == self.instance.db_object_path
             called[gcs.gcs.read_object.__name__] = filename
 
-        def mocked_write_object(
-            *, bucket_name: str, object_path: str, content: Union[bytes, pathlib.Path]
+        def mocked_write_object(  # pylint: disable=unused-argument
+            *,
+            bucket_name: str,
+            object_path: str,
+            content_source: Union[bytes, pathlib.Path],
+            project: Optional[str] = None,
         ) -> None:
             nonlocal called
             assert bucket_name == self.instance.bucket_name
             assert object_path == self.instance.db_object_path
-            called[gcs.gcs.write_object.__name__] = content
+            called[gcs.gcs.write_object.__name__] = content_source
 
         monkeypatch.setattr(gcs.gcs, gcs.gcs.read_object.__name__, mocked_read_object)
         monkeypatch.setattr(gcs.gcs, gcs.gcs.write_object.__name__, mocked_write_object)

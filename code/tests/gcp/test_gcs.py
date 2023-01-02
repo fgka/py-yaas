@@ -128,7 +128,9 @@ def test_read_object_ok(monkeypatch, expected: bytes):
     bucket = _MyBucket(expected)
     called = {}
 
-    def mocked_bucket(bucket_name: str) -> _MyBucket:
+    def mocked_bucket(  # pylint: disable=unused-argument
+        bucket_name: str, project: Optional[str] = None
+    ) -> _MyBucket:
         nonlocal called
         called[gcs._bucket.__name__] = bucket_name
         return bucket
@@ -152,7 +154,9 @@ def test_write_object_ok(monkeypatch):
     bucket = _MyBucket()
     called = {}
 
-    def mocked_bucket(bucket_name: str) -> _MyBucket:
+    def mocked_bucket(  # pylint: disable=unused-argument
+        bucket_name: str, project: Optional[str] = None
+    ) -> _MyBucket:
         nonlocal called
         called[gcs._bucket.__name__] = bucket_name
         return bucket
@@ -160,7 +164,9 @@ def test_write_object_ok(monkeypatch):
     monkeypatch.setattr(gcs, gcs._bucket.__name__, mocked_bucket)
     # When
     gcs.write_object(
-        bucket_name=_TEST_BUCKET_NAME, object_path=_TEST_PATH, content=_TEST_CONTENT
+        bucket_name=_TEST_BUCKET_NAME,
+        object_path=_TEST_PATH,
+        content_source=_TEST_CONTENT,
     )
     # Then
     assert called.get(gcs._bucket.__name__) == _TEST_BUCKET_NAME

@@ -13,7 +13,7 @@ import attrs
 from yaas import const, logger
 from yaas.dto import dto_defaults, request
 from yaas.gcp import cloud_run, cloud_run_const
-from yaas.scaler import base
+from yaas.scaler import base, resource_name_parser
 
 _LOGGER = logger.get(__name__)
 
@@ -97,8 +97,11 @@ class CloudRunScalingDefinition(  # pylint: disable=too-few-public-methods
 
     @classmethod
     def from_request(cls, value: request.ScaleRequest) -> "CloudRunScalingDefinition":
+        _, res_name = resource_name_parser.canonical_resource_type_and_name(
+            value.resource
+        )
         return CloudRunScalingDefinition(
-            resource=value.resource,
+            resource=res_name,
             command=CloudRunScalingCommand.from_command_str(value.command),
             timestamp_utc=value.timestamp_utc,
         )

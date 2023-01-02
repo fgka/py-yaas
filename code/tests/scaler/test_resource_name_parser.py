@@ -32,13 +32,13 @@ _TEST_RESOURCE_CLOUD_RUN_SIMPLIFIED: str = f"CloudRun {_TEST_RESOURCE_CLOUD_RUN_
         ),
     ],
 )
-def test_canonical_resource_name_and_type_ok_cloud_run(
+def test_canonical_resource_type_and_name_ok_cloud_run(
     resource: str, expected_type: resource_name_parser.ResourceType, expected_canonical
 ):
     (
         resource_type,
         canonical_str,
-    ) = resource_name_parser.canonical_resource_name_and_type(resource)
+    ) = resource_name_parser.canonical_resource_type_and_name(resource)
     # Then
     assert resource_type == expected_type
     assert canonical_str == expected_canonical
@@ -63,11 +63,11 @@ def test_canonical_resource_name_and_type_ok_cloud_run(
     ],
 )
 # pylint: enable=line-too-long
-def test_canonical_resource_name_and_type_nok_cloud_run(resource: str):
+def test_canonical_resource_type_and_name_nok_cloud_run(resource: str):
     (
         resource_type,
         canonical_str,
-    ) = resource_name_parser.canonical_resource_name_and_type(resource)
+    ) = resource_name_parser.canonical_resource_type_and_name(resource)
     # Then
     assert resource_type is None
     assert canonical_str is None

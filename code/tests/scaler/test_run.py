@@ -87,7 +87,7 @@ class TestCloudRunScalingDefinition:
                 resource=resource, command=command, timestamp_utc=321
             )
 
-    def test_from_request(self):
+    def test_from_request_ok(self):
         # Given
         req = common.create_scale_request(
             resource=_TEST_CLOUD_RUN_RESOURCE_STR,

@@ -24,8 +24,6 @@ if False:  # pylint: disable=using-constant-test
 # pylint: disable=wrong-import-position
 import click
 
-from googleapiclient import errors
-
 from yaas import logger
 from yaas.dto import event, request
 from yaas.event.store import calendar, gcs
@@ -109,7 +107,6 @@ async def list_events(  # pylint: disable=too-many-arguments
         bucket_name: Where to persist in GCS
         db_object: Where to persist locally
     """
-    # pylint: disable=too-many-locals,invalid-name,too-many-branches
     try:
         start_ts_utc, end_ts_utc = await _start_end_ts_utc_from_iso_str(
             start_iso_format=start_day, end_iso_format=end_day
@@ -126,18 +123,20 @@ async def list_events(  # pylint: disable=too-many-arguments
             project=project,
             bucket_name=bucket_name,
             db_object=db_object,
-            cal_snapshot=cal_snapshot,
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
+            cal_snapshot=cal_snapshot,
         )
-        for ts, lst_req in cal_snapshot.timestamp_to_request.items():
-            print(f"Timestamp {datetime.fromtimestamp(ts)} has {len(lst_req)} requests")
+        for ts_utc, lst_req in cal_snapshot.timestamp_to_request.items():
+            print(
+                f"Timestamp {datetime.fromtimestamp(ts_utc)} has {len(lst_req)} requests"
+            )
         if cache_snapshot:
             await _compare_snapshots(
                 cal_snapshot=cal_snapshot, cache_snapshot=cache_snapshot
             )
-    except errors.HttpError as error:
-        print(f"An error occurred: {error}")
+    except Exception as err:  # pylint: disable=broad-except
+        print(f"An error occurred: {err}")
 
 
 async def _start_end_ts_utc_from_iso_str(
@@ -170,22 +169,25 @@ async def _cache_snapshot(
     project: str,
     bucket_name: str,
     db_object: str,
-    cal_snapshot: event.EventSnapshot,
     start_ts_utc: int,
     end_ts_utc: int,
+    cal_snapshot: Optional[event.EventSnapshot] = None,
 ) -> event.EventSnapshot:
+    result = None
     if bucket_name and db_object:
-        print(f"Caching events into bucket <{bucket_name}> and object <{db_object}>")
+        print(f"Events cache: bucket <{bucket_name}> and object <{db_object}>")
         gcs_store = gcs.GcsObjectStoreContextManager(
             bucket_name=bucket_name,
             db_object_path=db_object,
             project=project,
         )
+        if isinstance(cal_snapshot, event.EventSnapshot):
+            async with gcs_store as obj:
+                await obj.write(cal_snapshot, overwrite_within_range=True)
+                await obj.archive(
+                    start_ts_utc=0, end_ts_utc=start_ts_utc - timedelta(seconds=1)
+                )
         async with gcs_store as obj:
-            await obj.write(cal_snapshot, overwrite_within_range=True)
-            await obj.archive(
-                start_ts_utc=0, end_ts_utc=start_ts_utc - timedelta(seconds=1)
-            )
             result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     return result
 
@@ -213,6 +215,78 @@ async def _compare_snapshots(
             )
             for req in lst_req:
                 print(f"\t{req}")
+
+
+@cli.command(help="Apply requests")
+@click.option(
+    "--start-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
+)
+@click.option(
+    "--end-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31"
+)
+@click.option("--project", required=False, type=str, help="Google Cloud project")
+@click.option(
+    "--bucket-name", required=False, type=str, help="Bucket where to store the cache."
+)
+@click.option(
+    "--db-object",
+    required=False,
+    type=str,
+    help="Path in the bucket where to store the cache object.",
+)
+@coro
+async def apply_events(  # pylint: disable=too-many-arguments
+    start_day: Optional[str] = None,
+    end_day: Optional[str] = None,
+    project: Optional[str] = None,
+    bucket_name: Optional[str] = None,
+    db_object: Optional[str] = None,
+) -> None:
+    """
+
+    Args:
+        start_day:
+        end_day:
+        project:
+        bucket_name:
+        db_object:
+
+    Returns:
+
+    """
+    try:
+        start_ts_utc, end_ts_utc = await _start_end_ts_utc_from_iso_str(
+            start_iso_format=start_day, end_iso_format=end_day
+        )
+        print(f"Date range: {start_ts_utc} {end_ts_utc}")
+        cache_snapshot = await _cache_snapshot(
+            project=project,
+            bucket_name=bucket_name,
+            db_object=db_object,
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+        )
+        parser = standard.StandardScalingCommandParser()
+        await parser.enact(
+            *[
+                req
+                for req_lst in cache_snapshot.timestamp_to_request.values()
+                for req in req_lst
+            ],
+            raise_if_invalid_request=False,
+        )
+    except Exception as err:  # pylint: disable=broad-except
+        print(f"An error occurred: {err}")
+
+
+async def _enact_request(
+    parser: standard.StandardScalingCommandParser, req: request.ScaleRequest
+) -> None:
+    try:
+        scaler = parser.scaler(req)
+        await scaler.enact()
+    except Exception as err:  # pylint: disable=broad-except
+        print(f"Could not apply request <{req}>. Error: {err}")
 
 
 @cli.command(help="Set Cloud Run scaling")

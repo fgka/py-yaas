@@ -61,5 +61,5 @@ class TestStandardScalingCommandParser:
         # Given
         req = _create_request(resource=_TEST_CLOUD_FUNCTION_RESOURCE_STR)
         # When/Then
-        with pytest.raises(base.CategoryScaleRequestProcessorError):
+        with pytest.raises(base.CategoryScaleRequestParserError):
             self.obj.scaler(req)

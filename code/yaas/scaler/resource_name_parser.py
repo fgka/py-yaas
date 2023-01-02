@@ -24,7 +24,7 @@ class ResourceType(enum.Enum):
     CLOUD_RUN = enum.auto()
 
 
-def canonical_resource_name_and_type(resource: str) -> Tuple[ResourceType, str]:
+def canonical_resource_type_and_name(resource: str) -> Tuple[ResourceType, str]:
     """
     Will parse the resource name, returning its type, as py:cls:`ResourceType`,
         and canonical name.

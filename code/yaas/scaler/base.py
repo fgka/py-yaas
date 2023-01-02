@@ -4,7 +4,8 @@
 Basic definition of types and expected functionality for resource scaler.
 """
 import abc
-from typing import Any, List, Tuple
+import asyncio
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import attrs
 
@@ -165,52 +166,123 @@ class CategoryType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
 
 
-class CategoryScaleRequestProcessorError(Exception):
+class CategoryScaleRequestParserError(Exception):
     """
     Wrapper for all errors creating a :py:class:`Scaler`
     for a given :py:class:`request.ScaleRequest`.
     """
 
 
-class CategoryScaleRequestProcessor(abc.ABC):
+class CategoryScaleRequestParser(abc.ABC):
     """
     For a given category process all :py:class:`request.ScaleRequest`.
     """
 
-    def scaler(self, value: request.ScaleRequest) -> Scaler:
+    async def enact(
+        self,
+        *value: request.ScaleRequest,
+        singulate_if_only_one: Optional[bool] = True,
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> Union[List[Tuple[bool, Scaler]], Tuple[bool, Scaler]]:
+        """
+        Will create the corresponding :py:class:`Scaler`
+            and call its :py:meth:`Scaler.enact` method.
+        Args:
+            value:
+                Scaling request(s)
+            singulate_if_only_one:
+                if :py:obj:`True` will return the single :py:class:`Scaler`
+                if ``value`` has a single item.
+            raise_if_invalid_request:
+                if :py:obj:`False` it will just log faulty requests.
+        Returns:
+            Used :py:class:`Scaler`
+        """
+        item_lst = self.scaler(
+            *value,
+            singulate_if_only_one=False,
+            raise_if_invalid_request=raise_if_invalid_request,
+        )
+        item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
+        result = list(zip(item_res_lst, item_lst))
+        return result[0] if len(result) == 1 and singulate_if_only_one else result
+
+    def scaler(
+        self,
+        *value: request.ScaleRequest,
+        singulate_if_only_one: Optional[bool] = True,
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> Union[List[Scaler], Scaler]:
         """
         Returns the :py:cls:`Scaler` instance corresponding to the resource and command.
 
+            singulate_if_only_one:
+                if :py:obj:`True` will return the single :py:class:`Scaler`
+                if ``value`` has a single item.
+            value:
+                Scaling request(s)
         Returns:
             Instance of :py:cls:`Scaler`.
         """
         # validate input
-        if not isinstance(value, request.ScaleRequest):
-            raise TypeError(
-                f"The argument must be an instance of {request.ScaleRequest.__name__}. "
-                f"Got: <{value}>({type(value)})"
-            )
-        if not self.is_supported(value.topic):
-            raise ValueError(
-                f"The request topic {value.topic} is not supported. "
-                f"Valid values are: {self.supported_categories()}"
-            )
+        self._validate_request(*value)
         # logic
-        try:
-            result = self._scaler(value)
-        except Exception as err:
-            raise CategoryScaleRequestProcessorError(
-                f"Could not create {Scaler.__name__} for request: {value}. Error: {err}"
-            ) from err
-        if result is None:
-            raise ValueError(
-                f"Resulting scaler for request: {value} is None. "
-                f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}"
-            )
-        return result
+        result = []
+        value = self._filter_requests(
+            value, raise_if_invalid_request=raise_if_invalid_request
+        )
+        for ndx, val in enumerate(value):
+            try:
+                item = self._scaler(
+                    val, raise_if_invalid_request=raise_if_invalid_request
+                )
+            except Exception as err:
+                raise CategoryScaleRequestParserError(
+                    f"Could not create {Scaler.__name__} for request: {val}[{ndx}]. "
+                    f"Error: {err}. "
+                    f"Values: {value}"
+                ) from err
+            if item is None:
+                raise ValueError(
+                    f"Resulting scaler for request: {val}[{ndx}] is None. "
+                    f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}. "
+                    f"Values: {value}"
+                )
+            result.append(item)
+
+        return result[0] if len(result) == 1 and singulate_if_only_one else result
+
+    def _validate_request(self, *value: request.ScaleRequest) -> None:
+        for ndx, val in enumerate(value):
+            if not isinstance(val, request.ScaleRequest):
+                raise TypeError(
+                    f"The argument must be an instance of {request.ScaleRequest.__name__} "
+                    f"Got: <{val}>[{ndx}]({type(val)}). "
+                    f"Values: {value}"
+                )
+            if not self.is_supported(val.topic):
+                raise ValueError(
+                    f"The request topic {val.topic}[{ndx}] is not supported. "
+                    f"Valid values are: {self.supported_categories()}. "
+                    f"Values: {value}"
+                )
+
+    def _filter_requests(  # pylint: disable=unused-argument
+        self,
+        value: Iterable[request.ScaleRequest],
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> List[request.ScaleRequest]:
+        """
+        Optional implementation to filter requests before creating :py:class:`Scaler`.
+        """
+        return value
 
     @abc.abstractmethod
-    def _scaler(self, value: request.ScaleRequest) -> Scaler:
+    def _scaler(
+        self,
+        value: request.ScaleRequest,
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> Scaler:
         """
         Only called with a pre-validated request.
         It should raise an exception if any specific is invalid.

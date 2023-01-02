@@ -22,6 +22,9 @@ class CacheType(dto_defaults.EnumWithFromStrIgnoreCase):
 
     @classmethod
     def default(cls) -> Any:
+        """
+        Default caching type.
+        """
         return CacheType.GCS_SQLITE
 
 
@@ -39,7 +42,8 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
     def _is_type_valid(self, attribute: attrs.Attribute, value: str):
         if not CacheType.from_str(value):
             raise ValueError(
-                f"Attribute {attribute.name} does not accept <{value}>. Valid values are: {[val for val in CacheType]}"
+                f"Attribute {attribute.name} does not accept <{value}>. "
+                f"Valid values are: {list(CacheType)}"
             )
         self._is_type_valid_subclass(attribute.name, value)
 

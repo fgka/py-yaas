@@ -5,13 +5,13 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 import tempfile
-from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pytest
 
 from yaas.dto import config
 
 
+# pylint: disable=consider-using-with
 _TEST_CACHE_LOCAL_JSON: config.LocalJsonLineCacheConfig = (
     config.LocalJsonLineCacheConfig(
         type=config.CacheType.LOCAL_JSON_LINE.value,
@@ -26,6 +26,7 @@ _TEST_CACHE_LOCAL_SQLITE: config.LocalSqliteCacheConfig = config.LocalSqliteCach
 _TEST_CACHE_GCS_SQLITE: config.GcsCacheConfig = config.GcsCacheConfig(
     type=config.CacheType.GCS_SQLITE.value, bucket_name="test-bucket-name"
 )
+# pylint: enable=consider-using-with
 
 
 class TestCacheConfig:

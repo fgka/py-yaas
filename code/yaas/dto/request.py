@@ -4,12 +4,34 @@
 Basic definition of types and expected functionality for resource scaler.
 """
 from collections import abc
-from typing import Any, Dict, Iterable, List, Optional, Union
+from datetime import datetime, timedelta
+from typing import Any, Dict, Iterable, List, Optional, Union, Tuple
 
 import attrs
 
 from yaas.dto import dto_defaults
 from yaas import const
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class Range(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-methods
+    """
+    Defines a range of time.
+    """
+
+    period_minutes: int = attrs.field(validator=attrs.validators.gt(0))
+    now_diff_minutes: int = attrs.field(validator=attrs.validators.instance_of(int))
+
+    def timestamp_range(self) -> Tuple[int, int]:
+        """
+        Will compute the range based on now for start.
+
+        Returns:
+
+        """
+        start_utc = datetime.utcnow() + timedelta(minutes=self.now_diff_minutes)
+        end_utc = start_utc + timedelta(minutes=self.period_minutes)
+        return start_utc.timestamp(), end_utc.timestamp()
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)

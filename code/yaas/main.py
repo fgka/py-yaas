@@ -9,19 +9,6 @@ from datetime import datetime, timedelta
 import functools
 from typing import Callable, Optional, Tuple
 
-# From: https://cloud.google.com/logging/docs/setup/python
-
-if False:  # pylint: disable=using-constant-test
-    import google.cloud.logging
-
-    try:
-        client = google.cloud.logging.Client()
-        client.get_default_handler()
-        client.setup_logging()
-    except Exception as log_err:  # pylint: disable=broad-except
-        print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
-
-# pylint: disable=wrong-import-position
 import click
 
 from yaas import logger
@@ -29,9 +16,6 @@ from yaas.dto import event, request
 from yaas.event.store import calendar, gcs
 from yaas.gcp import cloud_run
 from yaas.scaler import run, standard
-
-# pylint: enable=wrong-import-position
-
 
 _LOGGER = logger.get(__name__)
 

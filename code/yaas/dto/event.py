@@ -45,6 +45,20 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
             result = ts_lst[0], ts_lst[-1]
         return result
 
+    def all_requests(self) -> List[request.ScaleRequest]:
+        """
+        All requests it contains.
+        """
+        return [
+            req for req_list in self.timestamp_to_request.values() for req in req_list
+        ]
+
+    def amount_requests(self) -> int:
+        """
+        How many requests it contains.
+        """
+        return len(self.all_requests())
+
     @staticmethod
     def from_list_requests(
         *,
@@ -114,6 +128,13 @@ class EventSnapshotComparison(  # pylint: disable=too-few-public-methods
         * only_in_a: [snapshot_a_event_1, snapshot_a_event_4];
         * only_in_b: [snapshot_b_event_3, snapshot_b_event_5].
     """
+
+    snapshot_a: EventSnapshot = attrs.field(
+        validator=attrs.validators.instance_of(EventSnapshot)
+    )
+    snapshot_b: EventSnapshot = attrs.field(
+        validator=attrs.validators.instance_of(EventSnapshot)
+    )
 
     overlapping: Tuple[EventSnapshot] = attrs.field(
         default=None,

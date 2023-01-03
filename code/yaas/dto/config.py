@@ -16,6 +16,7 @@ class CacheType(dto_defaults.EnumWithFromStrIgnoreCase):
     Supported caching.
     """
 
+    CALENDAR = "calendar"
     LOCAL_JSON_LINE = "local_json"
     LOCAL_SQLITE = "local_sqlite"
     GCS_SQLITE = "gcs_sqlite"
@@ -69,7 +70,9 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
         # get the type
         base_cfg = factory_fn(CacheConfig, *args, **kwargs)
         # factory logic
-        if base_cfg.type == CacheType.GCS_SQLITE.value:
+        if base_cfg.type == CacheType.CALENDAR.value:
+            result = factory_fn(CalendarCacheConfig, *args, **kwargs)
+        elif base_cfg.type == CacheType.GCS_SQLITE.value:
             result = factory_fn(GcsCacheConfig, *args, **kwargs)
         elif base_cfg.type == CacheType.LOCAL_JSON_LINE.value:
             result = factory_fn(LocalJsonLineCacheConfig, *args, **kwargs)
@@ -96,6 +99,21 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
         """
         from_dict_cls_method = dto_defaults.HasFromJsonString.from_dict.__func__
         return cls._factory(from_dict_cls_method, value)
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class CalendarCacheConfig(CacheConfig):  # pylint: disable=too-few-public-methods
+    """
+    Calendar configurations.
+    """
+
+    calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
+    secret_name: str = attrs.field(validator=attrs.validators.instance_of(str))
+
+    def _is_type_valid_subclass(self, name: str, value: str):
+        valid_type = CacheType.CALENDAR
+        if CacheType.from_str(value) != valid_type:
+            raise ValueError(f"Value for field {name} must be {valid_type}")
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -160,8 +178,9 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
     Configuration to say to which PubSub topic each YAAS topic goes.
     """
 
-    calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
-    calendar_secret_name: str = attrs.field(validator=attrs.validators.instance_of(str))
+    calendar_config: CalendarCacheConfig = attrs.field(
+        validator=attrs.validators.instance_of(CalendarCacheConfig)
+    )
     cache_config: CacheConfig = attrs.field(
         validator=attrs.validators.instance_of(CacheConfig)
     )

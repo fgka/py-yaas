@@ -1,0 +1,210 @@
+# vim: ai:sw=4:ts=4:sta:et:fo=croql
+# pylint: disable=line-too-long
+"""
+GCP Cloud Run entry point:
+* https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service
+"""
+# pylint: enable=line-too-long
+import os
+
+# From: https://cloud.google.com/logging/docs/setup/python
+import google.cloud.logging
+
+try:
+    client = google.cloud.logging.Client()
+    client.get_default_handler()
+    client.setup_logging()
+except Exception as log_err:  # pylint: disable=broad-except
+    print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
+
+# pylint: disable=wrong-import-position
+import flask
+
+from yaas import logger
+from yaas.dto import config
+from yaas.entry_point import entry, pubsub_dispatcher
+from yaas.gcp import gcs
+from yaas.scaler import standard
+
+# pylint: enable=wrong-import-position
+
+_LOGGER = logger.get(__name__)
+MAIN_BP = flask.Blueprint("main", __name__, url_prefix="/")
+
+CONFIG_BUCKET_NAME_ENV_VAR: str = "CONFIG_BUCKET_NAME"
+CONFIG_OBJECT_PATH_ENV_VAR: str = "CONFIG_OBJECT_PATH"
+
+
+#########
+# Flask #
+#########
+
+
+def create_app(  # pylint: disable=unused-argument,keyword-arg-before-vararg
+    test_config=None, *args, **kwargs
+) -> flask.Flask:
+    """
+    As in https://flask.palletsprojects.com/en/2.2.x/tutorial/factory/
+
+    Args:
+        test_config:
+        *args:
+        **kwargs:
+
+    Returns:
+
+    """
+    app = flask.Flask(__name__, instance_relative_config=False)
+    if test_config:
+        app.config.from_mapping(test_config)
+    app.register_blueprint(MAIN_BP)
+    return app
+
+
+def _configuration() -> config.Config:
+    bucket_name = os.getenv(CONFIG_BUCKET_NAME_ENV_VAR)
+    object_path = os.getenv(CONFIG_OBJECT_PATH_ENV_VAR)
+    config_json = gcs.read_object(
+        bucket_name=bucket_name, object_path=object_path, warn_read_failure=True
+    )
+    return config.Config.from_json(config_json)
+
+
+#############
+# Cloud Run #
+#############
+
+
+@MAIN_BP.route("/config", methods=["GET"])
+def configuration() -> str:
+    """
+    Just return the current :py:class:`config.Config` as JSON.
+
+    `curl`::
+        curl http://localhost:8080/config
+
+    """
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    return flask.jsonify(_configuration().as_dict())
+
+
+@MAIN_BP.route("/update-cache", methods=["POST"])
+async def update_cache() -> str:
+    # pylint: disable=anomalous-backslash-in-string
+    """
+    Wrapper to :py:func:`entry.update_cache`.
+
+    `curl`::
+        PERIOD_DAYS="3"
+        PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
+        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}"
+        DATA_BASE64=$(echo ${DATA} | base64)
+        curl \
+            -d "{\"data\":\"${DATA_BASE64}\"}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            http://localhost:8080/update-cache
+    """
+    # pylint: enable=anomalous-backslash-in-string
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        update_range = pubsub_dispatcher.range_from_event(event=flask.request)
+        start_ts_utc, end_ts_utc = update_range.timestamp_range()
+        await entry.update_cache(
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+            configuration=_configuration(),
+        )
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not update cache. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
+@MAIN_BP.route("/send-requests", methods=["POST"])
+async def send_requests() -> str:
+    # pylint: disable=anomalous-backslash-in-string
+    """
+    Wrapper to :py:func:`entry.send_requests`.
+
+    `curl`::
+        PERIOD_DAYS="3"
+        PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
+        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}"
+        DATA_BASE64=$(echo ${DATA} | base64)
+        curl \
+            -d "{\"data\":\"${DATA_BASE64}\"}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            http://localhost:8080/send-requests
+    """
+    # pylint: enable=anomalous-backslash-in-string
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        update_range = pubsub_dispatcher.range_from_event(event=flask.request)
+        start_ts_utc, end_ts_utc = update_range.timestamp_range()
+        await entry.send_requests(
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+            configuration=_configuration(),
+        )
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not update cache. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
+@MAIN_BP.route("/enact-standard-requests", methods=["POST"])
+async def enact_requests() -> str:
+    # pylint: disable=anomalous-backslash-in-string,line-too-long
+    """
+    Wrapper to :py:func:`entry.enact_requests`.
+
+    `curl`::
+        REGION="europe-west3"
+        PROJECT=$(gcloud config get project)
+        RESOURCE="projects/${PROJECT}/locations/${REGION}/services/hello"
+        COMMAND="min_instances 11"
+        TIMESTAMP=$(date -u +%s)
+        DATA="{\"collection\": [{\"topic\": \"standard\", \"resource\": \"${RESOURCE}\", \"command\": \"${COMMAND}\", \"timestamp_utc\": ${TIMESTAMP}, \"original_json_event\": null}]}"
+        DATA_BASE64=$(echo ${DATA} | base64)
+        curl \
+            -d "{\"data\":\"${DATA_BASE64}\"}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            http://localhost:8080/enact-standard-requests
+    """
+    # pylint: enable=anomalous-backslash-in-string,line-too-long
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        parser = standard.StandardScalingCommandParser()
+        await entry.enact_requests(parser=parser, pubsub_event=flask.request)
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not update cache. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
+if __name__ == "__main__":
+    """
+    To test::
+        export CONFIG_BUCKET_NAME=yaas_cache
+        export CONFIG_OBJECT_PATH=yaas.cfg
+        python -m yaas.entry_point.cloud_run
+    """
+    port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
+    create_app().run(host="127.0.0.1", port=port, debug=True)

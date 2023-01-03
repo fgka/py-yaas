@@ -119,3 +119,34 @@ def from_event(
         )
 
     return result.collection
+
+
+def range_from_event(
+    *,
+    event: Union[flask.Request, Dict[str, Any]],
+    iso_str_timestamp: Optional[str] = None,
+) -> request.Range:
+    """
+
+    Args:
+        event:
+        iso_str_timestamp:
+
+    Returns:
+
+    """
+
+    def dict_to_obj_fn(  # pylint: disable=unused-argument
+        value: Dict[str, Any], *args, **kwargs
+    ) -> request.Range:
+        return request.Range.from_dict(value)
+
+    result = pubsub.parse_pubsub(
+        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
+    )
+    if not isinstance(result, request.Range):
+        raise ValueError(
+            f"Parsed value is not an instance of {request.Range.__name__}. "
+            f"Got: <{result}>({type(result)})"
+        )
+    return result

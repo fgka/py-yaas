@@ -117,6 +117,8 @@ def compare(
         result = _compare_potential_conflict(snapshot_a, snapshot_b)
     else:
         result = event.EventSnapshotComparison(
+            snapshot_a=snapshot_a,
+            snapshot_b=snapshot_b,
             overlapping=overlapping,
             only_in_a=only_in_a,
             only_in_b=only_in_b,
@@ -156,6 +158,8 @@ def _compare_potential_conflict(
         )
     # build result
     return event.EventSnapshotComparison(
+        snapshot_a=snapshot_a,
+        snapshot_b=snapshot_b,
         overlapping=overlapping,
         only_in_a=only_in_a,
         only_in_b=only_in_b,

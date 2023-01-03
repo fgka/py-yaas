@@ -13,20 +13,13 @@ from yaas.dto import event
 
 from tests import common
 
-_TEST_SNAPSHOT_A: event.EventSnapshot = event.EventSnapshot(source="A")
-_TEST_SNAPSHOT_B: event.EventSnapshot = event.EventSnapshot(source="B")
-_TEST_COMPARISON_SNAPSHOT: event.EventSnapshotComparison = (
-    event.EventSnapshotComparison()
-)
-_TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
-
 
 @pytest.mark.parametrize(
     "snapshot_a,snapshot_b",
     [
         (None, None),  # no snapshots
-        (None, _TEST_SNAPSHOT_B),  # missing A
-        (_TEST_SNAPSHOT_A, None),  # missing B
+        (None, common.TEST_CALENDAR_SNAPSHOT),  # missing A
+        (common.TEST_CACHE_SNAPSHOT, None),  # missing B
     ],
 )
 def test_compare_nok(snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot):
@@ -36,9 +29,9 @@ def test_compare_nok(snapshot_a: event.EventSnapshot, snapshot_b: event.EventSna
 
 def test_merge_ok(monkeypatch):
     # Given
-    snapshot_a_arg = _TEST_SNAPSHOT_A
-    snapshot_b_arg = _TEST_SNAPSHOT_B
-    expected = _TEST_MERGE_SNAPSHOT
+    snapshot_a_arg = common.TEST_CALENDAR_SNAPSHOT
+    snapshot_b_arg = common.TEST_CACHE_SNAPSHOT
+    expected = common.TEST_MERGE_SNAPSHOT
     called = {}
 
     def callback_fn(name: str) -> None:
@@ -67,10 +60,10 @@ def test_merge_ok(monkeypatch):
 def _create_merge_arguments(
     monkeypatch,
     *,
-    snapshot_a_arg: event.EventSnapshot = _TEST_SNAPSHOT_A,
-    snapshot_b_arg: event.EventSnapshot = _TEST_SNAPSHOT_B,
-    comparison_snapshot: event.EventSnapshotComparison = _TEST_COMPARISON_SNAPSHOT,
-    expected: event.EventSnapshot = _TEST_MERGE_SNAPSHOT,
+    snapshot_a_arg: event.EventSnapshot = common.TEST_CALENDAR_SNAPSHOT,
+    snapshot_b_arg: event.EventSnapshot = common.TEST_CACHE_SNAPSHOT,
+    comparison_snapshot: event.EventSnapshotComparison = common.TEST_COMPARISON_SNAPSHOT,
+    expected: event.EventSnapshot = common.TEST_MERGE_SNAPSHOT,
     callback_fn: Optional[Callable[[str], None]] = None,
     raise_exception_if_result_is_none: bool = True,
 ):
@@ -105,11 +98,11 @@ def _create_merge_arguments(
         (
             RuntimeError,
             None,  # compare raises exception
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
         ),
         (
             RuntimeError,
-            _TEST_COMPARISON_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
             None,  # merge raises exception
         ),
     ],
@@ -121,8 +114,8 @@ def test_merge_nok(
     expected: event.EventSnapshot,
 ):
     # Given
-    snapshot_a_arg = _TEST_SNAPSHOT_A
-    snapshot_b_arg = _TEST_SNAPSHOT_B
+    snapshot_a_arg = common.TEST_CALENDAR_SNAPSHOT
+    snapshot_b_arg = common.TEST_CACHE_SNAPSHOT
     called = {}
 
     def callback_fn(name: str) -> None:

@@ -11,12 +11,7 @@ import pytest
 from yaas.event import caching
 from yaas.dto import event
 
-_TEST_CALENDAR_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="calendar")
-_TEST_CACHE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="cache")
-_TEST_COMPARISON_SNAPSHOT: event.EventSnapshotComparison = (
-    event.EventSnapshotComparison()
-)
-_TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
+from tests import common
 
 
 @pytest.mark.parametrize(
@@ -75,10 +70,10 @@ def _create_update_callable_arguments(
     start_utc: int = 123,
     end_utc: int = 321,
     callback_fn: Optional[Callable[[str], None]] = None,
-    calendar_snapshot: event.EventSnapshot = _TEST_CALENDAR_SNAPSHOT,
-    cache_snapshot: event.EventSnapshot = _TEST_CACHE_SNAPSHOT,
-    comparison_snapshot: event.EventSnapshotComparison = _TEST_COMPARISON_SNAPSHOT,
-    merge_snapshot: event.EventSnapshot = _TEST_MERGE_SNAPSHOT,
+    calendar_snapshot: event.EventSnapshot = common.TEST_CALENDAR_SNAPSHOT,
+    cache_snapshot: event.EventSnapshot = common.TEST_CACHE_SNAPSHOT,
+    comparison_snapshot: event.EventSnapshotComparison = common.TEST_COMPARISON_SNAPSHOT,
+    merge_snapshot: event.EventSnapshot = common.TEST_MERGE_SNAPSHOT,
     cache_write_result: bool = True,
 ):
     merge_strategy = _create_fn(
@@ -158,50 +153,50 @@ def _create_fn(
             TypeError,
             "111",  # start_utc is not an int
             222,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             TypeError,
             111,
             "222",  # end_utc is not an int
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             ValueError,
             -1,  # start_utc < 0
             111,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             ValueError,
             222,  # start_utc > end_utc
             111,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             ValueError,
             111,  # start_utc is NOT > end_utc
             111,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
@@ -209,38 +204,38 @@ def _create_fn(
             111,
             222,
             None,  # calendar_reader raises exception
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             RuntimeError,
             111,
             222,
-            _TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
             None,  # cache_reader raises exception
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             RuntimeError,
             111,
             222,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
             None,  # snapshot.compare raises exception
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             True,
         ),
         (
             RuntimeError,
             111,
             222,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
             None,  # merge_strategy raises exception
             True,
         ),
@@ -248,10 +243,10 @@ def _create_fn(
             RuntimeError,
             111,
             222,
-            _TEST_CALENDAR_SNAPSHOT,
-            _TEST_CACHE_SNAPSHOT,
-            _TEST_COMPARISON_SNAPSHOT,
-            _TEST_MERGE_SNAPSHOT,
+            common.TEST_CALENDAR_SNAPSHOT,
+            common.TEST_CACHE_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_MERGE_SNAPSHOT,
             None,  # cache_writer raises exception
         ),
     ],

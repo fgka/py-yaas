@@ -133,7 +133,31 @@ py_yaas_playground-1.0-py2.py3-none-any.whl
 ## Build Docker Image
 
 ```bash
-docker build .
+docker build -t yaas-playground .
+```
+
+### Test Docker Image Locally
+
+Start image:
+
+```bash
+PORT=8080
+CONFIG_BUCKET_NAME="yaas_cache"
+CONFIG_OBJECT_PATH="yaas.cfg"
+docker run \
+  --publish 127.0.0.1:${PORT}:${PORT} \
+  --volume "${HOME}/.config/gcloud/application_default_credentials.json":/gcp/creds.json:ro \
+  --env GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json \
+  --env PORT=${PORT} \
+  --env CONFIG_BUCKET_NAME=${CONFIG_BUCKET_NAME} \
+  --env CONFIG_OBJECT_PATH=${CONFIG_OBJECT_PATH} \
+  -it yaas-playground   
+```
+
+Test the image:
+
+```bash
+curl http://localhost:8080/config
 ```
 
 ## PyCharm Users

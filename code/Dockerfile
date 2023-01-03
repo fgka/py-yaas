@@ -26,3 +26,7 @@ ENV WHEEL_FILE py_yaas_playground-1.0-py2.py3-none-any.whl
 COPY dist/${WHEEL_FILE} ./
 
 RUN python3 -m pip install ./${WHEEL_FILE}
+
+ENV FLASK_APP yaas.entry_point.flask_gunicorn:application
+
+CMD gunicorn --bind ":${PORT}" --workers 1 --threads 8 --timeout 0 ${FLASK_APP}

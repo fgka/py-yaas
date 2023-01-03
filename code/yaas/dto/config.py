@@ -3,7 +3,7 @@
 """
 Configurations.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import attrs
 
@@ -62,25 +62,40 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
 
         """
         from_json_cls_method = dto_defaults.HasFromJsonString.from_json.__func__
+        return cls._factory(from_json_cls_method, json_string, context)
+
+    @classmethod
+    def _factory(cls, factory_fn: Callable, *args, **kwargs) -> Any:
         # get the type
-        base_cfg = from_json_cls_method(CacheConfig, json_string, context)
+        base_cfg = factory_fn(CacheConfig, *args, **kwargs)
         # factory logic
         if base_cfg.type == CacheType.GCS_SQLITE.value:
-            result = from_json_cls_method(GcsCacheConfig, json_string, context)
+            result = factory_fn(GcsCacheConfig, *args, **kwargs)
         elif base_cfg.type == CacheType.LOCAL_JSON_LINE.value:
-            result = from_json_cls_method(
-                LocalJsonLineCacheConfig, json_string, context
-            )
+            result = factory_fn(LocalJsonLineCacheConfig, *args, **kwargs)
         elif base_cfg.type == CacheType.LOCAL_SQLITE.value:
-            result = from_json_cls_method(LocalSqliteCacheConfig, json_string, context)
+            result = factory_fn(LocalSqliteCacheConfig, *args, **kwargs)
         else:
             raise TypeError(
                 f"Cache type <{base_cfg.type}> is not a supported type. "
-                f"Check implementation of {cls.from_json.__name__} in {cls.__name__}. "
-                f"JSON string: <{json_string}>. "
-                f"Context: <{context}>"
+                f"Check implementation of {factory_fn.__name__} in {cls.__name__}. "
+                f"Args: <{args}>. "
+                f"Kwargs: <{kwargs}>"
             )
         return result
+
+    @classmethod
+    def from_dict(cls, value: Dict[str, Any]) -> Any:
+        """
+        Required to work as factory as well for cascading effect.
+        Args:
+            value:
+
+        Returns:
+
+        """
+        from_dict_cls_method = dto_defaults.HasFromJsonString.from_dict.__func__
+        return cls._factory(from_dict_cls_method, value)
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)

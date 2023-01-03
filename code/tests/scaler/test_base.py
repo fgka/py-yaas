@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pytest
 
-from yaas.dto import request
+from yaas.dto import request, scaling
 from yaas.scaler import base
 
 from tests import common
@@ -16,7 +16,7 @@ from tests import common
 _CALLED: Dict[str, bool] = {}
 
 
-class _MyScalingCommand(base.ScalingCommand):
+class _MyScalingCommand(scaling.ScalingCommand):
     def _is_parameter_valid(self, name: str, value: Any) -> None:
         _CALLED[_MyScalingCommand._is_parameter_valid.__name__] = True
 
@@ -30,18 +30,20 @@ class TestScalingCommand:
         obj = _MyScalingCommand(parameter="TEST_PARAMETER", target="TEST_TARGET")
         # Then
         assert obj is not None
-        assert _CALLED.get(base.ScalingCommand._is_parameter_valid.__name__)
-        assert _CALLED.get(base.ScalingCommand._is_target_valid.__name__)
+        assert _CALLED.get(scaling.ScalingCommand._is_parameter_valid.__name__)
+        assert _CALLED.get(scaling.ScalingCommand._is_target_valid.__name__)
 
 
-class _MyScalingDefinition(base.ScalingDefinition):
+class _MyScalingDefinition(scaling.ScalingDefinition):
     def _is_resource_valid(self, name: str, value: str) -> None:
         _CALLED[_MyScalingDefinition._is_resource_valid.__name__] = True
 
     @classmethod
     def from_request(cls, value: request.ScaleRequest) -> "ScalingDefinition":
         param_target = value.command.split(" ")
-        command = base.ScalingCommand(parameter=param_target[0], target=param_target[1])
+        command = scaling.ScalingCommand(
+            parameter=param_target[0], target=param_target[1]
+        )
         return _MyScalingDefinition(
             resource=value.resource,
             command=command,
@@ -58,7 +60,7 @@ class TestScalingDefinition:
         # Then
         assert result is not None
         assert obj == result
-        assert _CALLED.get(base.ScalingDefinition._is_resource_valid.__name__)
+        assert _CALLED.get(scaling.ScalingDefinition._is_resource_valid.__name__)
 
 
 def _create_request_and_definition(
@@ -68,9 +70,9 @@ def _create_request_and_definition(
     parameter: str = "TEST_PARAMETER",
     target: str = "TEST_TARGET",
     timestamp_utc: int = 123,
-) -> Tuple[request.ScaleRequest, base.ScalingDefinition]:
+) -> Tuple[request.ScaleRequest, scaling.ScalingDefinition]:
     command_str = f"{parameter} {target}"
-    command = base.ScalingCommand(parameter=parameter, target=target)
+    command = scaling.ScalingCommand(parameter=parameter, target=target)
     obj = _MyScalingDefinition(
         resource=resource, command=command, timestamp_utc=timestamp_utc
     )
@@ -86,7 +88,7 @@ def _create_request_and_definition(
 class _MyScaler(base.Scaler):
     def __init__(
         self,
-        definition: base.ScalingDefinition,
+        definition: scaling.ScalingDefinition,
         can_enact: bool = True,
         reason: str = None,
     ) -> None:
@@ -148,7 +150,7 @@ class TestScaler:
         assert not obj.called.get(base.Scaler._safe_enact.__name__)
 
 
-class _MyCategoryTypes(base.CategoryType):
+class _MyCategoryTypes(scaling.CategoryType):
     CATEGORY_A = "Category_1"
     CATEGORY_B = "Category_2"
 
@@ -163,24 +165,29 @@ class _MyCategoryScaleRequestParser(base.CategoryScaleRequestParser):
 
     def _scaler(
         self,
-        value: request.ScaleRequest,
+        value: scaling.ScalingDefinition,
         raise_if_invalid_request: Optional[bool] = True,
     ) -> base.Scaler:
         self.obj_called[base.CategoryScaleRequestParser._scaler.__name__] = True
-        return _MyScaler.from_request(value)
+        return _MyScaler(value)
+
+    def _to_scaling_definition(
+        self, value: Iterable[request.ScaleRequest]
+    ) -> Iterable[scaling.ScalingDefinition]:
+        return [_MyScalingDefinition.from_request(val) for val in value]
 
     def _filter_requests(
         self,
-        value: Iterable[request.ScaleRequest],
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> List[request.ScaleRequest]:
+    ) -> Iterable[scaling.ScalingDefinition]:
         self.obj_called[
             base.CategoryScaleRequestParser._filter_requests.__name__
         ] = value
         return value
 
     @classmethod
-    def supported_categories(cls) -> List[base.CategoryType]:
+    def supported_categories(cls) -> List[scaling.CategoryType]:
         cls.cls_called[
             base.CategoryScaleRequestParser.supported_categories.__name__
         ] = True
@@ -208,7 +215,7 @@ class TestCategoryScaleRequestParser:
             base.CategoryScaleRequestParser._filter_requests.__name__
         )
         assert len(filter_req) == 1
-        assert list(filter_req)[0] == req
+        assert list(filter_req)[0] == _MyScalingDefinition.from_request(req)
 
     def test_is_supported_ok(self):
         for item in _MyCategoryTypes:
@@ -247,7 +254,7 @@ class TestCategoryScaleRequestParser:
         )
         assert len(filter_req) == amount
         for f_req in filter_req:
-            assert f_req == req
+            assert f_req == _MyScalingDefinition.from_request(req)
 
     @pytest.mark.asyncio
     async def test_enact_ok(self):

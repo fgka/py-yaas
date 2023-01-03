@@ -6,13 +6,13 @@ Produce Google Cloud supported resources' scalers.
 from typing import Iterable, List, Optional, Tuple
 
 from yaas import logger
-from yaas.dto import request
+from yaas.dto import request, scaling
 from yaas.scaler import base, run, resource_name_parser
 
 _LOGGER = logger.get(__name__)
 
 
-class StandardCategoryType(base.CategoryType):
+class StandardCategoryType(scaling.CategoryType):
     """
     Base type for encoding supported categories.
     """
@@ -35,69 +35,67 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
     Standard category supported by YAAS.
     """
 
+    def _to_scaling_definition(
+        self, value: Iterable[request.ScaleRequest]
+    ) -> Iterable[scaling.ScalingDefinition]:
+        result = []
+        for ndx, val in enumerate(value):
+            res_type, _ = resource_name_parser.canonical_resource_type_and_name(
+                val.resource
+            )
+            if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
+                result.append(run.CloudRunScalingDefinition.from_request(val))
+            else:
+                raise TypeError(
+                    f"Request <{val}>[{ndx}]) of type {res_type} is not supported. "
+                    f"Check implementation of {self._to_scaling_definition.__name__} "
+                    f"in {self.__class__.__name__}. "
+                    f"Values: {value}"
+                )
+        return result
+
     def _filter_requests(
         self,
-        value: Iterable[request.ScaleRequest],
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> List[request.ScaleRequest]:
+    ) -> List[scaling.ScalingDefinition]:
         result = {}
-        for ndx, req in enumerate(
+        for ndx, scaling_def in enumerate(
             sorted(value, key=lambda val: val.timestamp_utc, reverse=True)
         ):
-            resource_type, canonical_request = self._create_canonical_request(req)
-            if resource_type is not None and canonical_request is not None:
-                previous = result.get(canonical_request.resource)
-                if previous is not None:
-                    _LOGGER.warning(
-                        "Discarding <%s>[%d] because there is an already a request "
-                        "at same, or later, timestamp (timestamp diff: %d): <%s>",
-                        req,
-                        ndx,
-                        req.timestamp_utc - previous.timestamp_utc,
-                        previous,
-                    )
-                else:
-                    result[canonical_request.resource] = canonical_request
-            else:
-                msg = (
-                    f"Could not extract type or canonical request from request <{req}>[{ndx}] "
-                    f"in {value}. "
-                    f"Request type: <{resource_type}>. "
-                    f"Canonical request: <{canonical_request}>"
+            key = scaling_def.resource, scaling_def.command
+            previous = result.get(key)
+            if previous is not None:
+                _LOGGER.warning(
+                    "Discarding <%s>[%d] because there is an already a scaling definition "
+                    "at the same, or later, timestamp (timestamp diff: %d): <%s>. "
+                    "All elements: %s",
+                    scaling_def,
+                    ndx,
+                    scaling_def.timestamp_utc - previous.timestamp_utc,
+                    previous,
+                    value,
                 )
-                if raise_if_invalid_request:
-                    raise base.CategoryScaleRequestParserError(msg)
-                _LOGGER.warning(msg)
+            else:
+                result[key] = scaling_def
         return list(result.values())
 
     def _scaler(
         self,
-        value: request.ScaleRequest,
+        value: scaling.ScalingDefinition,
         raise_if_invalid_request: Optional[bool] = True,
     ) -> base.Scaler:
-        resource_type, canonical_request = self._create_canonical_request(value)
-        try:
-            if resource_type == resource_name_parser.ResourceType.CLOUD_RUN:
-                result = run.CloudRunScaler.from_request(canonical_request)
-            else:
-                msg = (
-                    f"Scaler for resource type <{resource_type}> from request <{value}> "
-                    f"is not supported by {self.__class__.__name__}."
-                )
-                if raise_if_invalid_request:
-                    raise base.CategoryScaleRequestParserError(msg)
-                _LOGGER.warning(msg)
-        except Exception as err:
-            raise RuntimeError(
-                f"Could not create {base.Scaler.__name__} for type {resource_type.value}. "
-                f"Got: {err}"
-            ) from err
-        if result is None:
-            raise ValueError(
-                f"Resource <{value.resource}> (canonical resource: <{canonical_request.resource}>)"
-                f"in request {value} (canonical: {canonical_request}) "
-                "cannot be parsed or is not supported"
+        if isinstance(value, run.CloudRunScalingDefinition):
+            result = run.CloudRunScaler(value)
+        else:
+            msg = (
+                f"Scaler for definition <{value}> "
+                f"is not supported by {self.__class__.__name__}. "
+                f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}."
             )
+            if raise_if_invalid_request:
+                raise base.CategoryScaleRequestParserError(msg)
+            _LOGGER.warning(msg)
         return result
 
     @staticmethod
@@ -122,5 +120,5 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
         return resource_type, canonical_req
 
     @classmethod
-    def supported_categories(cls) -> List[base.CategoryType]:
+    def supported_categories(cls) -> List[scaling.CategoryType]:
         return list(StandardCategoryType)

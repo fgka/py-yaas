@@ -11,7 +11,7 @@ from typing import Any, Tuple
 import attrs
 
 from yaas import const, logger
-from yaas.dto import dto_defaults, request
+from yaas.dto import dto_defaults, request, scaling
 from yaas.gcp import cloud_run, cloud_run_const
 from yaas.scaler import base, resource_name_parser
 
@@ -39,7 +39,7 @@ class CloudRunCommandTypes(dto_defaults.EnumWithFromStrIgnoreCase):
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
-class CloudRunScalingCommand(base.ScalingCommand):
+class CloudRunScalingCommand(scaling.ScalingCommand):
     """
     Cloud Run scaling command definition.
     """
@@ -61,7 +61,7 @@ class CloudRunScalingCommand(base.ScalingCommand):
             )
 
     @staticmethod
-    def from_command_str(value: str) -> base.ScalingCommand:
+    def from_command_str(value: str) -> scaling.ScalingCommand:
         """
         Parse the command :py:cls:`str` into an instance of :py:cls:`CloudRunScalingCommand`.
 
@@ -83,7 +83,7 @@ class CloudRunScalingCommand(base.ScalingCommand):
 
 @attrs.define(**const.ATTRS_DEFAULTS)
 class CloudRunScalingDefinition(  # pylint: disable=too-few-public-methods
-    base.ScalingDefinition
+    scaling.ScalingDefinition
 ):
     """
     DTO to Hold a Cloud Run scaling definition.

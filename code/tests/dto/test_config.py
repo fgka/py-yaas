@@ -10,6 +10,8 @@ import pytest
 
 from yaas.dto import config
 
+from tests import common
+
 
 # pylint: disable=consider-using-with
 _TEST_CACHE_LOCAL_JSON: config.LocalJsonLineCacheConfig = (
@@ -83,3 +85,14 @@ class TestCacheConfig:
             config.CacheConfig.from_json(
                 value.as_json().replace(value.type, value.type + "_NOT")
             )
+
+
+class TestConfig:
+    def test_from_json_ok(self):
+        # Given
+        expected = common.TEST_CONFIG_LOCAL_JSON
+        json = expected.as_json()
+        # When
+        result = config.Config.from_json(json)
+        # Then
+        assert result == expected, f"JSON: {json}"

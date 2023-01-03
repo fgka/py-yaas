@@ -5,82 +5,12 @@ Basic definition of types and expected functionality for resource scaler.
 """
 import abc
 import asyncio
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
-import attrs
-
-from yaas.dto import dto_defaults, request
-from yaas import const, logger
+from yaas.dto import request, scaling
+from yaas import logger
 
 _LOGGER = logger.get(__name__)
-
-
-@attrs.define(**const.ATTRS_DEFAULTS)
-class ScalingCommand(  # pylint: disable=too-few-public-methods
-    dto_defaults.HasFromJsonString
-):
-    """
-    Defines the type for a scaling command.
-    """
-
-    parameter: str = attrs.field(validator=attrs.validators.instance_of(str))
-    target: Any = attrs.field(default=None)
-
-    @parameter.validator
-    def _validate_attribute(self, attribute: attrs.Attribute, value: Any) -> None:
-        self._is_parameter_valid(attribute.name, value)
-
-    @target.validator
-    def _validate_target(self, attribute: attrs.Attribute, value: Any) -> None:
-        self._is_target_valid(attribute.name, value)
-
-    def _is_parameter_valid(self, name: str, value: Any) -> None:
-        pass
-
-    def _is_target_valid(self, name: str, value: Any) -> None:
-        pass
-
-
-@attrs.define(**const.ATTRS_DEFAULTS)
-class ScalingDefinition(  # pylint: disable=too-few-public-methods
-    dto_defaults.HasFromJsonString
-):
-    """
-    Defines a DTO to hold the scaling definition.
-    """
-
-    resource: str = attrs.field(validator=attrs.validators.instance_of(str))
-    command: ScalingCommand = attrs.field(
-        validator=attrs.validators.instance_of(ScalingCommand)
-    )
-    timestamp_utc: int = attrs.field(
-        default=None,
-        validator=attrs.validators.optional(
-            attrs.validators.and_(
-                attrs.validators.instance_of(int), attrs.validators.gt(0)
-            )
-        ),
-    )
-
-    @resource.validator
-    def _is_resource_valid_call(self, attribute: attrs.Attribute, value: str) -> None:
-        self._is_resource_valid(attribute.name, value)
-
-    def _is_resource_valid(self, name: str, value: str) -> None:
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    def from_request(cls, value: request.ScaleRequest) -> "ScalingDefinition":
-        """
-        Return an instance corresponding to the :py:cls:`scale_request.ScaleRequest`.
-
-        Args:
-            value: the request
-
-        Returns:
-
-        """
 
 
 class Scaler(abc.ABC):
@@ -88,16 +18,16 @@ class Scaler(abc.ABC):
     Generic class to define a scaler.
     """
 
-    def __init__(self, definition: ScalingDefinition) -> None:
-        if not isinstance(definition, ScalingDefinition):
+    def __init__(self, definition: scaling.ScalingDefinition) -> None:
+        if not isinstance(definition, scaling.ScalingDefinition):
             raise TypeError(
-                f"The argument definition must be of type {ScalingDefinition.__name__}"
+                f"The argument definition must be of type {scaling.ScalingDefinition.__name__}"
             )
         self._definition = definition
         super().__init__()
 
     @property
-    def definition(self) -> ScalingDefinition:
+    def definition(self) -> scaling.ScalingDefinition:
         """
         Scaling definition.
 
@@ -158,12 +88,6 @@ class Scaler(abc.ABC):
         Returns:
             A tuple in the form ``(<can_enact: bool>, <reason for False: str>)``.
         """
-
-
-class CategoryType(dto_defaults.EnumWithFromStrIgnoreCase):
-    """
-    Base type for encoding supported categories.
-    """
 
 
 class CategoryScaleRequestParserError(Exception):
@@ -228,10 +152,11 @@ class CategoryScaleRequestParser(abc.ABC):
         self._validate_request(*value)
         # logic
         result = []
-        value = self._filter_requests(
-            value, raise_if_invalid_request=raise_if_invalid_request
+        scaling_def_lst: Iterable[scaling.ScalingDefinition] = self._filter_requests(
+            self._to_scaling_definition(value),
+            raise_if_invalid_request=raise_if_invalid_request,
         )
-        for ndx, val in enumerate(value):
+        for ndx, val in enumerate(scaling_def_lst):
             try:
                 item = self._scaler(
                     val, raise_if_invalid_request=raise_if_invalid_request
@@ -240,13 +165,13 @@ class CategoryScaleRequestParser(abc.ABC):
                 raise CategoryScaleRequestParserError(
                     f"Could not create {Scaler.__name__} for request: {val}[{ndx}]. "
                     f"Error: {err}. "
-                    f"Values: {value}"
+                    f"Values: {scaling_def_lst}"
                 ) from err
             if item is None:
                 raise ValueError(
                     f"Resulting scaler for request: {val}[{ndx}] is None. "
                     f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}. "
-                    f"Values: {value}"
+                    f"Values: {scaling_def_lst}"
                 )
             result.append(item)
 
@@ -267,11 +192,24 @@ class CategoryScaleRequestParser(abc.ABC):
                     f"Values: {value}"
                 )
 
+    @abc.abstractmethod
+    def _to_scaling_definition(
+        self, value: Iterable[request.ScaleRequest]
+    ) -> Iterable[scaling.ScalingDefinition]:
+        """
+        To convert the request into its proper, supported, scaling definition.
+        Args:
+            value:
+
+        Returns:
+
+        """
+
     def _filter_requests(  # pylint: disable=unused-argument
         self,
-        value: Iterable[request.ScaleRequest],
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> List[request.ScaleRequest]:
+    ) -> Iterable[scaling.ScalingDefinition]:
         """
         Optional implementation to filter requests before creating :py:class:`Scaler`.
         """
@@ -280,7 +218,7 @@ class CategoryScaleRequestParser(abc.ABC):
     @abc.abstractmethod
     def _scaler(
         self,
-        value: request.ScaleRequest,
+        value: scaling.ScalingDefinition,
         raise_if_invalid_request: Optional[bool] = True,
     ) -> Scaler:
         """
@@ -290,7 +228,7 @@ class CategoryScaleRequestParser(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def supported_categories(cls) -> List[CategoryType]:
+    def supported_categories(cls) -> List[scaling.CategoryType]:
         """
         Returns the :py:cls:`list` of :py:cls:`str` that this class supports for scaling.
 

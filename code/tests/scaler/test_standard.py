@@ -7,7 +7,7 @@
 import pytest
 
 from yaas.dto import request
-from yaas.scaler import base, run, standard
+from yaas.scaler import run, standard
 
 from tests import common
 
@@ -61,5 +61,5 @@ class TestStandardScalingCommandParser:
         # Given
         req = _create_request(resource=_TEST_CLOUD_FUNCTION_RESOURCE_STR)
         # When/Then
-        with pytest.raises(base.CategoryScaleRequestParserError):
+        with pytest.raises(TypeError):
             self.obj.scaler(req)

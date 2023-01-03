@@ -12,7 +12,6 @@ from typing import Optional, Tuple
 
 from yaas import logger
 
-
 _LOGGER = logger.get(__name__)
 
 

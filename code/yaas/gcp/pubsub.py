@@ -4,6 +4,7 @@ Manages PubSub boilerplate. How to parse the data and publish it.
 * https://cloud.google.com/pubsub/docs/push
 * https://cloud.google.com/pubsub/docs/publisher
 """
+import asyncio
 import base64
 import calendar
 from concurrent import futures
@@ -161,7 +162,7 @@ def _parse_str_data(value: Union[str, bytes]) -> str:
     return result
 
 
-def publish(value: Dict[str, Any], topic_path: str) -> None:
+async def publish(value: Dict[str, Any], topic_path: str) -> None:
     """
     Converts argument to a string to be published to a Pub/Sub topic.
 
@@ -186,6 +187,7 @@ def publish(value: Dict[str, Any], topic_path: str) -> None:
     json_str = json.dumps(value)
     data = json_str.encode(const.ENCODING_UTF8)
     publish_future = _client().publish(topic_path, data)
+    await asyncio.sleep(0)
     futures.wait([publish_future], return_when=futures.ALL_COMPLETED)
     _LOGGER.debug("Published data <%s> into topic <%s>", value, topic_path)
 

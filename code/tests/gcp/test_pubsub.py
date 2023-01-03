@@ -139,7 +139,8 @@ _TEST_VALUE: Dict[str, Any] = dict(key="TEST_VALUE")
 _TEST_TOPIC_PATH: str = "TEST_TOPIC_PATH"
 
 
-def test_publish_ok(monkeypatch):
+@pytest.mark.asyncio
+async def test_publish_ok(monkeypatch):
     # Given
     result_publish = "TEST_PUBLISH"
     client = _MyClient(result_publish)
@@ -158,7 +159,7 @@ def test_publish_ok(monkeypatch):
     monkeypatch.setattr(pubsub, pubsub._client.__name__, mocked_client)
     monkeypatch.setattr(pubsub.futures, pubsub.futures.wait.__name__, mocked_wait)
     # When
-    pubsub.publish(_TEST_VALUE, _TEST_TOPIC_PATH)
+    await pubsub.publish(_TEST_VALUE, _TEST_TOPIC_PATH)
     # Then
     topic_path, data = client.called.get(_MyClient.publish.__name__)
     assert topic_path == _TEST_TOPIC_PATH

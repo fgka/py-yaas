@@ -4,7 +4,7 @@
 Basic definition of types and expected functionality for resource scaler.
 """
 from collections import abc
-from typing import Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import attrs
 
@@ -41,6 +41,33 @@ class ScaleRequest(  # pylint: disable=too-few-public-methods
     )
 
 
+def _convert_list_dict(
+    value: List[Union[ScaleRequest, Dict[str, Any]]]
+) -> List[ScaleRequest]:
+    """
+    To be used when converting back from full dictionary.
+    """
+    # validate input
+    if not isinstance(value, abc.Iterable):
+        raise TypeError(
+            f"Argument is not {Iterable.__name__}. Got: <{value}>({type(value)})"
+        )
+    # convert
+    result = []
+    for ndx, val in enumerate(value):
+        if isinstance(val, ScaleRequest):
+            result.append(val)
+        else:
+            try:
+                obj = ScaleRequest.from_dict(val)
+            except Exception as err:
+                raise ValueError(
+                    f"Could not convert item <{val}>[{ndx}]({type(val)}) to {ScaleRequest.__name__}. Error: {err}. Values: {value}"
+                ) from err
+            result.append(obj)
+    return result
+
+
 @attrs.define(**const.ATTRS_DEFAULTS)
 class ScaleRequestCollection(  # pylint: disable=too-few-public-methods
     dto_defaults.HasFromJsonString
@@ -51,9 +78,10 @@ class ScaleRequestCollection(  # pylint: disable=too-few-public-methods
     """
 
     collection: List[ScaleRequest] = attrs.field(
+        converter=_convert_list_dict,
         validator=attrs.validators.deep_iterable(
             member_validator=attrs.validators.instance_of(ScaleRequest)
-        )
+        ),
     )
 
     @classmethod

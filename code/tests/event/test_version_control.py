@@ -4,7 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
-from typing import Callable, List, Optional
+from typing import Callable, Optional, Tuple
 
 import pytest
 
@@ -27,7 +27,7 @@ def test_compare_nok(snapshot_a: event.EventSnapshot, snapshot_b: event.EventSna
         version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
 
 
-def test_merge_ok(monkeypatch):
+def test_merge_ok_empty(monkeypatch):
     # Given
     snapshot_a_arg = common.TEST_CALENDAR_SNAPSHOT
     snapshot_b_arg = common.TEST_CACHE_SNAPSHOT
@@ -46,15 +46,16 @@ def test_merge_ok(monkeypatch):
         expected=expected,
     )
     # When
-    result = version_control.merge(
+    is_required, result = version_control.merge(
         snapshot_a=snapshot_a_arg,
         snapshot_b=snapshot_b_arg,
         merge_strategy=merge_strategy,
     )
     # Then
-    assert result == expected
+    assert not is_required
+    assert result is None
     assert called.get("mocked_compare")
-    assert called.get("merge_strategy")
+    assert called.get("merge_strategy") is None
 
 
 def _create_merge_arguments(
@@ -78,7 +79,7 @@ def _create_merge_arguments(
 
     def mocked_compare(
         *, snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot
-    ) -> event.EventSnapshotComparison:
+    ) -> Tuple[bool, event.EventSnapshotComparison]:
         callback_fn("mocked_compare")
         assert snapshot_a == snapshot_a_arg
         assert snapshot_b == snapshot_b_arg
@@ -92,6 +93,36 @@ def _create_merge_arguments(
     return merge_strategy
 
 
+def test_merge_ok(monkeypatch):
+    # Given
+    snapshot_a = common.create_event_snapshot("A", [1, 2, 3])
+    snapshot_b = common.create_event_snapshot("B")
+    called = {}
+
+    def callback_fn(name: str) -> None:
+        nonlocal called
+        called[name] = True
+
+    merge_strategy = _create_merge_arguments(
+        monkeypatch,
+        snapshot_a_arg=snapshot_a,
+        snapshot_b_arg=snapshot_b,
+        callback_fn=callback_fn,
+        comparison_snapshot=common.TEST_COMPARISON_SNAPSHOT_NON_EMPTY,
+    )
+    # When
+    is_required, result = version_control.merge(
+        snapshot_a=snapshot_a,
+        snapshot_b=snapshot_b,
+        merge_strategy=merge_strategy,
+    )
+    # Then
+    assert is_required
+    assert isinstance(result, event.EventSnapshot)
+    assert called.get("mocked_compare")
+    assert called.get("merge_strategy")
+
+
 @pytest.mark.parametrize(
     "exception,comparison_snapshot,expected",
     [
@@ -102,7 +133,7 @@ def _create_merge_arguments(
         ),
         (
             RuntimeError,
-            common.TEST_COMPARISON_SNAPSHOT,
+            common.TEST_COMPARISON_SNAPSHOT_NON_EMPTY,
             None,  # merge raises exception
         ),
     ],
@@ -129,6 +160,7 @@ def test_merge_nok(
         comparison_snapshot=comparison_snapshot,
         callback_fn=callback_fn,
         expected=expected,
+        raise_exception_if_result_is_none=True,
     )
     # When
     with pytest.raises(exception):
@@ -149,8 +181,8 @@ def test_merge_nok(
 
 
 def test_compare_ok_empty_a():
-    snapshot_a = _create_event_snapshot("A")
-    snapshot_b = _create_event_snapshot("B", [1, 2, 3])
+    snapshot_a = common.create_event_snapshot("A")
+    snapshot_b = common.create_event_snapshot("B", [1, 2, 3])
     # When
     result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
@@ -159,20 +191,9 @@ def test_compare_ok_empty_a():
     assert result.only_in_b == snapshot_b
     assert result.overlapping is None
     _validate_comparison_source(snapshot_a, snapshot_b, result)
-
-
-def _create_event_snapshot(
-    source: str, ts_list: Optional[List[int]] = None
-) -> event.EventSnapshot:
-    timestamp_to_request = {}
-    if ts_list:
-        for ts in ts_list:
-            timestamp_to_request[ts] = [
-                common.create_scale_request(
-                    topic="topic", resource="resource", command=f"{source} = {ts}"
-                )
-            ]
-    return event.EventSnapshot(source=source, timestamp_to_request=timestamp_to_request)
+    assert result.are_different()
+    assert result.snapshot_a == snapshot_a
+    assert result.snapshot_b == snapshot_b
 
 
 def _validate_comparison_source(
@@ -180,6 +201,8 @@ def _validate_comparison_source(
     snapshot_b: event.EventSnapshot,
     comparison: event.EventSnapshotComparison,
 ) -> None:
+    assert comparison.snapshot_a == snapshot_a
+    assert comparison.snapshot_b == snapshot_b
     if comparison.overlapping is not None:
         overlapping_a, overlapping_b = comparison.overlapping
         assert overlapping_a.source == snapshot_a.source
@@ -191,8 +214,8 @@ def _validate_comparison_source(
 
 
 def test_compare_ok_empty_b():
-    snapshot_a = _create_event_snapshot("A", [1, 2, 3])
-    snapshot_b = _create_event_snapshot("B")
+    snapshot_a = common.create_event_snapshot("A", [1, 2, 3])
+    snapshot_b = common.create_event_snapshot("B")
     # When
     result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
@@ -201,6 +224,7 @@ def test_compare_ok_empty_b():
     assert result.only_in_b is None
     assert result.overlapping is None
     _validate_comparison_source(snapshot_a, snapshot_b, result)
+    assert result.are_different()
 
 
 def test_compare_ok_disjoint():
@@ -213,8 +237,8 @@ def test_compare_ok_disjoint():
       |  +---------- A_2
       +------------- A_1
     """
-    snapshot_a = _create_event_snapshot("A", [1, 2])
-    snapshot_b = _create_event_snapshot("B", [3, 4, 5])
+    snapshot_a = common.create_event_snapshot("A", [1, 2])
+    snapshot_b = common.create_event_snapshot("B", [3, 4, 5])
     # When
     result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
@@ -223,6 +247,7 @@ def test_compare_ok_disjoint():
     assert result.only_in_a == snapshot_a
     assert result.only_in_b == snapshot_b
     _validate_comparison_source(snapshot_a, snapshot_b, result)
+    assert result.are_different()
 
 
 def test_compare_ok_only_conflict():
@@ -233,8 +258,8 @@ def test_compare_ok_only_conflict():
       |  +---- A_2, B_2
       +------- A_1, B_1
     """
-    snapshot_a = _create_event_snapshot("A", [1, 2, 3])
-    snapshot_b = _create_event_snapshot("B", [1, 2, 3])
+    snapshot_a = common.create_event_snapshot("A", [1, 2, 3])
+    snapshot_b = common.create_event_snapshot("B", [1, 2, 3])
     # When
     result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
@@ -246,6 +271,7 @@ def test_compare_ok_only_conflict():
     assert overlapping_a == snapshot_a
     assert overlapping_b == snapshot_b
     _validate_comparison_source(snapshot_a, snapshot_b, result)
+    assert result.are_different()
 
 
 def test_compare_ok_with_conflict():
@@ -259,12 +285,13 @@ def test_compare_ok_with_conflict():
       |  +---------- A_2, B_2
       +------------- A_1
     """
-    snapshot_a = _create_event_snapshot("A", [1, 2, 4])
-    snapshot_b = _create_event_snapshot("B", [2, 3, 5])
+    snapshot_a = common.create_event_snapshot("A", [1, 2, 4])
+    snapshot_b = common.create_event_snapshot("B", [2, 3, 5])
     # When
     result = version_control.compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     # Then
     assert isinstance(result, event.EventSnapshotComparison)
+    assert result.are_different()
     # Then: only A
     assert len(result.only_in_a.timestamp_to_request) == 2
     for ts in [1, 4]:

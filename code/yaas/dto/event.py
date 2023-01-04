@@ -166,3 +166,21 @@ class EventSnapshotComparison(  # pylint: disable=too-few-public-methods
     """
     All requests that are only in snapshot B but not in snapshot A.
     """
+
+    def are_different(self) -> bool:
+        """
+        A quick way to tell if the snapshots differ.
+        """
+        result = not self._is_snapshot_empty(
+            self.only_in_a
+        ) or not self._is_snapshot_empty(self.only_in_b)
+        if not result and self.overlapping is not None:
+            overlapping_a, overlapping_b = self.overlapping
+            result = not self._is_snapshot_empty(
+                overlapping_a
+            ) or not self._is_snapshot_empty(overlapping_b)
+        return result
+
+    @staticmethod
+    def _is_snapshot_empty(value: EventSnapshot) -> bool:
+        return value is None or not value.all_requests()

@@ -71,7 +71,7 @@ class _MyStoreContextManager(base.StoreContextManager):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self._result_snapshot = result_snapshot
+        self.result_snapshot = result_snapshot
         self.called = {}
         self.to_raise = set()
 
@@ -90,7 +90,7 @@ class _MyStoreContextManager(base.StoreContextManager):
         )
         if base.StoreContextManager.read.__name__ in self.to_raise:
             raise RuntimeError
-        return self._result_snapshot
+        return self.result_snapshot
 
     async def _write(
         self,
@@ -109,17 +109,18 @@ class _MyStoreContextManager(base.StoreContextManager):
         )
         if base.StoreContextManager.remove.__name__ in self.to_raise:
             raise RuntimeError
-        return self._result_snapshot
+        return self.result_snapshot
 
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> None:
+    ) -> event.EventSnapshot:
         self.called[base.StoreContextManager.archive.__name__] = (
             start_ts_utc,
             end_ts_utc,
         )
         if base.StoreContextManager.archive.__name__ in self.to_raise:
             raise RuntimeError
+        return self.result_snapshot
 
 
 _TEST_DATETIME: datetime = datetime.utcnow()
@@ -251,6 +252,7 @@ class TestStore:  # pylint: disable=too-many-public-methods
             async with self.object:
                 await self.object.read(start_ts_utc=start, end_ts_utc=end)
         self._assert_context_called()
+        assert not self.object.has_changed
 
     def _assert_context_called(self) -> None:
         assert self.object.called.get(base.StoreContextManager._open.__name__)
@@ -272,6 +274,7 @@ class TestStore:  # pylint: disable=too-many-public-methods
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
+        assert not self.object.has_changed
 
     def _assert_called_only(self, value: str, secondary: Optional[str] = None) -> Any:
         result = self.object.called.get(value)
@@ -292,8 +295,8 @@ class TestStore:  # pylint: disable=too-many-public-methods
         async with self.object:
             await self.object.write(value, overwrite_within_range=True)
         # Then
-        called = self._assert_called_only(base.StoreContextManager.write.__name__)
-        assert called == value
+        assert self.object.called.get(base.StoreContextManager.write.__name__) is None
+        assert not self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_write_ok_non_empty_request(self):
@@ -308,6 +311,7 @@ class TestStore:  # pylint: disable=too-many-public-methods
             base.StoreContextManager.remove.__name__,
         )
         assert called == value
+        assert self.object.has_changed
 
     @pytest.mark.parametrize("overwrite", [True, False])
     @pytest.mark.asyncio
@@ -325,6 +329,7 @@ class TestStore:  # pylint: disable=too-many-public-methods
         assert (
             self.object.called.get(base.StoreContextManager.remove.__name__) is not None
         ) == overwrite
+        assert not self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_remove_nok_raises(self):
@@ -344,10 +349,12 @@ class TestStore:  # pylint: disable=too-many-public-methods
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
+        assert not self.object.has_changed
 
     @pytest.mark.asyncio
-    async def test_remove_ok(self):
+    async def test_remove_ok_empty(self):
         # Given
+        self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
         start_ts_utc = 13
         end_ts_utc = 23
         # When
@@ -362,6 +369,27 @@ class TestStore:  # pylint: disable=too-many-public-methods
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
+        assert not self.object.has_changed
+
+    @pytest.mark.asyncio
+    async def test_remove_ok(self):
+        # Given
+        self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
+        start_ts_utc = 13
+        end_ts_utc = 23
+        # When
+        async with self.object:
+            result = await self.object.remove(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
+        # Then
+        assert isinstance(result, event.EventSnapshot)
+        called = self._assert_called_only(base.StoreContextManager.remove.__name__)
+        assert called
+        res_start, res_end = called
+        assert res_start == start_ts_utc
+        assert res_end == end_ts_utc
+        assert self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_archive_nok_raises(self):
@@ -381,10 +409,12 @@ class TestStore:  # pylint: disable=too-many-public-methods
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
+        assert not self.object.has_changed
 
     @pytest.mark.asyncio
-    async def test_archive_ok(self):
+    async def test_archive_ok_empty(self):
         # Given
+        self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
         start_ts_utc = 13
         end_ts_utc = 23
         # When
@@ -396,6 +426,24 @@ class TestStore:  # pylint: disable=too-many-public-methods
         res_start, res_end = called
         assert res_start == start_ts_utc
         assert res_end == end_ts_utc
+        assert not self.object.has_changed
+
+    @pytest.mark.asyncio
+    async def test_archive_ok(self):
+        # Given
+        self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
+        start_ts_utc = 13
+        end_ts_utc = 23
+        # When
+        async with self.object:
+            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+        # Then
+        called = self._assert_called_only(base.StoreContextManager.archive.__name__)
+        assert called
+        res_start, res_end = called
+        assert res_start == start_ts_utc
+        assert res_end == end_ts_utc
+        assert self.object.has_changed
 
 
 class _MyReadOnlyStore(base.ReadOnlyStoreContextManager):
@@ -433,6 +481,7 @@ class TestReadOnlyStore:
                     _TEST_EVENT_SNAPSHOT_WITH_REQUEST, overwrite_within_range=overwrite
                 )
         self._assert_context_called()
+        assert not self.object.has_changed
 
     def _assert_context_called(self) -> None:
         assert self.object.called.get(base.StoreContextManager._open.__name__)
@@ -462,3 +511,4 @@ class TestReadOnlyStore:
                     start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
                 )
         self._assert_context_called()
+        assert not self.object.has_changed

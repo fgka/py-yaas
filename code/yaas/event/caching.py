@@ -84,7 +84,7 @@ def update_event_cache(
         ) from err
     # merge
     try:
-        merged_snapshot = version_control.merge(
+        is_required, merged_snapshot = version_control.merge(
             snapshot_a=cached_snapshot,
             snapshot_b=calendar_snapshot,
             merge_strategy=merge_strategy,
@@ -97,13 +97,15 @@ def update_event_cache(
             f"Got: {err}"
         ) from err
     # write cache
-    try:
-        result = cache_writer(merged_snapshot)
-    except Exception as err:
-        raise RuntimeError(
-            f"Could not write snapshot <{merged_snapshot}> to cache using <{cache_writer}>. "
-            f"Got: {err}"
-        ) from err
+    result = True
+    if is_required:
+        try:
+            result = cache_writer(merged_snapshot)
+        except Exception as err:
+            raise RuntimeError(
+                f"Could not write snapshot <{merged_snapshot}> to cache using <{cache_writer}>. "
+                f"Got: {err}"
+            ) from err
     return result
 
 

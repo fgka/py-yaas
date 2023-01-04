@@ -5,10 +5,15 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 import tempfile
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from yaas.dto import config, event, request
 from yaas.scaler import standard
+
+################
+# ScaleRequest #
+################
+
 
 _TEST_SCALE_REQUEST_KWARGS: Dict[str, Any] = dict(
     topic="TEST_TOPIC",
@@ -20,11 +25,49 @@ _TEST_SCALE_REQUEST_KWARGS: Dict[str, Any] = dict(
 
 
 def create_scale_request(**kwargs) -> request.ScaleRequest:
+    """
+    Create a default :py:class:`request.ScaleRequest` using ``kwargs`` to overwrite defaults.
+
+    Args:
+        **kwargs:
+
+    Returns:
+
+    """
     scale_kwargs = {
         **_TEST_SCALE_REQUEST_KWARGS,
         **kwargs,
     }
     return request.ScaleRequest(**scale_kwargs)
+
+
+#################
+# EventSnapshot #
+#################
+
+
+def create_event_snapshot(
+    source: str, ts_list: Optional[List[int]] = None
+) -> event.EventSnapshot:
+    """
+    Creates an :py:class:`event.EventSnapshot` instance.
+
+    Args:
+        source:
+        ts_list:
+
+    Returns:
+
+    """
+    timestamp_to_request = {}
+    if ts_list:
+        for ts in ts_list:
+            timestamp_to_request[ts] = [
+                create_scale_request(
+                    topic="topic", resource="resource", command=f"{source} = {ts}"
+                )
+            ]
+    return event.EventSnapshot(source=source, timestamp_to_request=timestamp_to_request)
 
 
 TEST_CALENDAR_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="calendar")
@@ -33,7 +76,19 @@ TEST_COMPARISON_SNAPSHOT: event.EventSnapshotComparison = event.EventSnapshotCom
     snapshot_a=TEST_CALENDAR_SNAPSHOT,
     snapshot_b=TEST_CACHE_SNAPSHOT,
 )
+TEST_COMPARISON_SNAPSHOT_NON_EMPTY: event.EventSnapshotComparison = (
+    event.EventSnapshotComparison(
+        snapshot_a=TEST_CALENDAR_SNAPSHOT,
+        snapshot_b=TEST_CACHE_SNAPSHOT,
+        only_in_a=create_event_snapshot(source="onlu_in_a", ts_list=[123]),
+    )
+)
 TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
+
+
+##########
+# Config #
+##########
 
 
 _TEST_PUBSUB_TOPIC: str = "test_yaas_pubsub_topic"

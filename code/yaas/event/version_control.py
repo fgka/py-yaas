@@ -6,7 +6,7 @@ The difficulty here is to build and merge snapshots,
  in case the current cached values deviate from what is in newly fetched upcoming events.
 """
 # pylint: enable=line-too-long
-from typing import Callable, List
+from typing import Callable, List, Optional, Tuple
 
 from yaas import logger
 from yaas.dto import event
@@ -19,7 +19,7 @@ def merge(
     snapshot_a: event.EventSnapshot,
     snapshot_b: event.EventSnapshot,
     merge_strategy: Callable[[event.EventSnapshotComparison], event.EventSnapshot],
-) -> event.EventSnapshot:
+) -> Tuple[bool, Optional[event.EventSnapshot]]:
     """
     This is just wrapper to chain :py:func:`compare`
         and calling ``strategy`` on the comparison result.
@@ -30,6 +30,8 @@ def merge(
         merge_strategy:
 
     Returns:
+        A :py:class:`tuple` in the format: ``<is merge required>,<merge result>``.
+        If the merge is not required, the merge result will be :py:obj:`None`.
 
     """
     # validation
@@ -38,21 +40,25 @@ def merge(
             f"Strategy argument must be a {Callable.__name__} object. "
             f"Got <{merge_strategy}>({type(merge_strategy)})"
         )
-    # logic
+    # logic: comparison
     try:
         comparison = compare(snapshot_a=snapshot_a, snapshot_b=snapshot_b)
     except Exception as err:
         raise RuntimeError(
             f"Could not compare <{snapshot_a}> to <{snapshot_b}>. Got: {err}"
         ) from err
-    try:
-        result = merge_strategy(comparison)
-    except Exception as err:
-        raise RuntimeError(
-            f"Could not apply merge strategy <{merge_strategy}> to comparison <{comparison}>. "
-            f"Got: {err}"
-        ) from err
-    return result
+    # logic: merge
+    result = None
+    is_required = comparison.are_different()
+    if is_required:
+        try:
+            result = merge_strategy(comparison)
+        except Exception as err:
+            raise RuntimeError(
+                f"Could not apply merge strategy <{merge_strategy}> to comparison <{comparison}>. "
+                f"Got: {err}"
+            ) from err
+    return is_required, result
 
 
 def compare(

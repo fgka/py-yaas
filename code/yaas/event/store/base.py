@@ -75,6 +75,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         self._default_start_ts_utc_fn = default_start_ts_utc_fn
         self._default_end_ts_utc_fn = default_end_ts_utc_fn
         self._max_end_ts_utc_fn = max_end_ts_utc_fn
+        self._has_changed = False
 
     @property
     def source(self) -> str:
@@ -151,6 +152,13 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             source=self._source,
             request_lst=request_lst,
         )
+
+    @property
+    def has_changed(self) -> bool:
+        """
+        If any data modifying method has been called, it will be flagged here.
+        """
+        return self._has_changed
 
     async def read(
         self,
@@ -231,10 +239,14 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         if overwrite_within_range and value.timestamp_to_request:
             start_ts_utc, end_ts_utc = value.range()
             await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
-        try:
-            await self._write(value)
-        except Exception as err:
-            raise StoreError(f"Could not write {value} to store. Error: {err}") from err
+        if value.all_requests():
+            try:
+                await self._write(value)
+                self._has_changed = True
+            except Exception as err:
+                raise StoreError(
+                    f"Could not write {value} to store. Error: {err}"
+                ) from err
 
     async def _write(
         self,
@@ -281,6 +293,8 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
                 f"Remove did not return a valid {event.EventSnapshot.__class__.__name__} instance. "
                 f"Got <{result}>({type(result)})"
             )
+        if result.all_requests():
+            self._has_changed = True
         return result
 
     @abc.abstractmethod
@@ -294,7 +308,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         *,
         start_ts_utc: Optional[Union[int, float, datetime]] = None,
         end_ts_utc: Optional[Union[int, float, datetime]] = None,
-    ) -> None:
+    ) -> event.EventSnapshot:
         """
         Similar to :py:meth:`remove` but will move the data out of the current store into a
             _cold_ storage.
@@ -316,17 +330,28 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         start_ts_utc = self._effective_start_ts_utc(start_ts_utc)
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
-            await self._archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            result = await self._archive(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
         except Exception as err:
             raise StoreError(
                 f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. "
                 f"Error: {err}"
             ) from err
+        if not isinstance(result, event.EventSnapshot):
+            raise StoreError(
+                f"Archive did not return a valid {event.EventSnapshot.__class__.__name__} "
+                "instance. "
+                f"Got <{result}>({type(result)})"
+            )
+        if result.all_requests():
+            self._has_changed = True
+        return result
 
     @abc.abstractmethod
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> None:
+    ) -> event.EventSnapshot:
         raise NotImplementedError
 
 
@@ -338,7 +363,7 @@ class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
     async def _write(
         self,
         value: event.EventSnapshot,
-    ) -> None:
+    ) -> event.EventSnapshot:
         raise StoreError(
             f"This is a {self.__class__.__name__} instance which is also read-only."
         )
@@ -352,7 +377,7 @@ class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
 
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> None:
+    ) -> event.EventSnapshot:
         raise StoreError(
             f"This is a {self.__class__.__name__} instance which is also read-only."
         )

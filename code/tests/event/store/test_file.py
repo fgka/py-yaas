@@ -54,14 +54,16 @@ class _MyBaseFileStoreContextManager(file.BaseFileStoreContextManager):
 
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         self._which(is_archive).extend(value)
+        return value
 
     async def _remove_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         for val in value:
             self._which(is_archive).remove(val)
+        return value
 
 
 class TestBaseFileStoreContextManager:

@@ -63,21 +63,23 @@ async def update_cache(
         end_ts_utc=end_ts_utc,
     )
     # logic: merge
-    merged_snapshot = version_control.merge(
+    is_required, merged_snapshot = version_control.merge(
         snapshot_a=calendar_snapshot,
         snapshot_b=cache_snapshot,
         merge_strategy=merge_strategy,
     )
     _LOGGER.info(
-        "Merged snapshots using <%s>. Range <%s> and amount of requests: <%d>",
+        "Merged snapshots using <%s>. Merge required: %s. Range <%s> and amount of requests: <%d>",
         merge_strategy,
-        merged_snapshot.range(),
-        merged_snapshot.amount_requests(),
+        is_required,
+        merged_snapshot.range() if merged_snapshot else None,
+        merged_snapshot.amount_requests() if merged_snapshot else None,
     )
     # logic: overwrite cache
-    async with cache_store as obj:
-        await obj.write(merged_snapshot, overwrite_within_range=True)
-        _LOGGER.info("Wrote merged snapshot with overwrite")
+    if is_required:
+        async with cache_store as obj:
+            await obj.write(merged_snapshot, overwrite_within_range=True)
+            _LOGGER.info("Wrote merged snapshot with overwrite")
 
 
 def _validate_configuration(value: config.Config) -> None:

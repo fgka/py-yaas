@@ -92,12 +92,31 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             for req in req_lst:
                 if req not in all_existent:
                     to_write.append(req)
-        await self._write_scale_requests(to_write, is_archive=False)
+        written = await self._write_scale_requests(to_write, is_archive=False)
+        self._validate_all_requests_were_dealt_with(to_write, written, "written")
+
+    @staticmethod
+    def _validate_all_requests_were_dealt_with(
+        expected: List[request.ScaleRequest],
+        result: List[request.ScaleRequest],
+        error_msg_verb_in_past_tense: str,
+    ) -> None:
+        if expected is None:
+            expected = set()
+        if result is None:
+            result = set()
+        expected_minus_result = set(expected) - set(result)
+        if expected_minus_result:
+            raise base.StoreError(
+                f"Not all requests where {error_msg_verb_in_past_tense}. "
+                f"Not {error_msg_verb_in_past_tense}: {expected_minus_result}. "
+                f"From: {expected}"
+            )
 
     @abc.abstractmethod
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         """
         Persists all :py:class:`request.ScaleRequest` into current or archive file.
         """
@@ -105,10 +124,10 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
     async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        to_remove = await self._remove_scale_requests_in_range(
+        removed = await self._remove_scale_requests_in_range(
             start_ts_utc, end_ts_utc, is_archive=False
         )
-        return self._snapshot_from_request_lst(to_remove)
+        return self._snapshot_from_request_lst(removed)
 
     async def _remove_scale_requests_in_range(
         self,
@@ -117,30 +136,31 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         *,
         is_archive: Optional[bool] = False,
     ) -> List[request.ScaleRequest]:
-        result = []
+        to_remove = []
         async for req in self._read_scale_requests_in_range(
             start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
         ):
-            result.append(req)
-        await self._remove_scale_requests(result, is_archive=is_archive)
-        return result
+            to_remove.append(req)
+        removed = await self._remove_scale_requests(to_remove, is_archive=is_archive)
+        self._validate_all_requests_were_dealt_with(to_remove, removed, "removed")
+        return removed
 
     @abc.abstractmethod
     async def _remove_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         """
         Removes all :py:class:`request.ScaleRequest` from current or archive file.
         """
 
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> None:
+    ) -> event.EventSnapshot:
         to_archive = await self._remove_scale_requests_in_range(
             start_ts_utc, end_ts_utc, is_archive=False
         )
         try:
-            await self._write_scale_requests(to_archive, is_archive=True)
+            archived = await self._write_scale_requests(to_archive, is_archive=True)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error(
                 "Could not archive snapshot <%s>. Error: %s",
@@ -148,7 +168,9 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
                 err,
             )
             try:
-                await self._write_scale_requests(to_archive, is_archive=False)
+                recovered = await self._write_scale_requests(
+                    to_archive, is_archive=False
+                )
             except Exception as err_roll_back:
                 raise RuntimeError(
                     f"[DATA LOSS] Removed snapshot <{to_archive} for store, "
@@ -156,6 +178,11 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
                     f"Archive error: {err}. "
                     f"Error: {err_roll_back}"
                 ) from err_roll_back
+            self._validate_all_requests_were_dealt_with(
+                to_archive, recovered, "rolled back"
+            )
+        self._validate_all_requests_were_dealt_with(to_archive, archived, "archived")
+        return self._snapshot_from_request_lst(archived)
 
 
 class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
@@ -236,17 +263,18 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
 
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         path = self._json_line_file if not is_archive else self._archive_json_line_file
         with self._file_lock:
             async with aiofiles.open(
                 path, "a", encoding=const.ENCODING_UTF8
             ) as out_file:
                 await out_file.writelines([f"\n{val.as_json()}" for val in value])
+        return value
 
     async def _remove_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         # pylint: disable=consider-using-with
         tmp_file = pathlib.Path(tempfile.NamedTemporaryFile().name)
         # pylint: enable=consider-using-with
@@ -265,6 +293,7 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
                 f"[DATA LOSS] Could not move content from {tmp_file} into {json_file}. "
                 f"Error: {err}"
             ) from err
+        return value
 
 
 def _sqlite_column_type_from_attr(attribute: attrs.Attribute) -> str:
@@ -453,11 +482,12 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
 
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
-    ) -> None:
+    ) -> List[request.ScaleRequest]:
         insert_stmt = self._insert_stmt_tmpl(is_archive)
         cursor = self._create_cursor()
         cursor.executemany(insert_stmt, [self._to_row(val) for val in value])
         cursor.close()
+        return value
 
     @staticmethod
     def _insert_stmt_tmpl(is_archive: Optional[bool] = False) -> str:

@@ -8,11 +8,11 @@ import os
 
 from yaas.entry_point import cloud_run
 
-application = cloud_run.create_app()
+APPLICATION = cloud_run.create_app()
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
     # This is used when running locally. Gunicorn is used to run the
     # application on Cloud Run. See entrypoint in Dockerfile.
-    application.run(host="127.0.0.1", port=port, debug=True)
+    APPLICATION.run(host="127.0.0.1", port=port, debug=True)

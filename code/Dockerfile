@@ -27,6 +27,6 @@ COPY dist/${WHEEL_FILE} ./
 
 RUN python3 -m pip install ./${WHEEL_FILE}
 
-ENV FLASK_APP yaas.entry_point.flask_gunicorn:application
+ENV FLASK_APP yaas.entry_point.flask_gunicorn:APPLICATION
 
 CMD gunicorn --bind ":${PORT}" --workers 1 --threads 8 --timeout 0 ${FLASK_APP}

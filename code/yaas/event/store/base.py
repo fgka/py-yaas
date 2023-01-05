@@ -15,7 +15,7 @@ from types import TracebackType
 from typing import Any, Callable, List, Optional, Union, Type
 
 from yaas.dto import event, request
-from yaas import logger
+from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
 
@@ -84,10 +84,13 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
             )
         self._lock_file = lock_file
         self._lock_timeout_in_sec = lock_timeout_in_sec
-        self._open_lock_file = open(self._lock_file, "w")
+        # pylint: disable=consider-using-with
+        self._open_lock_file = open(self._lock_file, "w", encoding=const.ENCODING_UTF8)
+        # pylint: enable=consider-using-with
         self._thread_lock = threading.Lock()
 
     def __del__(self):
+        self._unlock()
         self._open_lock_file.close()
 
     @property
@@ -118,7 +121,9 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         Returns:
             :py:obj:`True` if lock has been acquired.
         """
+        # pylint: disable=consider-using-with
         result = self._thread_lock.acquire(blocking=False)
+        # pylint: enable=consider-using-with
         if result:
             result = self._fcntl_flock(True)
             if not result:
@@ -132,7 +137,7 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         try:
             fcntl.flock(self._open_lock_file, flag | fcntl.LOCK_NB)
             result = True
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             _LOGGER.info(
                 "Could not %s lock on file %s. Error: %s",
                 "acquire" if is_lock else "release",
@@ -403,7 +408,9 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             )
         if overwrite_within_range and value.timestamp_to_request:
             start_ts_utc, end_ts_utc = value.range()
-            removed = await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            removed = await self.remove(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+            )
             _LOGGER.debug("Removed existing before writing: %s", removed)
         if value.all_requests():
             try:

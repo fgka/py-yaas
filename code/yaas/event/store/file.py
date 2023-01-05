@@ -180,7 +180,9 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         ):
             to_remove.append(req)
         async with self._lock:
-            removed = await self._remove_scale_requests(to_remove, is_archive=is_archive)
+            removed = await self._remove_scale_requests(
+                to_remove, is_archive=is_archive
+            )
         self._validate_all_requests_were_dealt_with(to_remove, removed, "removed")
         return removed
 

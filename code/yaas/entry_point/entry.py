@@ -69,11 +69,11 @@ async def update_cache(
         merge_strategy=merge_strategy,
     )
     _LOGGER.info(
-        "Merged snapshots using <%s>. Merge required: %s. Range <%s> and amount of requests: <%d>",
+        "Merged snapshots using <%s>. Merge required: %s. Range <%s> and amount of requests: <%s>",
         merge_strategy,
         is_required,
-        merged_snapshot.range() if merged_snapshot else None,
-        merged_snapshot.amount_requests() if merged_snapshot else None,
+        str(merged_snapshot.range() if merged_snapshot else None),
+        str(merged_snapshot.amount_requests() if merged_snapshot else None),
     )
     # logic: overwrite cache
     if is_required:
@@ -153,12 +153,17 @@ async def send_requests(
         start_ts_utc=start_ts_utc,
         end_ts_utc=end_ts_utc,
     )
-    # logic: send
-    await pubsub_dispatcher.dispatch(
-        configuration.topic_to_pubsub,
-        *cache_snapshot.all_requests(),
-        raise_if_invalid_request=True,
-    )
+    if cache_snapshot.amount_requests():
+        # logic: send
+        await pubsub_dispatcher.dispatch(
+            configuration.topic_to_pubsub,
+            *cache_snapshot.all_requests(),
+            raise_if_invalid_request=True,
+        )
+    else:
+        _LOGGER.debug(
+            "There are no requests to dispatch in snapshot: %s", cache_snapshot
+        )
 
 
 async def enact_requests(
@@ -188,6 +193,11 @@ async def enact_requests(
     req_lst = pubsub_dispatcher.from_event(
         event=pubsub_event, iso_str_timestamp=iso_str_timestamp
     )
+    if not isinstance(req_lst, list):
+        raise TypeError(
+            f"Expecting a list of requests from event. Got: <{req_lst}>({type(req_lst)}). "
+            f"Event: {pubsub_event}"
+        )
     result: List[Tuple[bool, base_scaler.Scaler]] = await parser.enact(
         *req_lst, singulate_if_only_one=False, raise_if_invalid_request=True
     )

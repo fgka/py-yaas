@@ -82,9 +82,16 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
 
     async def _close(self) -> None:
         await super()._close()
-        gcs.write_object(
-            bucket_name=self._bucket_name,
-            object_path=self._db_object_path,
-            content_source=self.sqlite_file,
-            project=self._project,
-        )
+        if self.has_changed:
+            gcs.write_object(
+                bucket_name=self._bucket_name,
+                object_path=self._db_object_path,
+                content_source=self.sqlite_file,
+                project=self._project,
+            )
+        else:
+            _LOGGER.debug(
+                "There are not changes to the local file %s, not uploading to %s",
+                self.sqlite_file,
+                self.gcs_uri,
+            )

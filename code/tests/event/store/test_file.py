@@ -736,7 +736,9 @@ async def _read(json_line_file: pathlib.Path, is_archive=False) -> str:
     instance = _create_instance(json_line_file)
     async with instance as obj:
         result = await obj.read(
-            start_ts_utc=_MP_START_TS_UTC, end_ts_utc=_MP_END_TS_UTC, is_archive=is_archive
+            start_ts_utc=_MP_START_TS_UTC,
+            end_ts_utc=_MP_END_TS_UTC,
+            is_archive=is_archive,
         )
     return result.as_json()
 
@@ -748,7 +750,7 @@ def _create_instance(json_line_file: pathlib.Path) -> file.BaseFileStoreContextM
 async def _write(json_line_file: pathlib.Path, ts_lst: List[int]) -> None:
     instance = _create_instance(json_line_file)
     async with instance as obj:
-        value = common.create_event_snapshot(f"multiprocessing", ts_lst)
+        value = common.create_event_snapshot("multiprocessing", ts_lst)
         await obj.write(value, overwrite_within_range=True)
 
 

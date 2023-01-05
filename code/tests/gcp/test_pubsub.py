@@ -6,13 +6,15 @@
 # type: ignore
 import base64
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import flask
 import pytest
 
 from yaas import const
 from yaas.gcp import pubsub
+
+from tests import common
 
 _ISO_DATE_STR_PREFIX: str = "2022-10-07T11:01:38"
 _ISO_DATE_TO_TS: str = 1665140498
@@ -50,18 +52,11 @@ _TEST_VALUE_DICT: Dict[str, Any] = dict(key_a="value", key_b=123, key_c=dict(key
 )
 def test__parse_json_data_ok(expected: Any, asbytes: bool):
     # Given
-    value = _create_event_str(expected, asbytes)
+    value = common.create_event_str(expected, asbytes)
     # When
     result = pubsub._parse_json_data(value)
     # Then
     assert result == expected
-
-
-def _create_event_str(data: Any, as_bytes: Optional[bool] = True) -> Union[str, bytes]:
-    result = base64.b64encode(bytes(json.dumps(data).encode(const.ENCODING_UTF8)))
-    if not as_bytes:
-        result = result.decode(encoding=const.ENCODING_UTF8)
-    return result
 
 
 @pytest.mark.parametrize(
@@ -73,7 +68,10 @@ def _create_event_str(data: Any, as_bytes: Optional[bool] = True) -> Union[str, 
 )
 def test_parse_pubsub_ok(exp_obj_dict: Dict[str, Any], as_request: bool):
     # Given
-    event = _create_event(exp_obj_dict, as_request)
+    publish_date_str = _ISO_DATE_STR_PREFIX
+    event = common.create_event(
+        exp_obj_dict, as_request, publish_date_str=publish_date_str
+    )
     called = {}
     expected = "TEST_EXPECTED"
 
@@ -88,41 +86,11 @@ def test_parse_pubsub_ok(exp_obj_dict: Dict[str, Any], as_request: bool):
     result = pubsub.parse_pubsub(
         event=event,
         dict_to_obj_fn=dict_to_obj_fn,
-        iso_str_timestamp=_ISO_DATE_STR_PREFIX,
+        iso_str_timestamp=publish_date_str,
     )
     # Then
     assert result == expected
     assert called.get(dict_to_obj_fn.__name__)
-
-
-class _MyRequest(flask.Request):
-    def __init__(  # pylint: disable=super-init-not-called
-        self, json_payload: Optional[Any] = None
-    ):
-        self.called = {}
-        self._json_payload = json_payload
-
-    def get_json(self) -> str:  # pylint: disable=arguments-differ
-        self.called[_MyRequest.get_json.__name__] = True
-        return self._json_payload
-
-    def __repr__(self) -> str:
-        return _MyRequest.__name__
-
-
-def _create_event(obj_dict: Dict[str, Any], as_request: bool):
-    data = _create_event_str(obj_dict, as_bytes=not as_request)
-    if as_request:
-        payload = {
-            pubsub._EVENT_MESSAGE_KEY: {
-                pubsub._EVENT_MESSAGE_DATA_KEY: data,
-                pubsub._MESSAGE_PUBLISH_TIME_KEY: _ISO_DATE_STR_PREFIX,
-            }
-        }
-        result = _MyRequest(payload)
-    else:
-        result = {pubsub._EVENT_MESSAGE_DATA_KEY: data}
-    return result
 
 
 class _MyClient:

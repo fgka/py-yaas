@@ -199,7 +199,7 @@ async def enact_requests() -> str:
     return result
 
 
-if __name__ == "__main__":
+def _main():
     """
     To test::
         export CONFIG_BUCKET_NAME=yaas_cache
@@ -208,3 +208,7 @@ if __name__ == "__main__":
     """
     port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
     create_app().run(host="127.0.0.1", port=port, debug=True)
+
+
+if __name__ == "__main__":
+    _main()

@@ -8,7 +8,6 @@ import asyncio
 from datetime import datetime, timedelta
 from concurrent import futures
 import pathlib
-import time
 from typing import Any, Optional
 
 import pytest
@@ -114,7 +113,7 @@ class TestFileBasedLockContextManager:
             assert self.instance.is_locked()
             with pytest.raises(base.StoreLockTimeoutError):
                 async with self.instance:
-                    assert False, f"Should not be reached"
+                    assert False, "Should not be reached"
 
 
 def test__default_start_ts_utc_ok():
@@ -159,75 +158,12 @@ def test__default_max_end_ts_utc_ok():
     _assert_ts_in_range(result, min_result)
 
 
-class _MyStoreContextManager(base.StoreContextManager):
-    def __init__(
-        self,
-        result_snapshot: event.EventSnapshot = _TEST_EVENT_SNAPSHOT_EMPTY,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.result_snapshot = result_snapshot
-        self.called = {}
-        self.to_raise = set()
-
-    async def _open(self) -> None:
-        self.called[base.StoreContextManager._open.__name__] = True
-
-    async def _close(self) -> None:
-        self.called[base.StoreContextManager._close.__name__] = True
-
-    async def _read(
-        self,
-        *,
-        start_ts_utc: Optional[int] = None,
-        end_ts_utc: Optional[int] = None,
-        is_archive,
-    ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.read.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
-        if base.StoreContextManager.read.__name__ in self.to_raise:
-            raise RuntimeError
-        return self.result_snapshot
-
-    async def _write(
-        self,
-        value: event.EventSnapshot,
-    ) -> None:
-        self.called[base.StoreContextManager.write.__name__] = value
-        if base.StoreContextManager.write.__name__ in self.to_raise:
-            raise RuntimeError
-
-    async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.remove.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
-        if base.StoreContextManager.remove.__name__ in self.to_raise:
-            raise RuntimeError
-        return self.result_snapshot
-
-    async def _archive(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.archive.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
-        if base.StoreContextManager.archive.__name__ in self.to_raise:
-            raise RuntimeError
-        return self.result_snapshot
-
-
 _TEST_DATETIME: datetime = datetime.utcnow()
 
 
 class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     def setup(self):
-        self.object = _MyStoreContextManager()
+        self.object = common.MyStoreContextManager()
 
     @pytest.mark.parametrize(
         "value,expected",

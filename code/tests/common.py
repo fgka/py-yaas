@@ -65,7 +65,10 @@ def create_event_snapshot(
         for ts in ts_list:
             timestamp_to_request[ts] = [
                 create_scale_request(
-                    topic="topic", resource="resource", command=f"{source} = {ts}"
+                    topic="topic",
+                    resource="resource",
+                    command=f"{source} = {ts}",
+                    timestamp_utc=ts,
                 )
             ]
     return event.EventSnapshot(source=source, timestamp_to_request=timestamp_to_request)
@@ -92,7 +95,7 @@ TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
 #######################
 
 
-def lock_file(
+def tmpfile(
     *, existing: Optional[bool] = False, chmod: Optional[int] = None
 ) -> pathlib.Path:
     if chmod is not None:

@@ -55,17 +55,20 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         return self._lock
 
     async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         request_lst = []
-        async with self._lock:
-            async for req in self._read_scale_requests_in_range(
-                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=False
+        async for req in self._read_scale_requests_in_range(
+            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+        ):
+            if self._is_request_in_range(
+                req=req, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
             ):
-                if self._is_request_in_range(
-                    req=req, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-                ):
-                    request_lst.append(req)
+                request_lst.append(req)
         return self._snapshot_from_request_lst(request_lst)
 
     async def _read_scale_requests_in_range(
@@ -75,13 +78,14 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         end_ts_utc: Optional[int] = None,
         is_archive: Optional[bool] = False,
     ) -> Generator[request.ScaleRequest, None, None]:
-        async for result in self._read_scale_requests(
-            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
-        ):
-            if self._is_request_in_range(
-                req=result, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+        async with self._lock:
+            async for result in self._read_scale_requests(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
             ):
-                yield result
+                if self._is_request_in_range(
+                    req=result, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                ):
+                    yield result
 
     @abc.abstractmethod
     async def _read_scale_requests(
@@ -119,8 +123,7 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             for req in req_lst:
                 if req not in all_existent:
                     to_write.append(req)
-        async with self._lock:
-            written = await self._write_scale_requests(to_write, is_archive=False)
+        written = await self._write_scale_requests_with_lock(to_write, is_archive=False)
         self._validate_all_requests_were_dealt_with(to_write, written, "written")
 
     @staticmethod
@@ -141,6 +144,13 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
                 f"From: {expected}"
             )
 
+    async def _write_scale_requests_with_lock(
+        self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
+    ) -> List[request.ScaleRequest]:
+        async with self._lock:
+            result = await self._write_scale_requests(value, is_archive=is_archive)
+        return result
+
     @abc.abstractmethod
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
@@ -152,10 +162,9 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
     async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        async with self._lock:
-            removed = await self._remove_scale_requests_in_range(
-                start_ts_utc, end_ts_utc, is_archive=False
-            )
+        removed = await self._remove_scale_requests_in_range(
+            start_ts_utc, end_ts_utc, is_archive=False
+        )
         return self._snapshot_from_request_lst(removed)
 
     async def _remove_scale_requests_in_range(
@@ -170,7 +179,8 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
         ):
             to_remove.append(req)
-        removed = await self._remove_scale_requests(to_remove, is_archive=is_archive)
+        async with self._lock:
+            removed = await self._remove_scale_requests(to_remove, is_archive=is_archive)
         self._validate_all_requests_were_dealt_with(to_remove, removed, "removed")
         return removed
 
@@ -189,7 +199,9 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             start_ts_utc, end_ts_utc, is_archive=False
         )
         try:
-            archived = await self._write_scale_requests(to_archive, is_archive=True)
+            archived = await self._write_scale_requests_with_lock(
+                to_archive, is_archive=True
+            )
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error(
                 "Could not archive snapshot <%s>. Error: %s",
@@ -197,7 +209,7 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
                 err,
             )
             try:
-                recovered = await self._write_scale_requests(
+                recovered = await self._write_scale_requests_with_lock(
                     to_archive, is_archive=False
                 )
             except Exception as err_roll_back:
@@ -232,7 +244,7 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
         self,
         *,
         json_line_file: pathlib.Path,
-        archive_json_line_file: pathlib.Path,
+        archive_json_line_file: Optional[pathlib.Path] = None,
         **kwargs,
     ):
         if not isinstance(json_line_file, pathlib.Path):
@@ -240,6 +252,8 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
                 f"JSON line file must be a {pathlib.Path.__name__}. "
                 f"Got: <{json_line_file}>({type(json_line_file)})"
             )
+        if archive_json_line_file is None:
+            archive_json_line_file = json_line_file.with_suffix(".archive")
         if not isinstance(archive_json_line_file, pathlib.Path):
             raise TypeError(
                 f"Archive JSON line file must be a {pathlib.Path.__name__}. "
@@ -295,9 +309,7 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
     ) -> List[request.ScaleRequest]:
         path = self._json_line_file if not is_archive else self._archive_json_line_file
-        async with aiofiles.open(
-            path, "a", encoding=const.ENCODING_UTF8
-        ) as out_file:
+        async with aiofiles.open(path, "a", encoding=const.ENCODING_UTF8) as out_file:
             await out_file.writelines([f"\n{val.as_json()}" for val in value])
         return value
 

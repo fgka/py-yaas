@@ -5,10 +5,11 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 import asyncio
+from concurrent import futures
 import pathlib
 import re
 import tempfile
-from typing import Any, List, Type, Optional, Generator
+from typing import Any, Callable, List, Type, Optional, Generator, Tuple
 
 import attrs
 
@@ -33,8 +34,10 @@ _TEST_SCALE_REQUEST_AFTER: request.ScaleRequest = common.create_scale_request(
 
 
 class _MyBaseFileStoreContextManager(file.BaseFileStoreContextManager):
-    def __init__(self, **kwargs):
-        super().__init__(lock_file=common.lock_file(), **kwargs)
+    def __init__(self, lock_file: Optional[pathlib.Path] = None, **kwargs):
+        if lock_file is None:
+            lock_file = common.tmpfile()
+        super().__init__(lock_file=lock_file, **kwargs)
         self.current = []
         self.archived = []
 
@@ -358,14 +361,6 @@ class TestBaseFileStoreContextManager:
                 current.append(req)
             assert not current
 
-##########################
-# START: Multiprocessing #
-##########################
-
-########################
-# END: Multiprocessing #
-########################
-
 
 class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-methods
     def setup(self):
@@ -385,7 +380,7 @@ class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-me
         [
             (None, _TEST_JSON_LINE_FILE),
             (str(_TEST_JSON_LINE_FILE), _TEST_JSON_LINE_FILE),
-            (_TEST_JSON_LINE_FILE, None),
+            (_TEST_JSON_LINE_FILE, 123),
             (_TEST_JSON_LINE_FILE, str(_TEST_JSON_LINE_FILE)),
         ],
     )
@@ -726,3 +721,142 @@ class TestSQLiteStoreContextManager:
                 result.append(req)
             assert len(result) == 1
             assert result[0] == _TEST_SCALE_REQUEST_AFTER
+
+
+##########################
+# START: Multiprocessing #
+##########################
+
+
+_MP_START_TS_UTC: int = 100
+_MP_END_TS_UTC: int = _MP_START_TS_UTC + 1000
+
+
+async def _read(json_line_file: pathlib.Path, is_archive=False) -> str:
+    instance = _create_instance(json_line_file)
+    async with instance as obj:
+        result = await obj.read(
+            start_ts_utc=_MP_START_TS_UTC, end_ts_utc=_MP_END_TS_UTC, is_archive=is_archive
+        )
+    return result.as_json()
+
+
+def _create_instance(json_line_file: pathlib.Path) -> file.BaseFileStoreContextManager:
+    return file.JsonLineFileStoreContextManager(json_line_file=json_line_file)
+
+
+async def _write(json_line_file: pathlib.Path, ts_lst: List[int]) -> None:
+    instance = _create_instance(json_line_file)
+    async with instance as obj:
+        value = common.create_event_snapshot(f"multiprocessing", ts_lst)
+        await obj.write(value, overwrite_within_range=True)
+
+
+async def _archive(json_line_file: pathlib.Path, start: int, end: int) -> str:
+    instance = _create_instance(json_line_file)
+    async with instance as obj:
+        result = await obj.archive(start_ts_utc=start, end_ts_utc=end)
+    return result.as_json()
+
+
+async def _remove(json_line_file: pathlib.Path, start: int, end: int) -> str:
+    instance = _create_instance(json_line_file)
+    async with instance as obj:
+        result = await obj.remove(start_ts_utc=start, end_ts_utc=end)
+    return result.as_json()
+
+
+def _run_async(_async_fn: Callable, *args) -> Optional[str]:
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(_async_fn(*args))
+
+
+def _run_twice(
+    _async_fn: Callable, args_first: List[Any], args_second: List[Any]
+) -> Tuple[Optional[str], Optional[str]]:
+    with futures.ProcessPoolExecutor() as executor:
+        first = executor.submit(_run_async, _async_fn, *args_first)
+        second = executor.submit(_run_async, _async_fn, *args_second)
+        result = first.result(), second.result()
+    return result
+
+
+def test_file_read_concurrent_ok_empty():
+    # Given
+    json_line_file = common.tmpfile()
+    # When
+    first, second = _run_twice(_read, [json_line_file], [json_line_file])
+    # Then
+    first_obj = event.EventSnapshot.from_json(first)
+    second_obj = event.EventSnapshot.from_json(second)
+    assert first_obj == second_obj
+
+
+def test_file_write_concurrent_ok_empty():
+    # Given
+    json_line_file = common.tmpfile()
+    ts_first = [_MP_START_TS_UTC + 1, _MP_START_TS_UTC + 2]
+    ts_second = [_MP_START_TS_UTC + 10, _MP_START_TS_UTC + 20]
+    # When
+    _run_twice(_write, [json_line_file, ts_first], [json_line_file, ts_second])
+    # Then
+    read_str = _run_async(_read, json_line_file)
+    result = event.EventSnapshot.from_json(read_str)
+    assert result.amount_requests() == len(ts_first) + len(ts_second)
+    for ts in ts_first:
+        assert ts in result.timestamp_to_request
+    for ts in ts_second:
+        assert ts in result.timestamp_to_request
+
+
+def test_file_archive_concurrent_ok_empty():
+    # Given
+    json_line_file = common.tmpfile()
+    ts_first = [_MP_START_TS_UTC + 1, _MP_START_TS_UTC + 2]
+    ts_second = [_MP_START_TS_UTC + 10, _MP_START_TS_UTC + 20]
+    ts_remaining = [_MP_START_TS_UTC + 100, _MP_START_TS_UTC + 200]
+    ts_lst = ts_first + ts_second + ts_remaining
+    _run_async(_write, json_line_file, ts_lst)
+    # When
+    _run_twice(_archive, [json_line_file, *ts_first], [json_line_file, *ts_second])
+    # Then: current
+    current_str = _run_async(_read, json_line_file)
+    current = event.EventSnapshot.from_json(current_str)
+    assert current.amount_requests() == len(ts_remaining)
+    for ts in ts_remaining:
+        assert ts in current.timestamp_to_request
+    # Then: archive
+    archive_str = _run_async(_read, json_line_file, True)
+    archive = event.EventSnapshot.from_json(archive_str)
+    assert archive.amount_requests() == len(ts_first) + len(ts_second)
+    for ts in ts_first:
+        assert ts in archive.timestamp_to_request
+    for ts in ts_second:
+        assert ts in archive.timestamp_to_request
+
+
+def test_file_remove_concurrent_ok_empty():
+    # Given
+    json_line_file = common.tmpfile()
+    ts_first = [_MP_START_TS_UTC + 1, _MP_START_TS_UTC + 2]
+    ts_second = [_MP_START_TS_UTC + 10, _MP_START_TS_UTC + 20]
+    ts_remaining = [_MP_START_TS_UTC + 100, _MP_START_TS_UTC + 200]
+    ts_lst = ts_first + ts_second + ts_remaining
+    _run_async(_write, json_line_file, ts_lst)
+    # When
+    _run_twice(_remove, [json_line_file, *ts_first], [json_line_file, *ts_second])
+    # Then: current
+    current_str = _run_async(_read, json_line_file)
+    current = event.EventSnapshot.from_json(current_str)
+    assert current.amount_requests() == len(ts_remaining)
+    for ts in ts_remaining:
+        assert ts in current.timestamp_to_request
+    # Then: archive
+    archive_str = _run_async(_read, json_line_file, True)
+    archive = event.EventSnapshot.from_json(archive_str)
+    assert archive.amount_requests() == 0
+
+
+########################
+# END: Multiprocessing #
+########################

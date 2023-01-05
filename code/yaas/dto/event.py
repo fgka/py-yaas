@@ -3,7 +3,7 @@
 """
 Basic definition of types and expected functionality for resource scaler.
 """
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import attrs
 
@@ -11,6 +11,33 @@ from yaas.dto import dto_defaults, request
 from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
+
+
+def _json_timestamp_to_request_converter(
+    value: Union[Dict[str, List[Dict[str, Any]]], Dict[int, List[request.ScaleRequest]]]
+) -> Dict[int, List[request.ScaleRequest]]:
+    if isinstance(value, dict):
+        value = {
+            _str_or_int_to_int(key): [
+                _dict_or_scale_request_to_scale_request(item) for item in val
+            ]
+            for key, val in value.items()
+        }
+    return value
+
+
+def _str_or_int_to_int(value: Union[str, int]) -> int:
+    if isinstance(value, str):
+        value = int(value)
+    return value
+
+
+def _dict_or_scale_request_to_scale_request(
+    value: Union[Dict[str, Any], request.ScaleRequest]
+) -> request.ScaleRequest:
+    if isinstance(value, dict):
+        value = request.ScaleRequest.from_dict(value)
+    return value
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -24,6 +51,7 @@ class EventSnapshot(  # pylint: disable=too-few-public-methods
     source: str = attrs.field(validator=attrs.validators.instance_of(str))
     timestamp_to_request: Dict[int, List[request.ScaleRequest]] = attrs.field(
         default=attrs.Factory(dict),
+        converter=_json_timestamp_to_request_converter,
         validator=attrs.validators.deep_mapping(
             key_validator=attrs.validators.ge(0),
             value_validator=attrs.validators.deep_iterable(

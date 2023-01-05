@@ -69,8 +69,11 @@ class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
         """
         return self._secret_name
 
-    async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    async def _read_ro(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
     ) -> event.EventSnapshot:
         event_lst: List[Dict[str, Any]] = await google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,

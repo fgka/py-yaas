@@ -25,7 +25,9 @@ _TEST_EVENT_SNAPSHOT_WITH_REQUEST: event.EventSnapshot = event.EventSnapshot(
 )
 _TEST_EVENT_SNAPSHOT_EMPTY: event.EventSnapshot = event.EventSnapshot(source="B")
 
-# START: for multiprocessing #
+##########################
+# START: Multiprocessing #
+##########################
 
 
 async def _get_lock(obj, start_sleep: int) -> bool:
@@ -35,21 +37,21 @@ async def _get_lock(obj, start_sleep: int) -> bool:
     return True
 
 
-def _run_sync(lock_file: pathlib.Path, start_sleep):
+def _run_sync(lock_file: pathlib.Path, start_sleep: int):
     obj = base.FileBasedLockContextManager(lock_file=lock_file, lock_timeout_in_sec=1)
-    # This is to let all objects be created before trying to lock
-    time.sleep(1)
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(_get_lock(obj, start_sleep))
 
 
-# END: for multiprocessing #
+########################
+# END: Multiprocessing #
+########################
 
 
 class TestFileBasedLockContextManager:
     def setup(self):
         self.instance = base.FileBasedLockContextManager(
-            lock_file=common.lock_file(), lock_timeout_in_sec=1
+            lock_file=common.tmpfile(), lock_timeout_in_sec=1
         )
 
     def test_properties_ok(self):
@@ -59,7 +61,7 @@ class TestFileBasedLockContextManager:
         assert self.instance.lock_timeout_in_sec > 0
 
     def test_ctor_ok_existing_lock_file(self):
-        lock_file = common.lock_file(existing=True)
+        lock_file = common.tmpfile(existing=True)
         assert lock_file.exists()
         # When
         obj = base.FileBasedLockContextManager(lock_file=lock_file)
@@ -77,8 +79,8 @@ class TestFileBasedLockContextManager:
     @pytest.mark.parametrize(
         "lock_file,lock_timeout_in_sec",
         [
-            (common.lock_file(), 0),
-            (common.lock_file(), -1),
+            (common.tmpfile(), 0),
+            (common.tmpfile(), -1),
             (pathlib.Path("/bin/test"), 10),  # file does not have write access
         ],
     )
@@ -97,7 +99,7 @@ class TestFileBasedLockContextManager:
 
     def test_enter_nok_multiprocess(self):
 
-        lock_file = common.lock_file()
+        lock_file = common.tmpfile()
 
         with futures.ProcessPoolExecutor() as executor:
             first = executor.submit(_run_sync, lock_file, 0)
@@ -175,7 +177,11 @@ class _MyStoreContextManager(base.StoreContextManager):
         self.called[base.StoreContextManager._close.__name__] = True
 
     async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive,
     ) -> event.EventSnapshot:
         self.called[base.StoreContextManager.read.__name__] = (
             start_ts_utc,
@@ -553,8 +559,11 @@ class _MyReadOnlyStoreContextManager(base.ReadOnlyStoreContextManager):
     async def _close(self) -> None:
         self.called[base.StoreContextManager._close.__name__] = True
 
-    async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+    async def _read_ro(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
     ) -> event.EventSnapshot:
         self.called[base.StoreContextManager._read.__name__] = True
         return self._read_result
@@ -573,6 +582,15 @@ class TestReadOnlyStoreContextManager:
                 await self.object.write(
                     _TEST_EVENT_SNAPSHOT_WITH_REQUEST, overwrite_within_range=overwrite
                 )
+        self._assert_context_called()
+        assert not self.object.has_changed
+
+    @pytest.mark.asyncio
+    async def test_read_ok_archive(self):
+        # Given/When/Then
+        with pytest.raises(base.StoreError):
+            async with self.object:
+                await self.object.read(is_archive=True)
         self._assert_context_called()
         assert not self.object.has_changed
 

@@ -21,7 +21,7 @@ _LOGGER = logger.get(__name__)
 
 _DEFAULT_END_TS_FROM_NOW_IN_DAYS: int = 7
 _MAXIMUM_END_TS_FROM_NOW_IN_DAYS: int = 30
-_DEFAULT_LOCK_TIMEOUT_IN_SEC: int = 10
+_DEFAULT_LOCK_TIMEOUT_IN_SEC: int = 30
 _LOCK_SLEEP_STEP_IN_SEC: int = 1
 
 
@@ -86,20 +86,9 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         self._lock_timeout_in_sec = lock_timeout_in_sec
         self._open_lock_file = open(self._lock_file, "w")
         self._thread_lock = threading.Lock()
-        self._validate_lock()
 
     def __del__(self):
         self._open_lock_file.close()
-
-    def _validate_lock(self) -> None:
-        if not self._lock():
-            raise ValueError(
-                f"Could not lock file {self._lock_file}. State: {self.lock_state()}"
-            )
-        if not self._unlock():
-            raise ValueError(
-                f"Could not UNlock file {self._lock_file}. State: {self.lock_state()}"
-            )
 
     @property
     def lock_file(self) -> pathlib.Path:
@@ -177,7 +166,7 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
                 remaining_time_in_sec,
             )
             await asyncio.sleep(_LOCK_SLEEP_STEP_IN_SEC)
-            remaining_time_in_sec = int(datetime.utcnow().timestamp() - end_ts_in_sec)
+            remaining_time_in_sec = int(end_ts_in_sec - datetime.utcnow().timestamp())
             if remaining_time_in_sec <= 0:
                 raise StoreLockTimeoutError(
                     f"Could not acquire lock in the past {self._lock_timeout_in_sec} seconds. "
@@ -333,6 +322,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         *,
         start_ts_utc: Optional[Union[int, float, datetime]] = None,
         end_ts_utc: Optional[Union[int, float, datetime]] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         """
         Will retrieve a snapshot from the store that contains all events
@@ -344,6 +334,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             end_ts_utc: latest event possible in the snapshot.
                 It *must* respect the constraint: ``start_ts_utc > end_ts_utc``.
                 Default: :py:obj:`None`, meaning is given by implementation.
+            is_archive: if :py:obj:`True` will retrieve from archive instead of current.
 
         Returns:
             returns an instance of :py:class:`event.EventSnapshot`, event if empty.
@@ -360,7 +351,9 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
                 f"Got start - end = {start_ts_utc - end_ts_utc}"
             )
         try:
-            result = await self._read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            result = await self._read(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
+            )
         except Exception as err:
             raise StoreError(
                 f"Could not read {event.EventSnapshot.__name__} "
@@ -376,7 +369,11 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
 
     @abc.abstractmethod
     async def _read(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
@@ -406,7 +403,8 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             )
         if overwrite_within_range and value.timestamp_to_request:
             start_ts_utc, end_ts_utc = value.range()
-            await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            removed = await self.remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            _LOGGER.debug("Removed existing before writing: %s", removed)
         if value.all_requests():
             try:
                 await self._write(value)
@@ -527,6 +525,29 @@ class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
     """
     To be implemented by read-only stores.
     """
+
+    async def _read(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool],
+    ) -> event.EventSnapshot:
+        if is_archive:
+            raise StoreError(
+                f"This is a {self.__class__.__name__} instance which is also read-only. "
+                f"There is no archive."
+            )
+        return await self._read_ro(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+
+    @abc.abstractmethod
+    async def _read_ro(
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+    ):
+        pass
 
     async def _write(
         self,

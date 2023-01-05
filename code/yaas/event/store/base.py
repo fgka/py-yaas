@@ -5,9 +5,14 @@ Basic definition of event stores.
 """
 # pylint: enable=line-too-long
 import abc
+import asyncio
 import contextlib
+import fcntl
+import threading
 from datetime import datetime, timedelta
-from typing import Any, Callable, List, Optional, Union
+import pathlib
+from types import TracebackType
+from typing import Any, Callable, List, Optional, Union, Type
 
 from yaas.dto import event, request
 from yaas import logger
@@ -16,6 +21,8 @@ _LOGGER = logger.get(__name__)
 
 _DEFAULT_END_TS_FROM_NOW_IN_DAYS: int = 7
 _MAXIMUM_END_TS_FROM_NOW_IN_DAYS: int = 30
+_DEFAULT_LOCK_TIMEOUT_IN_SEC: int = 10
+_LOCK_SLEEP_STEP_IN_SEC: int = 1
 
 
 def _default_start_ts_utc() -> int:
@@ -43,6 +50,164 @@ def _default_max_end_ts_utc() -> int:
 
 class StoreError(Exception):
     """To code Store errors"""
+
+
+class StoreLockTimeoutError(StoreError):
+    """
+    Encodes timeouts when dealing with file locks.
+    """
+
+
+class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
+    """
+    Creates a local file based lock mechanism.
+    """
+
+    def __init__(
+        self,
+        *,
+        lock_file: pathlib.Path,
+        lock_timeout_in_sec: Optional[int] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if not isinstance(lock_timeout_in_sec, int):
+            lock_timeout_in_sec = _DEFAULT_LOCK_TIMEOUT_IN_SEC
+        if lock_timeout_in_sec <= 0:
+            raise ValueError(
+                f"Lock timeout must be an integer > 0. Got: {lock_timeout_in_sec}"
+            )
+        if not isinstance(lock_file, pathlib.Path):
+            raise TypeError(
+                f"Lock file must be a {pathlib.Path.__name__}. "
+                f"Got: <{lock_file}>({type(lock_file)})"
+            )
+        self._lock_file = lock_file
+        self._lock_timeout_in_sec = lock_timeout_in_sec
+        self._open_lock_file = open(self._lock_file, "w")
+        self._thread_lock = threading.Lock()
+        self._validate_lock()
+
+    def __del__(self):
+        self._open_lock_file.close()
+
+    def _validate_lock(self) -> None:
+        if not self._lock():
+            raise ValueError(
+                f"Could not lock file {self._lock_file}. State: {self.lock_state()}"
+            )
+        if not self._unlock():
+            raise ValueError(
+                f"Could not UNlock file {self._lock_file}. State: {self.lock_state()}"
+            )
+
+    @property
+    def lock_file(self) -> pathlib.Path:
+        """
+        Lock file location
+        """
+        return self._lock_file
+
+    @property
+    def lock_timeout_in_sec(self) -> int:
+        """
+        How long to wait for a lock before raising :py:class:`StoreLockTimeoutError`.
+        """
+        return self._lock_timeout_in_sec
+
+    def is_locked(self) -> bool:
+        """
+        Based on the internal thread lock.
+        """
+        return self._thread_lock.locked()
+
+    def _lock(self) -> bool:
+        """
+        Blocks all file operations globally,
+            so that writes don't trump each other and corrupt the files.
+
+        Returns:
+            :py:obj:`True` if lock has been acquired.
+        """
+        result = self._thread_lock.acquire(blocking=False)
+        if result:
+            result = self._fcntl_flock(True)
+            if not result:
+                self._thread_lock.release()
+        else:
+            _LOGGER.info("Could not acquire thread lock")
+        return result
+
+    def _fcntl_flock(self, is_lock: bool) -> bool:
+        flag = fcntl.LOCK_EX if is_lock else fcntl.LOCK_UN
+        try:
+            fcntl.flock(self._open_lock_file, flag | fcntl.LOCK_NB)
+            result = True
+        except Exception as err:
+            _LOGGER.info(
+                "Could not %s lock on file %s. Error: %s",
+                "acquire" if is_lock else "release",
+                self._lock_file,
+                err,
+            )
+            result = False
+        return result
+
+    def _unlock(self) -> bool:
+        """
+        UN-Blocks all file operations globally.
+        """
+        result = self._fcntl_flock(False)
+        if result:
+            self._thread_lock.release()
+        else:
+            _LOGGER.info("Could not unlock file %s", self._lock_file)
+        return result
+
+    async def _wait_for_lock_release_and_lock(self) -> None:
+        """
+        Holds and waits for the lock to be released.
+        """
+        end_ts_in_sec = datetime.utcnow().timestamp() + self._lock_timeout_in_sec
+        remaining_time_in_sec = self._lock_timeout_in_sec
+        while not self._lock():
+            _LOGGER.info(
+                "Waiting for lock. Sleeping %d sec, remaining wait time: %d sec",
+                _LOCK_SLEEP_STEP_IN_SEC,
+                remaining_time_in_sec,
+            )
+            await asyncio.sleep(_LOCK_SLEEP_STEP_IN_SEC)
+            remaining_time_in_sec = int(datetime.utcnow().timestamp() - end_ts_in_sec)
+            if remaining_time_in_sec <= 0:
+                raise StoreLockTimeoutError(
+                    f"Could not acquire lock in the past {self._lock_timeout_in_sec} seconds. "
+                    f"Lock state: {self.lock_state()}"
+                )
+
+    def lock_state(self) -> Any:
+        """
+        Information that helps to inform why it timeout-ed, it is "string-able"
+        """
+        stat = self._lock_file.stat()
+        return dict(
+            thread_lock=self._thread_lock.locked(),
+            lock_file=self._lock_file,
+            lock_created_time=f"{stat.st_ctime} / {datetime.fromtimestamp(stat.st_ctime)}",
+            lock_modified_time=f"{stat.st_mtime} / {datetime.fromtimestamp(stat.st_mtime)}",
+            lock_mode=oct(stat.st_mode),
+        )
+
+    async def __aenter__(self) -> "StoreContextManager":
+        await self._wait_for_lock_release_and_lock()
+        return self
+
+    async def __aexit__(
+        self,
+        __exc_type: Optional[Type[BaseException]] = None,
+        __exc_value: Optional[BaseException] = None,
+        __traceback: Optional[TracebackType] = None,
+    ) -> Optional[bool]:
+        return self._unlock()
 
 
 class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
@@ -125,9 +290,12 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         await self._open()
         return self
 
-    async def __aexit__(  # pylint: disable=invalid-name
-        self, exc_type: Any, exc: Any, tb: Any
-    ) -> None:
+    async def __aexit__(
+        self,
+        __exc_type: Optional[Type[BaseException]] = None,
+        __exc_value: Optional[BaseException] = None,
+        __traceback: Optional[TracebackType] = None,
+    ) -> Optional[bool]:
         await self._close()
 
     async def _open(self) -> None:

@@ -9,7 +9,6 @@ import tempfile
 from datetime import datetime
 import pathlib
 import sqlite3
-import threading
 from typing import Generator, List, Optional, Tuple, Type
 
 import aiofiles
@@ -22,23 +21,51 @@ from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
 
+_DEFAULT_LOCK_TIMEOUT_IN_SEC: int = 10
+
+
+class StoreLockTimeoutError(base.StoreError):
+    """
+    Encodes timeouts when dealing with file locks.
+    """
+
 
 class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
     """
     Basic functionality for file based :py:class:`base.StoreContextManager`
     """
 
+    def __init__(
+        self,
+        *,
+        lock_file: pathlib.Path,
+        lock_timeout_in_sec: Optional[int] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._lock = base.FileBasedLockContextManager(
+            lock_file=lock_file, lock_timeout_in_sec=lock_timeout_in_sec
+        )
+
+    @property
+    def lock(self) -> base.FileBasedLockContextManager:
+        """
+        Lock
+        """
+        return self._lock
+
     async def _read(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         request_lst = []
-        async for req in self._read_scale_requests_in_range(
-            start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=False
-        ):
-            if self._is_request_in_range(
-                req=req, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+        async with self._lock:
+            async for req in self._read_scale_requests_in_range(
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=False
             ):
-                request_lst.append(req)
+                if self._is_request_in_range(
+                    req=req, start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                ):
+                    request_lst.append(req)
         return self._snapshot_from_request_lst(request_lst)
 
     async def _read_scale_requests_in_range(
@@ -92,7 +119,8 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             for req in req_lst:
                 if req not in all_existent:
                     to_write.append(req)
-        written = await self._write_scale_requests(to_write, is_archive=False)
+        async with self._lock:
+            written = await self._write_scale_requests(to_write, is_archive=False)
         self._validate_all_requests_were_dealt_with(to_write, written, "written")
 
     @staticmethod
@@ -124,9 +152,10 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
     async def _remove(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        removed = await self._remove_scale_requests_in_range(
-            start_ts_utc, end_ts_utc, is_archive=False
-        )
+        async with self._lock:
+            removed = await self._remove_scale_requests_in_range(
+                start_ts_utc, end_ts_utc, is_archive=False
+            )
         return self._snapshot_from_request_lst(removed)
 
     async def _remove_scale_requests_in_range(
@@ -224,10 +253,12 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
                 f"can *NOT* be the same as <{archive_json_line_file}>"
             )
         self._json_line_file = json_line_file
-        super().__init__(source=self._json_line_file.name, **kwargs)
+        super().__init__(
+            source=self._json_line_file.name,
+            lock_file=self._json_line_file.with_suffix(".lock"),
+            **kwargs,
+        )
         self._archive_json_line_file = archive_json_line_file
-        # required to make it thread-safe
-        self._file_lock = threading.Lock()
 
     @property
     def json_line_file(self) -> pathlib.Path:
@@ -252,24 +283,22 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
     ) -> Generator[request.ScaleRequest, None, None]:
         path = self._json_line_file if not is_archive else self._archive_json_line_file
         if path.exists():
-            with self._file_lock:
-                async with aiofiles.open(
-                    path, "r", encoding=const.ENCODING_UTF8
-                ) as in_file:
-                    async for line in in_file:
-                        line = line.strip()
-                        if line:
-                            yield request.ScaleRequest.from_json(line)
+            async with aiofiles.open(
+                path, "r", encoding=const.ENCODING_UTF8
+            ) as in_file:
+                async for line in in_file:
+                    line = line.strip()
+                    if line:
+                        yield request.ScaleRequest.from_json(line)
 
     async def _write_scale_requests(
         self, value: List[request.ScaleRequest], *, is_archive: Optional[bool] = False
     ) -> List[request.ScaleRequest]:
         path = self._json_line_file if not is_archive else self._archive_json_line_file
-        with self._file_lock:
-            async with aiofiles.open(
-                path, "a", encoding=const.ENCODING_UTF8
-            ) as out_file:
-                await out_file.writelines([f"\n{val.as_json()}" for val in value])
+        async with aiofiles.open(
+            path, "a", encoding=const.ENCODING_UTF8
+        ) as out_file:
+            await out_file.writelines([f"\n{val.as_json()}" for val in value])
         return value
 
     async def _remove_scale_requests(
@@ -286,8 +315,7 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
                     await out_file.write(f"\n{req.as_json()}")
         json_file = self._archive_json_line_file if is_archive else self._json_line_file
         try:
-            with self._file_lock:
-                tmp_file.rename(json_file)
+            tmp_file.rename(json_file)
         except Exception as err:
             raise RuntimeError(
                 f"[DATA LOSS] Could not move content from {tmp_file} into {json_file}. "
@@ -368,7 +396,7 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
         self._sqlite_file = sqlite_file
         if "source" not in kwargs:
             kwargs["source"] = self._sqlite_file.name
-        super().__init__(**kwargs)
+        super().__init__(lock_file=self._sqlite_file.with_suffix(".lock"), **kwargs)
         self._connection = None
 
     @property

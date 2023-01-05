@@ -34,7 +34,7 @@ _TEST_SCALE_REQUEST_AFTER: request.ScaleRequest = common.create_scale_request(
 
 class _MyBaseFileStoreContextManager(file.BaseFileStoreContextManager):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(lock_file=common.lock_file(), **kwargs)
         self.current = []
         self.archived = []
 
@@ -357,6 +357,14 @@ class TestBaseFileStoreContextManager:
             async for req in obj._read_scale_requests(is_archive=False):
                 current.append(req)
             assert not current
+
+##########################
+# START: Multiprocessing #
+##########################
+
+########################
+# END: Multiprocessing #
+########################
 
 
 class TestJsonLineFileStoreContextManager:  # pylint: disable=too-many-public-methods

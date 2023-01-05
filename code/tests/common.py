@@ -4,6 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
+import pathlib
 import tempfile
 from typing import Any, Dict, List, Optional
 
@@ -84,6 +85,23 @@ TEST_COMPARISON_SNAPSHOT_NON_EMPTY: event.EventSnapshotComparison = (
     )
 )
 TEST_MERGE_SNAPSHOT: event.EventSnapshot = event.EventSnapshot(source="merge")
+
+
+#######################
+# StoreContextManager #
+#######################
+
+
+def lock_file(
+    *, existing: Optional[bool] = False, chmod: Optional[int] = None
+) -> pathlib.Path:
+    if chmod is not None:
+        existing = True
+    with tempfile.NamedTemporaryFile(delete=not existing) as tmp_file:
+        result = pathlib.Path(tmp_file.name)
+    if chmod is not None:
+        result.chmod(chmod)
+    return result
 
 
 ##########

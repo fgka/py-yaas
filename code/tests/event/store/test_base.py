@@ -4,7 +4,11 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
+import asyncio
 from datetime import datetime, timedelta
+from concurrent import futures
+import pathlib
+import time
 from typing import Any, Optional
 
 import pytest
@@ -20,6 +24,95 @@ _TEST_EVENT_SNAPSHOT_WITH_REQUEST: event.EventSnapshot = event.EventSnapshot(
     source="A", timestamp_to_request={0: [_TEST_SCALE_REQUEST]}
 )
 _TEST_EVENT_SNAPSHOT_EMPTY: event.EventSnapshot = event.EventSnapshot(source="B")
+
+# START: for multiprocessing #
+
+
+async def _get_lock(obj, start_sleep: int) -> bool:
+    await asyncio.sleep(start_sleep)
+    async with obj:
+        await asyncio.sleep(obj.lock_timeout_in_sec * 2)
+    return True
+
+
+def _run_sync(lock_file: pathlib.Path, start_sleep):
+    obj = base.FileBasedLockContextManager(lock_file=lock_file, lock_timeout_in_sec=1)
+    # This is to let all objects be created before trying to lock
+    time.sleep(1)
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(_get_lock(obj, start_sleep))
+
+
+# END: for multiprocessing #
+
+
+class TestFileBasedLockContextManager:
+    def setup(self):
+        self.instance = base.FileBasedLockContextManager(
+            lock_file=common.lock_file(), lock_timeout_in_sec=1
+        )
+
+    def test_properties_ok(self):
+        assert isinstance(self.instance.lock_file, pathlib.Path)
+        assert self.instance.lock_file.exists()
+        assert isinstance(self.instance.lock_timeout_in_sec, int)
+        assert self.instance.lock_timeout_in_sec > 0
+
+    def test_ctor_ok_existing_lock_file(self):
+        lock_file = common.lock_file(existing=True)
+        assert lock_file.exists()
+        # When
+        obj = base.FileBasedLockContextManager(lock_file=lock_file)
+        # Then
+        assert obj.lock_file.exists()
+
+    def test_ctor_ok_timeout_non_int(self):
+        # Given/When
+        obj = base.FileBasedLockContextManager(
+            lock_file=self.instance.lock_file, lock_timeout_in_sec=None
+        )
+        # Then
+        assert obj.lock_timeout_in_sec == base._DEFAULT_LOCK_TIMEOUT_IN_SEC
+
+    @pytest.mark.parametrize(
+        "lock_file,lock_timeout_in_sec",
+        [
+            (common.lock_file(), 0),
+            (common.lock_file(), -1),
+            (pathlib.Path("/bin/test"), 10),  # file does not have write access
+        ],
+    )
+    def test_ctor_nok(self, lock_file: pathlib.Path, lock_timeout_in_sec: int):
+        with pytest.raises(Exception):
+            base.FileBasedLockContextManager(
+                lock_file=lock_file, lock_timeout_in_sec=lock_timeout_in_sec
+            )
+
+    @pytest.mark.asyncio
+    async def test_enter_ok(self):
+        assert not self.instance.is_locked()
+        async with self.instance:
+            assert self.instance.is_locked()
+        assert not self.instance.is_locked()
+
+    def test_enter_nok_multiprocess(self):
+
+        lock_file = common.lock_file()
+
+        with futures.ProcessPoolExecutor() as executor:
+            first = executor.submit(_run_sync, lock_file, 0)
+            second = executor.submit(_run_sync, lock_file, 1)
+            assert first.result()
+            with pytest.raises(base.StoreLockTimeoutError):
+                second.result()
+
+    @pytest.mark.asyncio
+    async def test_enter_nok_reentrant(self):
+        async with self.instance:
+            assert self.instance.is_locked()
+            with pytest.raises(base.StoreLockTimeoutError):
+                async with self.instance:
+                    assert False, f"Should not be reached"
 
 
 def test__default_start_ts_utc_ok():
@@ -126,7 +219,7 @@ class _MyStoreContextManager(base.StoreContextManager):
 _TEST_DATETIME: datetime = datetime.utcnow()
 
 
-class TestStore:  # pylint: disable=too-many-public-methods
+class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     def setup(self):
         self.object = _MyStoreContextManager()
 
@@ -446,7 +539,7 @@ class TestStore:  # pylint: disable=too-many-public-methods
         assert self.object.has_changed
 
 
-class _MyReadOnlyStore(base.ReadOnlyStoreContextManager):
+class _MyReadOnlyStoreContextManager(base.ReadOnlyStoreContextManager):
     def __init__(
         self, read_result: event.EventSnapshot = _TEST_EVENT_SNAPSHOT_EMPTY, **kwargs
     ):
@@ -467,9 +560,9 @@ class _MyReadOnlyStore(base.ReadOnlyStoreContextManager):
         return self._read_result
 
 
-class TestReadOnlyStore:
+class TestReadOnlyStoreContextManager:
     def setup(self):
-        self.object = _MyReadOnlyStore()
+        self.object = _MyReadOnlyStoreContextManager()
 
     @pytest.mark.parametrize("overwrite", [True, False])
     @pytest.mark.asyncio

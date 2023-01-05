@@ -117,7 +117,9 @@ def _mock_entry(
     ) -> List[request.ScaleRequest]:
         nonlocal called, event_requests
         if event_requests is None:
-            event_requests = [common.create_scale_request(topic=common.MyCategoryType.CATEGORY_A.name)]
+            event_requests = [
+                common.create_scale_request(topic=common.MyCategoryType.CATEGORY_A.name)
+            ]
         called[entry.pubsub_dispatcher.from_event.__name__] = locals()
         return event_requests
 
@@ -228,7 +230,8 @@ async def test_enact_requests_ok(monkeypatch):
     assert called_from_event.get("event") == kwargs.get("pubsub_event")
     assert called_from_event.get("iso_str_timestamp") == kwargs.get("iso_str_timestamp")
     # Then: parser
-    scaler = parser.obj_called.get(scaler_base.CategoryScaleRequestParser._scaler.__name__)
+    scaler = parser.obj_called.get(
+        scaler_base.CategoryScaleRequestParser._scaler.__name__
+    )
     assert scaler
     assert scaler.called.get(scaler_base.Scaler._safe_enact.__name__)
-

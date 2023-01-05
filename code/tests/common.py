@@ -240,7 +240,9 @@ class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
         raise_if_invalid_request: Optional[bool] = True,
     ) -> scaler_base.Scaler:
         result = MyScaler(value)
-        self.obj_called[scaler_base.CategoryScaleRequestParser._scaler.__name__] = result
+        self.obj_called[
+            scaler_base.CategoryScaleRequestParser._scaler.__name__
+        ] = result
         return result
 
     def _to_scaling_definition(

@@ -4,11 +4,9 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
-import base64
 import json
 from typing import Any, Dict, List, Optional
 
-import flask
 import pytest
 
 from yaas import const

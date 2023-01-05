@@ -70,6 +70,8 @@ class TestGcsObjectStoreContextManager:
         # Then
         assert called.get(gcs.gcs.read_object.__name__) == self.instance.sqlite_file
         if has_changed:
-            assert called.get(gcs.gcs.write_object.__name__) == self.instance.sqlite_file
+            assert (
+                called.get(gcs.gcs.write_object.__name__) == self.instance.sqlite_file
+            )
         else:
             assert called.get(gcs.gcs.write_object.__name__) is None

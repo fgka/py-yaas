@@ -146,7 +146,20 @@ def _mock_entry(
 async def test_update_cache_ok(monkeypatch):
     # Given
     expected = common.create_event_snapshot("calendar", [_TEST_START_TS_UTC + 1])
-    called = _mock_entry(monkeypatch, calendar_snapshot=expected)
+    cache_store = common.MyStoreContextManager()
+
+    async def mocked_clean_up(
+        value: config.DataRetentionConfig
+    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
+        nonlocal cache_store
+        cache_store.called[base.StoreContextManager.clean_up.__name__] = locals()
+        return cache_store.result_snapshot, cache_store.result_snapshot
+
+    monkeypatch.setattr(cache_store, cache_store.clean_up.__name__, mocked_clean_up)
+    cache_store.clean_up = mocked_clean_up
+    called = _mock_entry(
+        monkeypatch, calendar_snapshot=expected, cache_store=cache_store
+    )
     kwargs = dict(
         start_ts_utc=_TEST_START_TS_UTC,
         end_ts_utc=_TEST_END_TS_UTC,
@@ -167,6 +180,10 @@ async def test_update_cache_ok(monkeypatch):
     assert (
         store_called.get(base.StoreContextManager.write.__name__).get("value")
         == expected
+    )
+    assert (
+        store_called.get(base.StoreContextManager.clean_up.__name__).get("value")
+        == common.TEST_CONFIG_LOCAL_JSON.retention_config
     )
 
 

@@ -75,11 +75,21 @@ async def update_cache(
         str(merged_snapshot.range() if merged_snapshot else None),
         str(merged_snapshot.amount_requests() if merged_snapshot else None),
     )
-    # logic: overwrite cache
-    if is_required:
-        async with cache_store as obj:
+    async with cache_store as obj:
+        # logic: overwrite cache
+        if is_required:
             await obj.write(merged_snapshot, overwrite_within_range=True)
-            _LOGGER.info("Wrote merged snapshot with overwrite")
+            _LOGGER.info(
+                "Wrote merged snapshot with overwrite. Store: %s", cache_store.source
+            )
+        # logic: clean-up
+        archived, removed = await obj.clean_up(configuration.retention_config)
+        _LOGGER.info(
+            "Clean-up on %s archived <%s> and removed <%s>",
+            cache_store.source,
+            archived,
+            removed,
+        )
 
 
 def _validate_configuration(value: config.Config) -> None:

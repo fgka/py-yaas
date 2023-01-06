@@ -39,9 +39,14 @@ async def test_update_cache_ok_no_change(monkeypatch):
         called.get(entry._calendar_snapshot.__name__), kwargs
     )
     # Then: cache
-    called_calendar_snapshot = called.get(entry._cache_store_and_snapshot.__name__)
-    _verify_cache_snapshot_called(called_calendar_snapshot, kwargs)
-    assert not called_calendar_snapshot.get("cache_store").called
+    called_cache_snapshot = called.get(entry._cache_store_and_snapshot.__name__)
+    _verify_cache_snapshot_called(called_cache_snapshot, kwargs)
+    assert not called_cache_snapshot.get("cache_store").called.get(
+        base.StoreContextManager.write.__name__
+    )
+    assert called_cache_snapshot.get("cache_store").called.get(
+        base.StoreContextManager.clean_up.__name__
+    )
 
 
 def _verify_calendar_snapshot_called(
@@ -78,6 +83,17 @@ def _mock_entry(
     event_requests: Optional[List[request.ScaleRequest]] = None,
 ) -> Dict[str, Any]:
     called = {}
+    if cache_store is None:
+        cache_store = common.MyStoreContextManager()
+
+    async def mocked_clean_up(  # pylint: disable=unused-argument
+        value: config.DataRetentionConfig,
+    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
+        nonlocal cache_store
+        cache_store.called[base.StoreContextManager.clean_up.__name__] = locals()
+        return cache_store.result_snapshot, cache_store.result_snapshot
+
+    monkeypatch.setattr(cache_store, cache_store.clean_up.__name__, mocked_clean_up)
 
     async def mocked_calendar_snapshot(  # pylint: disable=unused-argument
         *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
@@ -97,8 +113,6 @@ def _mock_entry(
         nonlocal called, cache_snapshot, cache_store
         if cache_snapshot is None:
             cache_snapshot = common.create_event_snapshot("cache")
-        if cache_store is None:
-            cache_store = common.MyStoreContextManager()
         called[entry._cache_store_and_snapshot.__name__] = locals()
         return cache_store, cache_snapshot
 
@@ -147,16 +161,6 @@ async def test_update_cache_ok(monkeypatch):
     # Given
     expected = common.create_event_snapshot("calendar", [_TEST_START_TS_UTC + 1])
     cache_store = common.MyStoreContextManager()
-
-    async def mocked_clean_up(
-        value: config.DataRetentionConfig
-    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
-        nonlocal cache_store
-        cache_store.called[base.StoreContextManager.clean_up.__name__] = locals()
-        return cache_store.result_snapshot, cache_store.result_snapshot
-
-    monkeypatch.setattr(cache_store, cache_store.clean_up.__name__, mocked_clean_up)
-    cache_store.clean_up = mocked_clean_up
     called = _mock_entry(
         monkeypatch, calendar_snapshot=expected, cache_store=cache_store
     )

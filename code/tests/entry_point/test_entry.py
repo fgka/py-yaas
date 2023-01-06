@@ -164,7 +164,10 @@ async def test_update_cache_ok(monkeypatch):
     # Then: store
     store_called = called_calendar_snapshot.get("cache_store").called
     assert isinstance(store_called, dict)
-    assert store_called.get(base.StoreContextManager.write.__name__).get("value") == expected
+    assert (
+        store_called.get(base.StoreContextManager.write.__name__).get("value")
+        == expected
+    )
 
 
 @pytest.mark.asyncio

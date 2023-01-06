@@ -197,7 +197,7 @@ class DataRetentionConfig(
             ),
         ),
     )
-    archive_max_retention_before_removal_in_days: int = attrs.field(
+    max_retention_archive_before_removal_in_days: int = attrs.field(
         default=DEFAULT_ARCHIVE_MAX_RETENTION_BEFORE_REMOVAL_IN_DAYS,
         validator=attrs.validators.and_(
             attrs.validators.instance_of(int),

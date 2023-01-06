@@ -12,9 +12,9 @@ import threading
 from datetime import datetime, timedelta
 import pathlib
 from types import TracebackType
-from typing import Any, Callable, List, Optional, Union, Type
+from typing import Any, Callable, List, Optional, Union, Tuple, Type
 
-from yaas.dto import event, request
+from yaas.dto import config, event, request
 from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
@@ -532,6 +532,69 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
         raise NotImplementedError
+
+    async def clean_up(
+        self, value: config.DataRetentionConfig
+    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
+        """
+        Will, according to ``value``, archive old entries and remove stale archived items.
+        It returns a :py:class`tuple` in the format::
+            <archived items>,<permanently remove items>
+        Args:
+            value:
+                What to archive and what to remove permanently.
+
+        Returns:
+            A :py:class`tuple` in the format: ``<archived items>,<permanently remove items>``.
+        """
+        # validate input
+        if not isinstance(value, config.DataRetentionConfig):
+            raise TypeError(
+                f"Value must be an instance of {config.DataRetentionConfig.__name__}. "
+                f"Got: <{value}>({type(value)})"
+            )
+        # logic
+        archive_end_ts_utc = self._end_ts_utc_from_days_delta_and_logging(
+            value.expired_entries_max_retention_before_archive_in_days, "Archiving"
+        )
+        archived = await self.archive(start_ts_utc=1, end_ts_utc=archive_end_ts_utc)
+        remove_end_ts_utc = self._end_ts_utc_from_days_delta_and_logging(
+            value.max_retention_archive_before_removal_in_days, "Permanently removing"
+        )
+        removed = await self.remove(
+            start_ts_utc=1, end_ts_utc=remove_end_ts_utc, is_archive=True
+        )
+        return archived, removed
+
+    @staticmethod
+    def _end_ts_utc_from_days_delta_and_logging(
+        value: int, log_msg_prefix: str, *, now: Optional[int] = None
+    ) -> int:
+        result = StoreContextManager._end_ts_utc_from_days_delta(value, now=now)
+        _LOGGER.info(
+            "%s all items older than %d days, cutoff timestamp %d (%s)",
+            log_msg_prefix,
+            value,
+            result,
+            datetime.fromtimestamp(result),
+        )
+        return result
+
+    @staticmethod
+    def _end_ts_utc_from_days_delta(value: int, *, now: Optional[int] = None) -> int:
+        """
+        The argument is assumed an amount of days in the past from now.
+        It returns the corresponding timestamp from now.
+        """
+        if not isinstance(value, int) or value < 0:
+            raise ValueError(
+                f"Value must be a positive integer. Got: <{value}>({type(value)})"
+            )
+        if now is None:
+            now = datetime.utcnow().timestamp()
+        current_time = datetime.fromtimestamp(now)
+        result = current_time - timedelta(days=value)
+        return int(result.timestamp())
 
 
 class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):

@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 import pytest
 
-from yaas.dto import event, request
+from yaas.dto import config, event, request
 from yaas.event.store import base
 
 from tests import common
@@ -23,6 +23,7 @@ _TEST_EVENT_SNAPSHOT_WITH_REQUEST: event.EventSnapshot = event.EventSnapshot(
     source="A", timestamp_to_request={0: [_TEST_SCALE_REQUEST]}
 )
 _TEST_EVENT_SNAPSHOT_EMPTY: event.EventSnapshot = event.EventSnapshot(source="B")
+_TEST_NOW_DT: datetime = datetime.utcnow()
 
 ##########################
 # START: Multiprocessing #
@@ -297,9 +298,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     @pytest.mark.asyncio
     async def test_read_nok_raises(self, is_archive: bool):
         # Given
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23, is_archive=is_archive)
         self.object.to_raise.add(base.StoreContextManager.read.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
@@ -366,7 +365,10 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
             async with self.object:
                 await self.object.write(value, overwrite_within_range=overwrite)
         # Then: write
-        assert self.object.called.get(base.StoreContextManager.write.__name__).get("value") == value
+        assert (
+            self.object.called.get(base.StoreContextManager.write.__name__).get("value")
+            == value
+        )
         # Then: remove
         assert (
             self.object.called.get(base.StoreContextManager.remove.__name__) is not None
@@ -377,9 +379,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     @pytest.mark.asyncio
     async def test_remove_nok_raises(self, is_archive: bool):
         # Given
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23, is_archive=is_archive)
         self.object.to_raise.add(base.StoreContextManager.remove.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
@@ -395,9 +395,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     async def test_remove_ok_empty(self, is_archive: bool):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23, is_archive=is_archive)
         # When
         async with self.object:
             result = await self.object.remove(**exp_kwargs)
@@ -412,9 +410,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     async def test_remove_ok(self, is_archive: bool):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23, is_archive=is_archive)
         # When
         async with self.object:
             result = await self.object.remove(**exp_kwargs)
@@ -427,9 +423,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     @pytest.mark.asyncio
     async def test_archive_nok_raises(self):
         # Given
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23)
         self.object.to_raise.add(base.StoreContextManager.archive.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
@@ -444,9 +438,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     async def test_archive_ok_empty(self):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23)
         # When
         async with self.object:
             await self.object.archive(**exp_kwargs)
@@ -459,15 +451,94 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     async def test_archive_ok(self):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        exp_kwargs = dict(
-            start_ts_utc=13, end_ts_utc=23
-        )
+        exp_kwargs = dict(start_ts_utc=13, end_ts_utc=23)
         # When
         async with self.object:
             await self.object.archive(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.archive.__name__)
         self._assert_called_kwargs(called, exp_kwargs)
+        assert self.object.has_changed
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            1,
+            13,
+            0,
+        ],
+    )
+    def test__end_ts_utc_from_days_delta_and_logging_ok(self, value: int):
+        # Given
+        now = _TEST_NOW_DT.timestamp()
+        expected = _TEST_NOW_DT - timedelta(days=value)
+        # When
+        result = base.StoreContextManager._end_ts_utc_from_days_delta_and_logging(
+            value, "test", now=now
+        )
+        # Then
+        assert result == int(expected.timestamp())
+
+    @pytest.mark.parametrize("value", [None, -1])
+    def test__end_ts_utc_from_days_delta_and_logging_nok(self, value: int):
+        now = _TEST_NOW_DT.timestamp()
+        with pytest.raises(ValueError):
+            base.StoreContextManager._end_ts_utc_from_days_delta_and_logging(
+                value, "test", now=now
+            )
+
+    @pytest.mark.asyncio
+    async def test_clean_up_ok(self, monkeypatch):
+        self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
+        configuration = config.DataRetentionConfig(
+            expired_entries_max_retention_before_archive_in_days=3,
+            max_retention_archive_before_removal_in_days=37,
+        )
+        now_ts = int(_TEST_NOW_DT.timestamp())
+        end_ts_utc_lst = [
+            now_ts - 1000,
+            now_ts - 10000,
+        ]
+        called_end_ts = []
+
+        def mocked_end_ts_utc_from_days_delta_and_logging(  # pylint: disable=unused-argument
+            _, value: int, log_msg_prefix: str, *, now: Optional[int] = None
+        ) -> int:
+            nonlocal called_end_ts
+            result = end_ts_utc_lst[len(called_end_ts)]
+            called_end_ts.append(locals())
+            return result
+
+        monkeypatch.setattr(
+            base.StoreContextManager,
+            base.StoreContextManager._end_ts_utc_from_days_delta_and_logging.__name__,
+            mocked_end_ts_utc_from_days_delta_and_logging,
+        )
+        # When
+        async with self.object:
+            await self.object.clean_up(configuration)
+        # Then: ent_ts
+        assert len(called_end_ts) == len(end_ts_utc_lst)
+        assert (
+            called_end_ts[0].get("value")
+            == configuration.expired_entries_max_retention_before_archive_in_days
+        )
+        assert (
+            called_end_ts[1].get("value")
+            == configuration.max_retention_archive_before_removal_in_days
+        )
+        # Then: archive
+        called_archive = self.object.called.get(
+            base.StoreContextManager.archive.__name__
+        )
+        assert called_archive.get("start_ts_utc") == 1
+        assert called_archive.get("end_ts_utc") == end_ts_utc_lst[0]
+        # Then: remove
+        called_remove = self.object.called.get(base.StoreContextManager.remove.__name__)
+        assert called_remove.get("start_ts_utc") == 1
+        assert called_remove.get("end_ts_utc") == end_ts_utc_lst[1]
+        assert called_remove.get("is_archive")
+        # Then: changed
         assert self.object.has_changed
 
 

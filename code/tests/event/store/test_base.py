@@ -8,7 +8,7 @@ import asyncio
 from datetime import datetime, timedelta
 from concurrent import futures
 import pathlib
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import pytest
 
@@ -293,22 +293,21 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
         assert self.object.called.get(base.StoreContextManager._open.__name__)
         assert self.object.called.get(base.StoreContextManager._close.__name__)
 
+    @pytest.mark.parametrize("is_archive", [True, False])
     @pytest.mark.asyncio
-    async def test_read_nok_raises(self):
+    async def test_read_nok_raises(self, is_archive: bool):
         # Given
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
+        )
         self.object.to_raise.add(base.StoreContextManager.read.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
             async with self.object:
-                await self.object.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+                await self.object.read(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.read.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert not self.object.has_changed
 
     def _assert_called_only(self, value: str, secondary: Optional[str] = None) -> Any:
@@ -321,6 +320,14 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
         assert len(self.object.called) == amount
         self._assert_context_called()
         return result
+
+    @staticmethod
+    def _assert_called_kwargs(
+        called_kwargs: Dict[str, Any], exp_kwargs: Dict[str, Any]
+    ) -> None:
+        assert isinstance(called_kwargs, dict)
+        for key, val in exp_kwargs.items():
+            assert called_kwargs.get(key) == val
 
     @pytest.mark.asyncio
     async def test_write_ok_empty_request(self):
@@ -345,7 +352,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
             base.StoreContextManager.write.__name__,
             base.StoreContextManager.remove.__name__,
         )
-        assert called == value
+        assert called.get("value") == value
         assert self.object.has_changed
 
     @pytest.mark.parametrize("overwrite", [True, False])
@@ -359,125 +366,108 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
             async with self.object:
                 await self.object.write(value, overwrite_within_range=overwrite)
         # Then: write
-        assert self.object.called.get(base.StoreContextManager.write.__name__) == value
+        assert self.object.called.get(base.StoreContextManager.write.__name__).get("value") == value
         # Then: remove
         assert (
             self.object.called.get(base.StoreContextManager.remove.__name__) is not None
         ) == overwrite
         assert not self.object.has_changed
 
+    @pytest.mark.parametrize("is_archive", [True, False])
     @pytest.mark.asyncio
-    async def test_remove_nok_raises(self):
+    async def test_remove_nok_raises(self, is_archive: bool):
         # Given
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
+        )
         self.object.to_raise.add(base.StoreContextManager.remove.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
             async with self.object:
-                await self.object.remove(
-                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-                )
+                await self.object.remove(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.remove.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert not self.object.has_changed
 
+    @pytest.mark.parametrize("is_archive", [True, False])
     @pytest.mark.asyncio
-    async def test_remove_ok_empty(self):
+    async def test_remove_ok_empty(self, is_archive: bool):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
+        )
         # When
         async with self.object:
-            result = await self.object.remove(
-                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-            )
+            result = await self.object.remove(**exp_kwargs)
         # Then
         assert isinstance(result, event.EventSnapshot)
         called = self._assert_called_only(base.StoreContextManager.remove.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert not self.object.has_changed
 
+    @pytest.mark.parametrize("is_archive", [True, False])
     @pytest.mark.asyncio
-    async def test_remove_ok(self):
+    async def test_remove_ok(self, is_archive: bool):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23, is_archive=is_archive
+        )
         # When
         async with self.object:
-            result = await self.object.remove(
-                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-            )
+            result = await self.object.remove(**exp_kwargs)
         # Then
         assert isinstance(result, event.EventSnapshot)
         called = self._assert_called_only(base.StoreContextManager.remove.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_archive_nok_raises(self):
         # Given
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23
+        )
         self.object.to_raise.add(base.StoreContextManager.archive.__name__)
         # When/Then
         with pytest.raises(base.StoreError):
             async with self.object:
-                await self.object.archive(
-                    start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
-                )
+                await self.object.archive(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.archive.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert not self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_archive_ok_empty(self):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_EMPTY
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23
+        )
         # When
         async with self.object:
-            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.object.archive(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.archive.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert not self.object.has_changed
 
     @pytest.mark.asyncio
     async def test_archive_ok(self):
         # Given
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        start_ts_utc = 13
-        end_ts_utc = 23
+        exp_kwargs = dict(
+            start_ts_utc=13, end_ts_utc=23
+        )
         # When
         async with self.object:
-            await self.object.archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
+            await self.object.archive(**exp_kwargs)
         # Then
         called = self._assert_called_only(base.StoreContextManager.archive.__name__)
-        assert called
-        res_start, res_end = called
-        assert res_start == start_ts_utc
-        assert res_end == end_ts_utc
+        self._assert_called_kwargs(called, exp_kwargs)
         assert self.object.has_changed
 
 

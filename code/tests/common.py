@@ -136,12 +136,9 @@ class MyStoreContextManager(base.StoreContextManager):
         *,
         start_ts_utc: Optional[int] = None,
         end_ts_utc: Optional[int] = None,
-        is_archive,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.read.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
+        self.called[base.StoreContextManager.read.__name__] = locals()
         if base.StoreContextManager.read.__name__ in self.to_raise:
             raise RuntimeError
         return self.result_snapshot
@@ -150,17 +147,18 @@ class MyStoreContextManager(base.StoreContextManager):
         self,
         value: event.EventSnapshot,
     ) -> None:
-        self.called[base.StoreContextManager.write.__name__] = value
+        self.called[base.StoreContextManager.write.__name__] = locals()
         if base.StoreContextManager.write.__name__ in self.to_raise:
             raise RuntimeError
 
     async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.remove.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
+        self.called[base.StoreContextManager.remove.__name__] = locals()
         if base.StoreContextManager.remove.__name__ in self.to_raise:
             raise RuntimeError
         return self.result_snapshot
@@ -168,10 +166,7 @@ class MyStoreContextManager(base.StoreContextManager):
     async def _archive(
         self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> event.EventSnapshot:
-        self.called[base.StoreContextManager.archive.__name__] = (
-            start_ts_utc,
-            end_ts_utc,
-        )
+        self.called[base.StoreContextManager.archive.__name__] = locals()
         if base.StoreContextManager.archive.__name__ in self.to_raise:
             raise RuntimeError
         return self.result_snapshot
@@ -242,13 +237,17 @@ class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
         result = MyScaler(value)
         self.obj_called[
             scaler_base.CategoryScaleRequestParser._scaler.__name__
-        ] = result
+        ] = locals()
         return result
 
     def _to_scaling_definition(
         self, value: Iterable[request.ScaleRequest]
     ) -> Iterable[scaling.ScalingDefinition]:
-        return [MyScalingDefinition.from_request(val) for val in value]
+        result = [MyScalingDefinition.from_request(val) for val in value]
+        self.obj_called[
+            scaler_base.CategoryScaleRequestParser._to_scaling_definition.__name__
+        ] = locals()
+        return result
 
     def _filter_requests(
         self,
@@ -257,7 +256,7 @@ class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
     ) -> Iterable[scaling.ScalingDefinition]:
         self.obj_called[
             scaler_base.CategoryScaleRequestParser._filter_requests.__name__
-        ] = value
+        ] = locals()
         return value
 
     @classmethod

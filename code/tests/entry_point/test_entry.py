@@ -163,8 +163,8 @@ async def test_update_cache_ok(monkeypatch):
     _verify_cache_snapshot_called(called_calendar_snapshot, kwargs)
     # Then: store
     store_called = called_calendar_snapshot.get("cache_store").called
-    assert store_called
-    assert store_called.get(base.StoreContextManager.write.__name__) == expected
+    assert isinstance(store_called, dict)
+    assert store_called.get(base.StoreContextManager.write.__name__).get("value") == expected
 
 
 @pytest.mark.asyncio
@@ -230,8 +230,8 @@ async def test_enact_requests_ok(monkeypatch):
     assert called_from_event.get("event") == kwargs.get("pubsub_event")
     assert called_from_event.get("iso_str_timestamp") == kwargs.get("iso_str_timestamp")
     # Then: parser
-    scaler = parser.obj_called.get(
+    scaler_args = parser.obj_called.get(
         scaler_base.CategoryScaleRequestParser._scaler.__name__
     )
-    assert scaler
-    assert scaler.called.get(scaler_base.Scaler._safe_enact.__name__)
+    assert isinstance(scaler_args, dict)
+    assert scaler_args.get("result").called.get(scaler_base.Scaler._safe_enact.__name__)

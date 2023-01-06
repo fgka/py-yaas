@@ -432,6 +432,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         *,
         start_ts_utc: Optional[Union[int, float, datetime]] = None,
         end_ts_utc: Optional[Union[int, float, datetime]] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         """
         Will remove all events within the range specified by ``[start_ts_utc, end_ts_utc]``
@@ -442,6 +443,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
                 Default: :py:obj:`None`, meaning is given by implementation.
             end_ts_utc: latest event possible in the snapshot.
                 Default: :py:obj:`None`, meaning is given by implementation.
+            is_archive: if :py:obj:`True` will remove from archive instead of current.
 
         Returns:
             returns an instance of :py:class:`event.EventSnapshot`, with removed events.
@@ -454,7 +456,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         try:
             result = await self._remove(
-                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc
+                start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive
             )
         except Exception as err:
             raise StoreError(
@@ -472,7 +474,11 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
 
     @abc.abstractmethod
     async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
@@ -565,7 +571,11 @@ class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
         )
 
     async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         raise StoreError(
             f"This is a {self.__class__.__name__} instance which is also read-only."

@@ -160,10 +160,14 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
         """
 
     async def _remove(
-        self, *, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
+        self,
+        *,
+        start_ts_utc: Optional[int] = None,
+        end_ts_utc: Optional[int] = None,
+        is_archive: Optional[bool] = False,
     ) -> event.EventSnapshot:
         removed = await self._remove_scale_requests_in_range(
-            start_ts_utc, end_ts_utc, is_archive=False
+            start_ts_utc, end_ts_utc, is_archive=is_archive
         )
         return self._snapshot_from_request_lst(removed)
 

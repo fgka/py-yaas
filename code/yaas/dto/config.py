@@ -172,6 +172,40 @@ class GcsCacheConfig(CacheConfig):  # pylint: disable=too-few-public-methods
             raise ValueError(f"Value for field {name} must be {valid_type}")
 
 
+MINIMUM_EXPIRED_ENTRIES_MAX_RETENTION_BEFORE_ARCHIVE_IN_DAYS: int = 1
+DEFAULT_EXPIRED_ENTRIES_MAX_RETENTION_BEFORE_ARCHIVE_IN_DAYS: int = (
+    MINIMUM_EXPIRED_ENTRIES_MAX_RETENTION_BEFORE_ARCHIVE_IN_DAYS
+)
+MINIMUM_ARCHIVE_MAX_RETENTION_BEFORE_REMOVAL_IN_DAYS: int = 30
+DEFAULT_ARCHIVE_MAX_RETENTION_BEFORE_REMOVAL_IN_DAYS: int = 365
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class DataRetentionConfig(
+    dto_defaults.HasFromJsonString
+):  # pylint: disable=too-few-public-methods
+    """
+    Specify the different ways data is archived and removed.
+    """
+
+    expired_entries_max_retention_before_archive_in_days: int = attrs.field(
+        default=DEFAULT_EXPIRED_ENTRIES_MAX_RETENTION_BEFORE_ARCHIVE_IN_DAYS,
+        validator=attrs.validators.and_(
+            attrs.validators.instance_of(int),
+            attrs.validators.ge(
+                MINIMUM_EXPIRED_ENTRIES_MAX_RETENTION_BEFORE_ARCHIVE_IN_DAYS
+            ),
+        ),
+    )
+    archive_max_retention_before_removal_in_days: int = attrs.field(
+        default=DEFAULT_ARCHIVE_MAX_RETENTION_BEFORE_REMOVAL_IN_DAYS,
+        validator=attrs.validators.and_(
+            attrs.validators.instance_of(int),
+            attrs.validators.ge(MINIMUM_ARCHIVE_MAX_RETENTION_BEFORE_REMOVAL_IN_DAYS),
+        ),
+    )
+
+
 @attrs.define(**const.ATTRS_DEFAULTS)
 class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-methods
     """
@@ -189,4 +223,8 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
             key_validator=attrs.validators.instance_of(str),
             value_validator=attrs.validators.instance_of(str),
         )
+    )
+    retention_config: DataRetentionConfig = attrs.field(
+        default=attrs.Factory(DataRetentionConfig),
+        validator=attrs.validators.instance_of(DataRetentionConfig),
     )

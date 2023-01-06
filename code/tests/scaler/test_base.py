@@ -137,7 +137,7 @@ class TestCategoryScaleRequestParser:
         # Then: filter
         filter_req = self.obj.obj_called.get(
             base.CategoryScaleRequestParser._filter_requests.__name__
-        )
+        ).get("value")
         assert len(filter_req) == 1
         assert list(filter_req)[0] == common.MyScalingDefinition.from_request(req)
 
@@ -179,7 +179,7 @@ class TestCategoryScaleRequestParser:
         # Then: filter
         filter_req = self.obj.obj_called.get(
             base.CategoryScaleRequestParser._filter_requests.__name__
-        )
+        ).get("value")
         assert len(filter_req) == amount
         for f_req in filter_req:
             assert f_req == common.MyScalingDefinition.from_request(req)

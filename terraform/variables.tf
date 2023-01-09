@@ -93,7 +93,7 @@ variable "docker_base_image" {
 variable "yaas_image_name" {
   description = "YAAS docker application image"
   type        = string
-  default     = "yaas_app"
+  default     = "yaas"
 }
 
 variable "yaas_dockerfile" {

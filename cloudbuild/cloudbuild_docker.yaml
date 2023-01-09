@@ -1,13 +1,18 @@
 steps:
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: AR_AUTH
-    args: ["auth", "configure-docker", "${LOCATION}-docker.pkg.dev" ]
+  - name: "bash"
+    id: PY_DIST_DIR
+    script: |
+      #!/usr/bin/env bash
+      mkdir -p ${DIST_DIR}
+      touch ${DIST_DIR}/empty.whl
+    dir: "${_CODE_DIR}"
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",
            "--pull",
            "--no-cache",
-           "--build-arg", "BASE_IMAGE=${_AR_DOCKER_REPO}/${_BASE_IMAGE}",
+           "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
+           "--build-arg", "DIST_DIR=${_DIST_DIR}",
            "--build-arg", "PIP_INDEX_URL=${_AR_PIP_REPO}",
            "--build-arg", "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
@@ -20,6 +25,8 @@ logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/"
 
 options:
   dynamic_substitutions: true
+  env:
+    - "DIST_DIR=${_DIST_DIR}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: E2_HIGHCPU_32
@@ -27,6 +34,7 @@ options:
 
 substitutions:
   _CODE_DIR: "./code"
+  _DIST_DIR: "./dist"
   _DOCKERFILE: ""
   _PIP_INSTALL_ARG: ""
   _BASE_IMAGE: ""

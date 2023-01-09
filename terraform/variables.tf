@@ -90,25 +90,13 @@ variable "docker_base_image" {
   default     = "python:buster"
 }
 
-variable "yaas_base_image_name" {
-  description = "YAAS docker base image"
-  type        = string
-  default     = "yaas_base"
-}
-
-variable "yaas_base_dockerfile" {
-  description = "YAAS base Dockerfile"
-  type        = string
-  default     = "./docker/Dockerfile.base"
-}
-
-variable "yaas_app_image_name" {
+variable "yaas_image_name" {
   description = "YAAS docker application image"
   type        = string
   default     = "yaas_app"
 }
 
-variable "yaas_app_dockerfile" {
+variable "yaas_dockerfile" {
   description = "YAAS application Dockerfile"
   type        = string
   default     = "./docker/Dockerfile"
@@ -130,13 +118,7 @@ variable "python_build_template_filename" {
   default     = "cloudbuild/cloudbuild_py.yaml"
 }
 
-variable "docker_base_build_trigger_name" {
-  description = "Cloud Build trigger for Docker image."
-  type        = string
-  default     = "docker-yaas-base"
-}
-
-variable "docker_app_build_trigger_name" {
+variable "docker_build_trigger_name" {
   description = "Cloud Build trigger for Docker image."
   type        = string
   default     = "docker-yaas"

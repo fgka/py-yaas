@@ -49,7 +49,7 @@ steps:
            "--dist-dir", "./${_DIST_DIR}"]
     dir: "${_CODE_DIR}"
 
-logsBucket: "gs://${_BUCKET_NAME}"
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/"
 
 options:
   dynamic_substitutions: true

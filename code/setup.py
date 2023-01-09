@@ -21,7 +21,7 @@ EMAIL = "gkandriotti@google.com"
 AUTHOR = "Gustavo Kuhn Andriotti"
 # https://devguide.python.org/versions/#branchstatus
 REQUIRES_PYTHON = ">=3.10.0"  # End-of-life: 2026-10 (checked on 2022-09-01)
-VERSION = 1.00
+VERSION = 1.0
 CLASSIFIERS = [
     # Trove classifiers
     # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -62,6 +62,7 @@ CODE_QUALITY_REQUIRED = [
     "pytest-pudb>=0.7.0",
     "pytest-pylint>=0.18.0",
     "pytest-xdist>=2.5.0",
+    "junit-xml>=1.9",
     "vulture>=2.5",
 ]
 

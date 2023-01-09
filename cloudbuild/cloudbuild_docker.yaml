@@ -5,6 +5,7 @@ steps:
            "--no-cache",
            "--build-arg",
             "BASE_IMAGE=${_BASE_IMAGE}",
+            "PIP_INDEX_URL=${_PIP_INDEX_URL}",
             "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE}",
@@ -19,6 +20,7 @@ substitutions:
   _CODE_DIR: "./code"
   _DOCKERFILE_DIR: "./docker"
   _DOCKERFILE: "${_DOCKERFILE_DIR}/Dockerfile"
+  _PIP_INDEX_URL: ""
   _PIP_INSTALL_ARG: ""
   _BASE_IMAGE: "yaas_base:latest"
   _IMAGE_NAME: "yaas"

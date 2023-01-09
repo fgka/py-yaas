@@ -1,9 +1,16 @@
 steps:
+  - name: "bash"
+    id: PY_DIST_DIR
+    script: |
+      #!/usr/bin/env bash
+      mkdir -p ${_DIST_DIR}
   - name: "python"
     id: PY_MINIMUM
     entrypoint: "python3"
     args: ["-m", "pip", "install", "--user", "--upgrade",
            "pip", "wheel", "setuptools"]
+    waitFor:
+      - PY_DIST_DIR
   - name: "python"
     id: PY_BUILD_DEPENDENCIES
     entrypoint: "python3"

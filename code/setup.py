@@ -61,7 +61,7 @@ CODE_QUALITY_REQUIRED = [
     "pytest-mock>=3.8.2",
     "pytest-pudb>=0.7.0",
     "pytest-pylint>=0.18.0",
-    "pytest-xdist>=2.5.0",
+    "pytest-xdist>=3.1.0",
     "junit-xml>=1.9",
     "vulture>=2.5",
 ]

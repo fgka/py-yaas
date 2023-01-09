@@ -1,0 +1,30 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build",
+           "--pull",
+           "--no-cache",
+           "--build-arg",
+            "BASE_IMAGE=${_BASE_IMAGE}",
+            "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
+           "--tag", "${_IMAGE_NAME}",
+           "--tag", "${_DOCKER_IMAGE}",
+           "--file", "${_DOCKERFILE_AR}",
+           "${_CODE_DIR}"]
+
+options:
+  dynamic_substitutions: true
+  substitution_option: "ALLOW_LOOSE"
+
+substitutions:
+  _CODE_DIR: "${PWD}/code"
+  _DOCKERFILE_DIR: "${PWD}/docker"
+  _DOCKERFILE_AR: "${_DOCKERFILE_DIR}/Dockerfile"
+  _PIP_INSTALL_ARG: ""
+  _BASE_IMAGE: "yaas_base:latest"
+  _IMAGE_NAME: "yaas"
+  _AR_DOCKER_REPO: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${DOCKER_REPO_NAME}"
+  _AR_PIP_REPO: "${LOCATION}-python.pkg.dev/${PROJECT_ID}/${PYTHON_REPO_NAME}"
+  _DOCKER_IMAGE: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
+
+images:
+  - "${_DOCKER_IMAGE}"

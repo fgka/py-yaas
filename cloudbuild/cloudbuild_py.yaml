@@ -1,0 +1,66 @@
+steps:
+  - name: "python"
+    id: PY_MINIMUM
+    entrypoint: "python3"
+    args: ["-m", "pip", "install", "--user", "--upgrade",
+           "pip", "wheel", "setuptools"]
+  - name: "python"
+    id: PY_BUILD_DEPENDENCIES
+    entrypoint: "python3"
+    args: ["-m", "pip", "install", "--user", ".[all]"]
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: PY_BUILD
+    entrypoint: "python3"
+    args: ["./setup.py", "build", "--force"]
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: PY_LINT
+    entrypoint: "python3"
+    args: ["-m", "pylint",
+           "--output-format=junit",
+           "--output=${_PYTHON_PYLINT_FILE}",
+           "setup.py", "tests", "yaas"]
+    dir: "${_CODE_DIR}"
+    waitFor:
+      - PY_BUILD
+  - name: "python"
+    id: PY_TESTS
+    entrypoint: "python3"
+    args: ["-m", "pytest", "--junitxml=${_PYTHON_PYTEST_FILE}"]
+    dir: "${_CODE_DIR}"
+    waitFor:
+      - PY_BUILD
+  - name: "python"
+    id: PY_WHEEL
+    entrypoint: "python3"
+    args: ["./setup.py", "bdist_wheel", "--universal",
+           "--build-number", "${BUILD_ID}",
+           "--dist-dir", "${_DIST_DIR}"]
+    dir: "${_CODE_DIR}"
+
+logsBucket: "gs://${_BUCKET_NAME}"
+
+options:
+  dynamic_substitutions: true
+  logging: LEGACY
+  logStreamingOption: STREAM_DEFAULT
+  machineType: E2_HIGHCPU_32
+
+substitutions:
+  _CODE_DIR: "./code"
+  _DIST_DIR: "${_CODE_DIR}/dist"
+  _PYTHON_PYTEST_FILE: "${_DIST_DIR}/${SHORT_SHA}_test_log.xml"
+  _PYTHON_PYLINT_FILE: "${_DIST_DIR}/${SHORT_SHA}_lint_log.xml"
+  _PYTHON_REPO_NAME: ""
+  _AR_PIP_REPO: "${LOCATION}-python.pkg.dev/${PROJECT_ID}/${_PYTHON_REPO_NAME}"
+
+artifacts:
+  objects:
+    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${BUILD_ID}"
+    paths:
+      - "${_PYTHON_PYTEST_FILE}"
+      - "${_PYTHON_PYLINT_FILE}"
+  pythonPackages:
+   - repository: "${_AR_PIP_REPO}"
+     paths: ["${_DIST_DIR}/*.whl"]

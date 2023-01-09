@@ -27,19 +27,16 @@ module "cicd_build" {
   build_pubsub_monitoring_channel_name = module.cicd_infra.build_pubsub_monitoring_channel.display_name
   build_email_monitoring_channel_name  = module.cicd_infra.build_email_monitoring_channel.display_name
   docker_base_image                    = var.docker_base_image
-  yaas_base_image_name                 = var.yaas_base_image_name
-  yaas_app_image_name                  = var.yaas_app_image_name
-  yaas_base_dockerfile                 = var.yaas_base_dockerfile
-  yaas_app_dockerfile                  = var.yaas_app_dockerfile
+  yaas_image_name                      = var.yaas_image_name
+  yaas_dockerfile                      = var.yaas_dockerfile
   python_build_trigger_name            = var.python_build_trigger_name
   python_build_template_filename       = var.python_build_template_filename
-  docker_base_build_trigger_name       = var.docker_base_build_trigger_name
-  docker_app_build_trigger_name        = var.docker_app_build_trigger_name
+  docker_build_trigger_name            = var.docker_build_trigger_name
   docker_build_template_filename       = var.docker_build_template_filename
   tf_build_trigger_name                = var.tf_build_trigger_name
   github_owner                         = var.github_owner
   github_repo_name                     = var.github_repo_name
   github_branch                        = var.github_branch
-  yaas_py_package_name = var.yaas_py_package_name
+  yaas_py_package_name                 = var.yaas_py_package_name
   depends_on                           = [module.cicd_infra]
 }

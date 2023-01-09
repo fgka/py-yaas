@@ -25,7 +25,7 @@ RUN apt-get update \
 
 ARG DIST_DIR="./dist"
 ENV DIST_DIR=${DIST_DIR}
-COPY ${DIST_DIR}/*.whl ./
+# COPY ${DIST_DIR}/*.whl ./
 
 ARG PIP_INDEX_URL=""
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}

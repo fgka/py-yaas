@@ -5,7 +5,6 @@ steps:
       #!/usr/bin/env bash
       mkdir -p ${DIST_DIR}
       touch ${DIST_DIR}/empty.whl
-    dir: "${_CODE_DIR}"
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",

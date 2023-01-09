@@ -21,6 +21,14 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
 
+Code dependant:
+
+```bash
+pushd ../code
+export PY_PACKAGE=$(python ./setup.py --fullname)
+popd
+```
+
 Please set them properly:
 
 ```bash
@@ -76,7 +84,8 @@ terraform plan \
   -var "region=${REGION}" \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "github_owner=${GITHUB_OWNER}" \
-  -var "github_repo_name=${GITHUB_REPO}"
+  -var "github_repo_name=${GITHUB_REPO}" \
+  -var "yaas_py_package_name=${PY_PACKAGE}"
 ```
 
 ## Apply

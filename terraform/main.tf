@@ -40,5 +40,6 @@ module "cicd_build" {
   github_owner                         = var.github_owner
   github_repo_name                     = var.github_repo_name
   github_branch                        = var.github_branch
+  yaas_py_package_name = var.yaas_py_package_name
   depends_on                           = [module.cicd_infra]
 }

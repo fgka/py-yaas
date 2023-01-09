@@ -5,12 +5,14 @@ steps:
            "--no-cache",
            "--build-arg",
             "BASE_IMAGE=${_BASE_IMAGE}",
-            "PIP_INDEX_URL=${_PIP_INDEX_URL}",
+            "PIP_INDEX_URL=${_AR_PIP_REPO}",
             "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE}",
            "--file", "${_DOCKERFILE}",
            "${_CODE_DIR}"]
+
+logsBucket: "gs://${_BUCKET_NAME}"
 
 options:
   dynamic_substitutions: true
@@ -21,14 +23,12 @@ options:
 
 substitutions:
   _CODE_DIR: "./code"
-  _DOCKERFILE_DIR: "./docker"
-  _DOCKERFILE: "${_DOCKERFILE_DIR}/Dockerfile"
-  _PIP_INDEX_URL: ""
+  _DOCKERFILE: ""
   _PIP_INSTALL_ARG: ""
-  _BASE_IMAGE: "yaas_base:latest"
-  _IMAGE_NAME: "yaas"
-  _AR_DOCKER_REPO: "${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${DOCKER_REPO_NAME}"
-  _AR_PIP_REPO: "${LOCATION}-python.pkg.dev/${PROJECT_ID}/${PYTHON_REPO_NAME}"
+  _BASE_IMAGE: ""
+  _IMAGE_NAME: ""
+  _AR_DOCKER_REPO: ""
+  _AR_PIP_REPO: ""
   _DOCKER_IMAGE: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
 
 images:

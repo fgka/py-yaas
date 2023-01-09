@@ -174,3 +174,11 @@ variable "github_branch" {
   default     = "main"
 }
 
+//////////
+// Code //
+//////////
+
+variable "yaas_py_package_name" {
+  description = "Python package full name with version: python ./setup.py --fullname"
+  type        = string
+}

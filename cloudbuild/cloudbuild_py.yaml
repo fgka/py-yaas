@@ -76,4 +76,4 @@ artifacts:
       - "${_CODE_DIR}/${_DIST_DIR}/${_PYTHON_PYLINT_FILE}"
   pythonPackages:
    - repository: "${_AR_PIP_REPO}"
-     paths: ["${_DIST_DIR}/*.whl"]
+     paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]

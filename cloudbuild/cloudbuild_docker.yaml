@@ -8,7 +8,7 @@ steps:
             "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE}",
-           "--file", "${_DOCKERFILE_AR}",
+           "--file", "${_DOCKERFILE}",
            "${_CODE_DIR}"]
 
 options:
@@ -16,9 +16,9 @@ options:
   substitution_option: "ALLOW_LOOSE"
 
 substitutions:
-  _CODE_DIR: "${PWD}/code"
-  _DOCKERFILE_DIR: "${PWD}/docker"
-  _DOCKERFILE_AR: "${_DOCKERFILE_DIR}/Dockerfile"
+  _CODE_DIR: "./code"
+  _DOCKERFILE_DIR: "./docker"
+  _DOCKERFILE: "${_DOCKERFILE_DIR}/Dockerfile"
   _PIP_INSTALL_ARG: ""
   _BASE_IMAGE: "yaas_base:latest"
   _IMAGE_NAME: "yaas"

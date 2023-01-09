@@ -783,6 +783,7 @@ def _run_twice(
     return result
 
 
+@pytest.mark.doesnt_work_cloudbuild
 def test_file_read_concurrent_ok_empty():
     # Given
     json_line_file = common.tmpfile()
@@ -794,6 +795,7 @@ def test_file_read_concurrent_ok_empty():
     assert first_obj == second_obj
 
 
+@pytest.mark.doesnt_work_cloudbuild
 def test_file_write_concurrent_ok_empty():
     # Given
     json_line_file = common.tmpfile()
@@ -811,6 +813,7 @@ def test_file_write_concurrent_ok_empty():
         assert ts in result.timestamp_to_request
 
 
+@pytest.mark.doesnt_work_cloudbuild
 def test_file_archive_concurrent_ok_empty():
     # Given
     json_line_file = common.tmpfile()
@@ -837,6 +840,7 @@ def test_file_archive_concurrent_ok_empty():
         assert ts in archive.timestamp_to_request
 
 
+@pytest.mark.doesnt_work_cloudbuild
 def test_file_remove_concurrent_ok_empty():
     # Given
     json_line_file = common.tmpfile()

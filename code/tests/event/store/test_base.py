@@ -97,6 +97,7 @@ class TestFileBasedLockContextManager:
             assert self.instance.is_locked()
         assert not self.instance.is_locked()
 
+    @pytest.mark.doesnt_work_cloudbuild
     def test_enter_nok_multiprocess(self):
 
         lock_file = common.tmpfile()

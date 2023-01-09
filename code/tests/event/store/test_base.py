@@ -81,7 +81,7 @@ class TestFileBasedLockContextManager:
         [
             (common.tmpfile(), 0),
             (common.tmpfile(), -1),
-            (pathlib.Path("/bin/test"), 10),  # file does not have write access
+            (pathlib.Path("/"), 10),  # file does not have write access
         ],
     )
     def test_ctor_nok(self, lock_file: pathlib.Path, lock_timeout_in_sec: int):

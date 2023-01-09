@@ -91,9 +91,10 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
 
     def __del__(self):
         # This is for a clean delete in case the object hasn't been successfully created
-        if getattr(self, "_lock_file"):
+        if getattr(self, "_lock_file", None):
             self._unlock()
-            self._open_lock_file.close()
+            if getattr(self, "_open_lock_file", None):
+                self._open_lock_file.close()
 
     @property
     def lock_file(self) -> pathlib.Path:
@@ -128,7 +129,7 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         # pylint: enable=consider-using-with
         if result:
             result = self._fcntl_flock(True)
-            if not result:
+            if not result and self._thread_lock.locked():
                 self._thread_lock.release()
         else:
             _LOGGER.info("Could not acquire thread lock")
@@ -154,7 +155,7 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         UN-Blocks all file operations globally.
         """
         result = self._fcntl_flock(False)
-        if result:
+        if result and self._thread_lock.locked():
             self._thread_lock.release()
         else:
             _LOGGER.info("Could not unlock file %s", self._lock_file)

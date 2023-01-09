@@ -66,7 +66,7 @@ substitutions:
   _PYTHON_PYTEST_FILE: "${SHORT_SHA}_test_log.xml"
   _PYTHON_PYLINT_FILE: "${SHORT_SHA}_lint_log.json"
   _PYTHON_REPO_NAME: ""
-  _AR_PIP_REPO: "${LOCATION}-python.pkg.dev/${PROJECT_ID}/${_PYTHON_REPO_NAME}"
+  _AR_PIP_REPO: ""
 
 artifacts:
   objects:

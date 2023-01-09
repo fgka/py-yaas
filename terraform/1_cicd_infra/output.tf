@@ -32,7 +32,7 @@ output "python_repo" {
 }
 
 output "python_repo_url" {
-  value = "${lookup(local.artifact_registry_urls, "python", null)}"
+  value = "https://${lookup(local.artifact_registry_urls, "python", null)}"
 }
 
 ////////////

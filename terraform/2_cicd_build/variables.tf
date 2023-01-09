@@ -78,7 +78,7 @@ variable "yaas_base_image_name" {
 variable "yaas_base_dockerfile" {
   description = "YAAS base Dockerfile"
   type        = string
-  default     = "./docker/Dockefile.base"
+  default     = "./docker/Dockerfile.base"
 }
 
 variable "yaas_app_image_name" {
@@ -90,7 +90,7 @@ variable "yaas_app_image_name" {
 variable "yaas_app_dockerfile" {
   description = "YAAS application Dockerfile"
   type        = string
-  default     = "./docker/Dockefile"
+  default     = "./docker/Dockerfile"
 }
 
 

@@ -9,7 +9,7 @@ locals {
   })
   artifact_registry_urls = tomap({
     for k, v in local.artifact_registry_repos:
-      k => "https://${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
+      k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
   })
 }
 

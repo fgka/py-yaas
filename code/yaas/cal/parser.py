@@ -37,25 +37,25 @@ _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SCALING_SPEC_REGEX: re.Pattern = re.compile(
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
     + "\\."
     + "]+)"  # topic
-    + "\s*\.?\s*"
+    + r"\s*\.?\s*"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
-    + "\s*\.?\s*"  # separator
+    + r"\s*\.?\s*"  # separator
     + "([^"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
     + "\\."
     + "]+)"  # resource
-    + "\s*\.?\s*"
+    + r"\s*\.?\s*"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
-    + "\s*\.?\s*"  # separator
+    + r"\s*\.?\s*"  # separator
     + "([^"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
     + "\\."
     + "]+)"  # what/command
-    + "\s*\.?\s*$",  # trailing space and/or period ('.')
+    + r"\s*\.?\s*$",  # trailing space and/or period ('.')
     flags=re.IGNORECASE | re.MULTILINE,
 )
 # pylint: enable=anomalous-backslash-in-string

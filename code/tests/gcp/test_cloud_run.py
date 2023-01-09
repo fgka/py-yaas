@@ -28,11 +28,14 @@ class _StubCloudRunService:
 
     def _set_path_value(self, path: str, value: Any) -> None:
         parent = self
-        paths = path.split(cloud_run_const.REQUEST_PATH_SEP)
-        for attr in paths[:-1]:
+        if cloud_run_const.REQUEST_PATH_SEP in path:
+            path_lst = path.split(cloud_run_const.REQUEST_PATH_SEP)
+        else:
+            path_lst = [path]
+        for attr in path_lst[:-1]:
             setattr(parent, attr, _StubCloudRunService._StubAttr())
             parent = getattr(parent, attr)
-        setattr(parent, path[-1], value)
+        setattr(parent, path_lst[-1], value)
 
 
 class _StubCloudRunAsyncOperation:
@@ -96,7 +99,7 @@ async def test_get_service_nok_raises(monkeypatch):
 @pytest.mark.parametrize(
     "reconciling,raise_on_get,expected",
     [
-        (False, False, False),  # all good
+        (False, False, True),  # all good
         (True, False, False),  # reconciling is True
         (False, True, False),  # get_service() raises exception
     ],

@@ -117,7 +117,7 @@ class TestScaler:
 
 
 class TestCategoryScaleRequestParser:
-    def setup(self):
+    def setup_method(self):
         self.obj = common.MyCategoryScaleRequestParser()
 
     def test_scaler_ok(self):

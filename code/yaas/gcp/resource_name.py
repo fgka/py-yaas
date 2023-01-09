@@ -9,8 +9,8 @@ from typing import List
 
 
 # pylint: disable=anomalous-backslash-in-string
-_TOKEN_REGEX: re.Pattern = re.compile("^[^/\s]+$")
-_TOKEN_VALUE_REGEX_STR: str = "([^/\\s]+)"
+_TOKEN_REGEX: re.Pattern = re.compile(r"^[^/\s]+$")
+_TOKEN_VALUE_REGEX_STR: str = r"([^/\\s]+)"
 # pylint: enable=anomalous-backslash-in-string
 
 

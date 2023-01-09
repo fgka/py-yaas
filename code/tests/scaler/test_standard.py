@@ -37,7 +37,7 @@ def _create_request(
 
 
 class TestStandardScalingCommandParser:
-    def setup(self):
+    def setup_method(self):
         self.obj = standard.StandardScalingCommandParser()
 
     def test_scaler_ok(self):

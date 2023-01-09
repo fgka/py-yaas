@@ -90,8 +90,10 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         self._thread_lock = threading.Lock()
 
     def __del__(self):
-        self._unlock()
-        self._open_lock_file.close()
+        # This is for a clean delete in case the object hasn't been successfully created
+        if getattr(self, "_lock_file"):
+            self._unlock()
+            self._open_lock_file.close()
 
     @property
     def lock_file(self) -> pathlib.Path:

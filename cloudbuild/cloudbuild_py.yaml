@@ -5,7 +5,6 @@ steps:
       #!/usr/bin/env bash
       mkdir -p ${DIST_DIR}
     dir: "${_CODE_DIR}"
-    # Source: https://nieldw.medium.com/get-a-pseudo-sequential-build-number-in-google-cloud-build-85ae591cf86
   - name: "python"
     id: PY_MINIMUM
     entrypoint: "python3"

@@ -49,7 +49,7 @@ def _run_sync(lock_file: pathlib.Path, start_sleep: int):
 
 
 class TestFileBasedLockContextManager:
-    def setup(self):
+    def setup_method(self):
         self.instance = base.FileBasedLockContextManager(
             lock_file=common.tmpfile(), lock_timeout_in_sec=1
         )
@@ -164,7 +164,7 @@ _TEST_DATETIME: datetime = datetime.utcnow()
 
 
 class TestStoreContextManager:  # pylint: disable=too-many-public-methods
-    def setup(self):
+    def setup_method(self):
         self.object = common.MyStoreContextManager()
 
     @pytest.mark.parametrize(
@@ -568,7 +568,7 @@ class _MyReadOnlyStoreContextManager(base.ReadOnlyStoreContextManager):
 
 
 class TestReadOnlyStoreContextManager:
-    def setup(self):
+    def setup_method(self):
         self.object = _MyReadOnlyStoreContextManager()
 
     @pytest.mark.parametrize("overwrite", [True, False])

@@ -60,12 +60,12 @@ Groups on matching are::
 # pylint: disable=anomalous-backslash-in-string
 _SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
     pattern=r"^CloudRun\.?\s*\.?\s*"
-    + "\s+"  # separator <space>
-    + "([^@\s]+)"  # service
-    + "\s*\.?\s*@\.?\s*"  # separator @
-    + "([^\s]+)"  # project
-    + "\s*\.?\s+\.?\s*"  # separator <space>
-    + "([^\s]+)$",  # region
+    + r"\s+"  # separator <space>
+    + r"([^@\s]+)"  # service
+    + r"\s*\.?\s*@\.?\s*"  # separator @
+    + r"([^\s]+)"  # project
+    + r"\s*\.?\s+\.?\s*"  # separator <space>
+    + r"([^\s]+)$",  # region
     flags=re.IGNORECASE,
 )
 # pylint: enable=anomalous-backslash-in-string

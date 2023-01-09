@@ -23,9 +23,9 @@ _LOGGER = logger.get(__name__)
 _GCS_PATH_SEP: str = "/"
 # pylint: disable=anomalous-backslash-in-string
 _BUCKET_NAME_REGEX: re.Pattern = re.compile(
-    "^\s*[a-z\d][a-z\d\_-]{1,61}[a-z\d]\s*$", flags=re.ASCII
+    r"^\s*[a-z\d][a-z\d\_-]{1,61}[a-z\d]\s*$", flags=re.ASCII
 )
-_PATH_SEGMENT_REGEX: re.Pattern = re.compile("^[\w\.\_-]+$", flags=re.ASCII)
+_PATH_SEGMENT_REGEX: re.Pattern = re.compile(r"^[\w\.\_-]+$", flags=re.ASCII)
 # pylint: enable=anomalous-backslash-in-string
 
 

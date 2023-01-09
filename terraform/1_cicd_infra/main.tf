@@ -2,6 +2,17 @@
 // Global/General //
 ////////////////////
 
+locals {
+  artifact_registry_repos = tomap({
+    docker = google_artifact_registry_repository.docker_repo,
+    python = google_artifact_registry_repository.python_repo,
+  })
+  artifact_registry_urls = tomap({
+    for k, v in local.artifact_registry_repos:
+      k => "https://${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
+  })
+}
+
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -16,10 +27,22 @@ module "build_service_account" {
   name         = var.build_service_account_name
   generate_key = false
   iam_project_roles = {
-    "${var.project_id}" = [
+    "${data.google_project.project.id}" = [
       "roles/cloudbuild.builds.builder",
+      "roles/iam.serviceAccountUser",
+      "roles/logging.logWriter",
     ]
   }
+}
+
+resource "google_artifact_registry_repository_iam_binding" "bindings" {
+  for_each   = local.artifact_registry_repos
+  provider   = google-beta
+  project    = var.project_id
+  location   = each.value.location
+  repository = each.value.name
+  role       = "roles/artifactregistry.writer"
+  members    = [module.build_service_account.iam_email]
 }
 
 /////////////
@@ -32,41 +55,30 @@ module "build_bucket" {
   prefix     = var.build_bucket_name_prefix
   name       = data.google_project.project.number
   iam = {
-    "roles/storage.legacyBucketReader" = [
+    "roles/storage.objectAdmin" = [
       module.build_service_account.iam_email,
     ]
   }
 }
-
 
 ///////////////////////
 // Artifact Registry //
 ///////////////////////
 
-module "docker_repo" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/artifact-registry"
-  project_id = var.project_id
-  location   = var.region
-  id         = var.docker_artifact_registry_name
-  format     = "DOCKER"
-  iam = {
-    "roles/artifactregistry.writer" = [
-      module.build_service_account.iam_email,
-    ]
-  }
+resource "google_artifact_registry_repository" "docker_repo" {
+  provider      = google-beta
+  project       = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+  repository_id = var.docker_artifact_registry_name
 }
 
-module "python_repo" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/artifact-registry"
-  project_id = var.project_id
-  location   = var.region
-  id         = var.python_artifact_registry_name
-  format     = "PYTHON"
-  iam = {
-    "roles/artifactregistry.writer" = [
-      module.build_service_account.iam_email,
-    ]
-  }
+resource "google_artifact_registry_repository" "python_repo" {
+  provider      = google-beta
+  project       = var.project_id
+  location      = var.region
+  format        = "PYTHON"
+  repository_id = var.python_artifact_registry_name
 }
 
 ////////////
@@ -100,6 +112,6 @@ resource "google_monitoring_notification_channel" "build_email_monitoring_channe
   display_name = var.build_email_monitoring_channel_name
   type         = "email"
   labels = {
-    email_address = var.build_notification_monitoring_email_address
+    email_address = var.build_monitoring_email_address
   }
 }

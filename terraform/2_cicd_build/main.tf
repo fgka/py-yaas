@@ -2,13 +2,6 @@
 // Global/General //
 ////////////////////
 
-locals {
-  artifact_registry_repos = tomap({
-    docker = google_artifact_registry_repository.docker_repo,
-    python = google_artifact_registry_repository.python_repo,
-  })
-}
-
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -17,95 +10,79 @@ data "google_project" "project" {
 // Service Accounts //
 //////////////////////
 
-module "build_service_account" {
-  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
-  project_id   = var.project_id
-  name         = var.build_service_account_name
-  generate_key = false
-  iam_project_roles = {
-    "${data.google_project.project.id}" = [
-      "roles/cloudbuild.builds.builder",
-    ]
+data "google_service_account" "build_service_account" {
+  account_id = var.build_service_account_email
+}
+
+////////////////////
+// Build Triggers //
+////////////////////
+
+resource "google_cloudbuild_trigger" "python" {
+  location           = var.region
+  name               = var.python_build_trigger_name
+  service_account    = data.google_service_account.build_service_account.id
+  filename           = var.python_build_template_filename
+  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
+  substitutions = {
+    _BUCKET_NAME = var.build_bucket_name
+    _AR_PIP_REPO = var.python_artifact_registry_url
+  }
+  github {
+    owner = var.github_owner
+    name  = var.github_repo_name
+    push {
+      branch = "^${var.github_branch}$"
+    }
   }
 }
 
-resource "google_artifact_registry_repository_iam_binding" "bindings" {
-  for_each   = local.artifact_registry_repos
-  provider   = google-beta
-  project    = var.project_id
-  location   = each.value.location
-  repository = each.value.name
-  role       = "roles/artifactregistry.writer"
-  members    = [module.build_service_account.iam_email]
-}
-
-/////////////
-// Buckets //
-/////////////
-
-module "build_bucket" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/gcs"
-  project_id = var.project_id
-  prefix     = var.build_bucket_name_prefix
-  name       = data.google_project.project.number
-  iam = {
-    "roles/storage.objectAdmin" = [
-      module.build_service_account.iam_email,
-    ]
+resource "google_cloudbuild_trigger" "docker_base" {
+  location           = var.region
+  name               = var.docker_base_build_trigger_name
+  service_account    = data.google_service_account.build_service_account.id
+  filename           = var.docker_build_template_filename
+  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
+  substitutions = {
+    _BUCKET_NAME     = var.build_bucket_name
+    _DOCKERFILE      = var.yaas_base_dockerfile
+    _PIP_INSTALL_ARG = ""
+    _PIP_INDEX_URL   = ""
+    _BASE_IMAGE      = var.docker_base_image
+    _IMAGE_NAME      = var.yaas_base_image_name
+    _AR_DOCKER_REPO  = var.docker_artifact_registry_url
+    _AR_PIP_REPO     = var.python_artifact_registry_url
+  }
+  github {
+    owner = var.github_owner
+    name  = var.github_repo_name
+    push {
+      branch = "^${var.github_branch}$"
+    }
   }
 }
 
-///////////////////////
-// Artifact Registry //
-///////////////////////
-
-resource "google_artifact_registry_repository" "docker_repo" {
-  provider      = google-beta
-  project       = var.project_id
-  location      = var.region
-  format        = "DOCKER"
-  repository_id = var.docker_artifact_registry_name
-}
-
-resource "google_artifact_registry_repository" "python_repo" {
-  provider      = google-beta
-  project       = var.project_id
-  location      = var.region
-  format        = "PYTHON"
-  repository_id = var.python_artifact_registry_name
-}
-
-////////////
-// PubSub //
-////////////
-
-module "build_monitoring_topic" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
-  project_id = var.project_id
-  name       = var.build_monitoring_topic_name
-  iam = {
-    "roles/pubsub.admin" = [
-      module.build_service_account.iam_email,
-    ]
+resource "google_cloudbuild_trigger" "docker_app" {
+  location           = var.region
+  name               = var.docker_app_build_trigger_name
+  service_account    = data.google_service_account.build_service_account.id
+  filename           = var.docker_build_template_filename
+  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
+  substitutions = {
+    _BUCKET_NAME     = var.build_bucket_name
+    _DOCKERFILE      = var.yaas_app_dockerfile
+    _PIP_INSTALL_ARG = ""
+    _PIP_INDEX_URL   = ""
+    _BASE_IMAGE      = var.yaas_base_image_name
+    _IMAGE_NAME      = var.yaas_app_image_name
+    _AR_DOCKER_REPO  = var.docker_artifact_registry_url
+    _AR_PIP_REPO     = var.python_artifact_registry_url
   }
-}
-
-/////////////////////////////
-// Monitoring and Alerting //
-/////////////////////////////
-
-resource "google_monitoring_notification_channel" "build_pubsub_monitoring_channel" {
-  display_name = var.build_pubsub_monitoring_channel_name
-  type         = "pubsub"
-  labels = {
-    topic = module.build_monitoring_topic.id
-  }
-}
-
-resource "google_monitoring_notification_channel" "build_email_monitoring_channel" {
-  display_name = var.build_email_monitoring_channel_name
-  type         = "email"
-  labels = {
-    email_address = var.build_monitoring_email_address
+  github {
+    owner = var.github_owner
+    name  = var.github_repo_name
+    push {
+      branch = "^${var.github_branch}$"
+    }
   }
 }

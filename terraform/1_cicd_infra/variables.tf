@@ -46,7 +46,7 @@ variable "docker_artifact_registry_name" {
 variable "python_artifact_registry_name" {
   description = "Python YAAS package registry name."
   type        = string
-  default     = "yaas"
+  default     = "py-yaas"
 }
 
 ////////////
@@ -75,7 +75,7 @@ variable "build_email_monitoring_channel_name" {
   default     = "yaas-build-email-monitoring-channel"
 }
 
-variable "build_notification_monitoring_email_address" {
+variable "build_monitoring_email_address" {
   description = "When the build fails, it needs to send the alert to a specific email."
   type        = string
 }

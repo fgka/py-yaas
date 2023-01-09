@@ -21,24 +21,40 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
 
+Please set them properly:
+
+```bash
+export NOTIFICATION_EMAIL="${USER}@$(uname -n)"
+export GITHUB_OWNER="${USER}"
+export GITHUB_REPO="py-yaas-playground"
+```
+
 Check:
 
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
+echo "Email: ${NOTIFICATION_EMAIL}"
 ```
 
 ## Enable APIs
 
-Main project:
-
 ```bash
 gcloud services enable \
+  artifactregistry.googleapis.com \
   calendar-json.googleapis.com \
+  cloudapis.googleapis.com \
   cloudbuild.googleapis.com \
   cloudfunctions.googleapis.com \
   iam.googleapis.com \
+  iamcredentials.googleapis.com \
   logging.googleapis.com \
   monitoring.googleapis.com \
+  pubsub.googleapis.com \
+  run.googleapis.com \
+  secretmanager.googleapis.com \
+  servicemanagement.googleapis.com \
+  serviceusage.googleapis.com \
+  storage.googleapis.com \
   --project="${PROJECT_ID}"
 ```
 
@@ -57,7 +73,10 @@ TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
   -var "project_id=${PROJECT_ID}" \
-  -var "region=${REGION}"
+  -var "region=${REGION}" \
+  -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
+  -var "github_owner=${GITHUB_OWNER}" \
+  -var "github_repo_name=${GITHUB_REPO}"
 ```
 
 ## Apply

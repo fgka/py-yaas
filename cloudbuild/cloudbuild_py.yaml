@@ -45,7 +45,7 @@ steps:
     id: PY_WHEEL
     entrypoint: "python3"
     args: ["./setup.py", "bdist_wheel", "--universal",
-           "--build-number", "$(date -u +%s)",
+           # TODO "--build-number", "$(date -u +%s)",
            "--dist-dir", "./${_DIST_DIR}"]
     dir: "${_CODE_DIR}"
 

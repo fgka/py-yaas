@@ -18,7 +18,7 @@ steps:
     id: PY_LINT
     entrypoint: "python3"
     args: ["-m", "pylint",
-           "--output-format=junit",
+           "--output-format=json",
            "--output=${_PYTHON_PYLINT_FILE}",
            "setup.py", "tests", "yaas"]
     dir: "${_CODE_DIR}"
@@ -51,7 +51,7 @@ substitutions:
   _CODE_DIR: "./code"
   _DIST_DIR: "${_CODE_DIR}/dist"
   _PYTHON_PYTEST_FILE: "${_DIST_DIR}/${SHORT_SHA}_test_log.xml"
-  _PYTHON_PYLINT_FILE: "${_DIST_DIR}/${SHORT_SHA}_lint_log.xml"
+  _PYTHON_PYLINT_FILE: "${_DIST_DIR}/${SHORT_SHA}_lint_log.json"
   _PYTHON_REPO_NAME: ""
   _AR_PIP_REPO: "${LOCATION}-python.pkg.dev/${PROJECT_ID}/${_PYTHON_REPO_NAME}"
 

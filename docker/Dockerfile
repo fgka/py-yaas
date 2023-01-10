@@ -29,11 +29,16 @@ ENV ENV_DIST_DIR ${DIST_DIR}
 RUN echo "Dest dir <${ENV_DIST_DIR}>"
 COPY ${DIST_DIR}/*.whl ./
 
+## Debug
+RUN echo "Content to install"
+RUN ls -l ./*.whl
+
 ## Install the target package
-ARG PIP_INSTALL_ARG
-ENV ENV_PIP_INSTALL_ARG ${PIP_INSTALL_ARG}
-RUN echo "PIP install arg <${ENV_PIP_INSTALL_ARG}>"
-RUN python3 -m pip install "${PIP_INSTALL_ARG}"
+RUN ls -1 ./*.whl \
+    | while read WHL; \
+      do \
+        python3 -m pip install ${WHL}; \
+      done
 
 ## Clean-up pip cache
 RUN python3 -m pip cache purge

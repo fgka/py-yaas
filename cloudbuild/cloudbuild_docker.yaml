@@ -4,9 +4,7 @@ steps:
     script: |
       #!/usr/bin/env bash
       mkdir -p ${DIST_DIR}
-      EMTPY_WHL=${DIST_DIR}/empty.whl
-      touch ${EMTPY_WHL}
-      echo "Created ${EMTPY_WHL}"
+      echo "Created ${DIST_DIR}"
   - name: "python"
     id: PY_PIP_DOWNLOAD
     entrypoint: "python3"
@@ -15,15 +13,6 @@ steps:
            "--dest", "${_DIST_DIR}",
            "--extra-index-url", "${_AR_PIP_REPO}/simple/",
            "${_PIP_INSTALL_ARG}"]
-  - name: "bash"
-    id: DEBUG
-    script: |
-      #!/usr/bin/env bash
-      echo "Content of ${DIST_DIR}"
-      ls -l ${DIST_DIR}
-      echo "Docker args"
-      echo "--build-arg BASE_IMAGE=${_BASE_IMAGE}"
-      echo "--build-arg DIST_DIR=${_DIST_DIR}"
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",
@@ -32,7 +21,7 @@ steps:
            "--progress", "plain",
            "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
            "--build-arg", "DIST_DIR=${_DIST_DIR}",
-           "--build-arg", "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
+           "--build-arg", "PIP_INSTALL_ARG=./*.whl",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE_LATEST}",
            "--tag", "${_DOCKER_IMAGE_SHA}",

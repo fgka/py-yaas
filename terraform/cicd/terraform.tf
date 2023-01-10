@@ -5,6 +5,10 @@ terraform {
     google      = ">= 4.44.0"
     google-beta = ">= 4.44.0"
   }
+  backend "gcs" {
+    bucket = "yaas-tf-state-245814988234"
+    prefix = "terraform/europe-west3/state/cicd"
+  }
 }
 
 provider "google" {

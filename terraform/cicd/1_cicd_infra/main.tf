@@ -35,6 +35,7 @@ module "tf_build_service_account" {
       "roles/logging.logWriter",
       "roles/monitoring.admin",
       "roles/pubsub.admin",
+      "roles/resourcemanager.projectIamAdmin",
       "roles/storage.admin",
     ]
   }

@@ -30,9 +30,3 @@ substitutions:
   _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
   _PYTHON_BUILD_TRIGGER: ""
-
-artifacts:
-  objects:
-    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
-    paths:
-      - "${_TF_PLAN_FILE}"

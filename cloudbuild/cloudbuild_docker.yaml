@@ -4,7 +4,9 @@ steps:
     script: |
       #!/usr/bin/env bash
       mkdir -p ${DIST_DIR}
-      touch ${DIST_DIR}/empty.whl
+      EMTPY_WHL=${DIST_DIR}/empty.whl
+      touch ${EMTPY_WHL}
+      echo "Created ${EMTPY_WHL}"
   - name: "python"
     id: PY_PIP_DOWNLOAD
     entrypoint: "python3"
@@ -13,18 +15,29 @@ steps:
            "--dest", "${_DIST_DIR}",
            "--extra-index-url", "${_AR_PIP_REPO}/simple/",
            "${_PIP_INSTALL_ARG}"]
+  - name: "bash"
+    id: DEBUG
+    script: |
+      #!/usr/bin/env bash
+      echo "Content of ${DIST_DIR}"
+      ls -l ${DIST_DIR}
+      echo "Docker args"
+      echo "--build-arg BASE_IMAGE=${_BASE_IMAGE}"
+      echo "--build-arg DIST_DIR=${_DIST_DIR}"
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",
            "--pull",
            "--no-cache",
+           "--progress", "plain",
            "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
            "--build-arg", "DIST_DIR=${_DIST_DIR}",
+           "--build-arg", "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE_LATEST}",
            "--tag", "${_DOCKER_IMAGE_SHA}",
            "--file", "${_DOCKERFILE}",
-           "${_CODE_DIR}"]
+           "."]
 
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/"
 
@@ -38,8 +51,7 @@ options:
   substitution_option: "ALLOW_LOOSE"
 
 substitutions:
-  _CODE_DIR: "./code"
-  _DIST_DIR: "./dist"
+  _DIST_DIR: "dist"
   _DOCKERFILE: ""
   _PIP_INSTALL_ARG: ""
   _BASE_IMAGE: ""

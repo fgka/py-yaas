@@ -3,7 +3,7 @@
 ////////////////////
 
 locals {
-  tf_build_plan_args = tomap({
+  tf_build_plan_args = merge(tomap({
     project_id                     = var.project_id,
     region                         = var.region,
     build_monitoring_email_address = var.build_monitoring_email_address,
@@ -11,7 +11,8 @@ locals {
     github_repo_name               = var.github_repo_name,
     github_branch                  = var.github_branch,
     yaas_pip_package               = var.yaas_pip_package,
-  })
+    }),
+  var.tf_build_plan_args)
 }
 
 ///////////
@@ -56,5 +57,6 @@ module "cicd_build" {
   github_branch                        = var.github_branch
   yaas_pip_package                     = var.yaas_pip_package
   tf_build_plan_args                   = local.tf_build_plan_args
+  tf_build_ignored_files               = var.tf_build_ignored_files
   depends_on                           = [module.cicd_infra]
 }

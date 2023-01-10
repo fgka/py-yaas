@@ -5,6 +5,14 @@ steps:
       #!/usr/bin/env bash
       mkdir -p ${DIST_DIR}
       touch ${DIST_DIR}/empty.whl
+  - name: "python"
+    id: PY_PIP_DOWNLOAD
+    entrypoint: "python3"
+    args: ["-m", "pip", "download",
+           "--no-deps",
+           "--dest", "${_DIST_DIR",
+           "--extra-index-url", "${_AR_PIP_REPO}/simple/",
+           "${_PIP_INSTALL_ARG}"]
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",
@@ -12,8 +20,6 @@ steps:
            "--no-cache",
            "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
            "--build-arg", "DIST_DIR=${_DIST_DIR}",
-           "--build-arg", "PIP_INDEX_URL=${_AR_PIP_REPO}",
-           "--build-arg", "PIP_INSTALL_ARG=${_PIP_INSTALL_ARG}",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE_LATEST}",
            "--tag", "${_DOCKER_IMAGE_SHA}",
@@ -40,6 +46,7 @@ substitutions:
   _IMAGE_NAME: ""
   _AR_DOCKER_REPO: ""
   _AR_PIP_REPO: ""
+  _PIP_EXTRA_INDEX_URL: "${_AR_PIP_REPO}/simple/"
   _DOCKER_IMAGE_LATEST: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:latest"
   _DOCKER_IMAGE_SHA: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
 

@@ -88,7 +88,7 @@ variable "yaas_dockerfile" {
 variable "python_build_trigger_name" {
   description = "Cloud Build trigger for Python code."
   type        = string
-  default     = "py-yaas"
+  default     = "yaas-py"
 }
 
 variable "python_build_template_filename" {
@@ -100,7 +100,7 @@ variable "python_build_template_filename" {
 variable "docker_build_trigger_name" {
   description = "Cloud Build trigger for Docker image."
   type        = string
-  default     = "docker-yaas"
+  default     = "yaas-docker"
 }
 
 variable "docker_build_template_filename" {
@@ -112,7 +112,7 @@ variable "docker_build_template_filename" {
 variable "tf_build_trigger_name" {
   description = "Cloud Build trigger for Terraform code."
   type        = string
-  default     = "tf-yaas"
+  default     = "yaas-tf-cicd"
 }
 
 ////////////

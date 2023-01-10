@@ -25,10 +25,7 @@ RUN apt-get update \
 
 ARG DIST_DIR="./dist"
 ENV DIST_DIR=${DIST_DIR}
-# COPY ${DIST_DIR}/*.whl ./
-
-ARG PIP_INDEX_URL=""
-ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+COPY ${DIST_DIR}/*.whl ./
 
 ARG PIP_INSTALL_ARG=./py_yaas_playground-1.0-py2.py3-none-any.whl
 RUN python3 -m pip install "${PIP_INSTALL_ARG}"

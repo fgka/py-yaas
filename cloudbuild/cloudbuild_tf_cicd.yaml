@@ -6,7 +6,7 @@ steps:
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_PLAN
     entrypoint: "sh"
-    args: ["-c", "terraform -chdir=terraform/cicd plan -out=${_TF_PLAN_FILE}"]
+    args: ["-c", "terraform -chdir=terraform/cicd plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_APPLY
     entrypoint: "sh"

@@ -40,13 +40,13 @@ variable "build_bucket_name_prefix" {
 variable "docker_artifact_registry_name" {
   description = "Cloud Run YAAS docker image registry name."
   type        = string
-  default     = "yaas"
+  default     = "yaas-docker"
 }
 
 variable "python_artifact_registry_name" {
   description = "Python YAAS package registry name."
   type        = string
-  default     = "py-yaas"
+  default     = "yaas-py"
 }
 
 ////////////

@@ -8,8 +8,8 @@ locals {
     python = google_artifact_registry_repository.python_repo,
   })
   artifact_registry_urls = tomap({
-    for k, v in local.artifact_registry_repos:
-      k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
+    for k, v in local.artifact_registry_repos :
+    k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
   })
 }
 

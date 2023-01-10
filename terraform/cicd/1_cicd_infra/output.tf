@@ -24,7 +24,7 @@ output "docker_repo" {
 }
 
 output "docker_repo_url" {
-  value = "${lookup(local.artifact_registry_urls, "docker", null)}"
+  value = lookup(local.artifact_registry_urls, "docker", null)
 }
 
 output "python_repo" {

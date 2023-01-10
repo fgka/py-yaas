@@ -42,6 +42,8 @@ Check:
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
+echo "PIP: ${PIP_PACKAGE}"
+echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}"
 ```
 
 ## Enable APIs

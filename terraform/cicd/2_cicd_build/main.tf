@@ -14,6 +14,10 @@ data "google_project" "project" {
 // Service Accounts //
 //////////////////////
 
+data "google_service_account" "tf_build_service_account" {
+  account_id = var.tf_build_service_account_email
+}
+
 data "google_service_account" "build_service_account" {
   account_id = var.build_service_account_email
 }
@@ -25,7 +29,7 @@ data "google_service_account" "build_service_account" {
 resource "google_cloudbuild_trigger" "tf" {
   location           = var.region
   name               = var.tf_build_trigger_name
-  service_account    = data.google_service_account.build_service_account.id
+  service_account    = data.google_service_account.tf_build_service_account.id
   filename           = var.tf_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {

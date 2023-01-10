@@ -23,6 +23,7 @@ module "cicd_infra" {
   source                               = "./1_cicd_infra"
   project_id                           = var.project_id
   region                               = var.region
+  tf_build_service_account_name        = var.tf_build_service_account_name
   build_service_account_name           = var.build_service_account_name
   build_bucket_name_prefix             = var.build_bucket_name_prefix
   docker_artifact_registry_name        = var.docker_artifact_registry_name
@@ -37,6 +38,7 @@ module "cicd_build" {
   source                               = "./2_cicd_build"
   project_id                           = var.project_id
   region                               = var.region
+  tf_build_service_account_email       = module.cicd_infra.tf_build_service_account.email
   build_service_account_email          = module.cicd_infra.build_service_account.email
   build_bucket_name                    = module.cicd_infra.build_bucket.name
   docker_artifact_registry_url         = module.cicd_infra.docker_repo_url

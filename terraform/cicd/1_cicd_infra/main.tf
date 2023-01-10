@@ -21,6 +21,25 @@ data "google_project" "project" {
 // Service Accounts //
 //////////////////////
 
+module "tf_build_service_account" {
+  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
+  project_id   = var.project_id
+  name         = var.tf_build_service_account_name
+  generate_key = false
+  iam_project_roles = {
+    "${data.google_project.project.id}" = [
+      "roles/artifactregistry.admin",
+      "roles/cloudbuild.builds.editor",
+      "roles/iam.serviceAccountAdmin",
+      "roles/iam.serviceAccountUser",
+      "roles/logging.logWriter",
+      "roles/monitoring.admin",
+      "roles/pubsub.admin",
+      "roles/storage.admin",
+    ]
+  }
+}
+
 module "build_service_account" {
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
   project_id   = var.project_id

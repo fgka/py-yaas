@@ -17,6 +17,11 @@ variable "region" {
 // Service Accounts //
 //////////////////////
 
+variable "tf_build_service_account_email" {
+  description = "Service account to build terraform"
+  type        = string
+}
+
 variable "build_service_account_email" {
   description = "Service account to build artefacts"
   type        = string

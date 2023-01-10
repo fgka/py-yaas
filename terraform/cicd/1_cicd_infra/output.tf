@@ -3,6 +3,10 @@
 // Service Accounts //
 //////////////////////
 
+output "tf_build_service_account" {
+  value = module.tf_build_service_account.service_account
+}
+
 output "build_service_account" {
   value = module.build_service_account.service_account
 }

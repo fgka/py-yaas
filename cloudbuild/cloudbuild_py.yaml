@@ -51,7 +51,7 @@ steps:
         --build-number ${BUILD_NUMBER} \
         --dist-dir ${DIST_DIR}
     dir: "${_CODE_DIR}"
-  - name: "gcloud"
+  - name: "gcr.io/cloud-builders/gcloud"
     id: BUILD_DOCKER
     args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}",
            "--region", "${LOCATION}",

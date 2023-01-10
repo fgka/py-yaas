@@ -11,7 +11,7 @@ steps:
     id: TERRAFORM_APPLY
     entrypoint: "sh"
     args: ["-c", "terraform -chdir=terraform/cicd apply ${_TF_PLAN_FILE}"]
-  - name: "gcloud"
+  - name: "gcr.io/cloud-builders/gcloud"
     id: BUILD_PYTHON
     args: [ "builds", "triggers", "run", "${_PYTHON_BUILD_TRIGGER}",
             "--region", "${LOCATION}",

@@ -3,6 +3,8 @@
 ////////////////////
 
 locals {
+  cloud_build_sa_email  = "${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+  cloud_build_sa_member = "serviceAccount:${local.cloud_build_sa_email}"
   artifact_registry_repos = tomap({
     docker = google_artifact_registry_repository.docker_repo,
     python = google_artifact_registry_repository.python_repo,
@@ -63,6 +65,12 @@ resource "google_artifact_registry_repository_iam_binding" "bindings" {
   repository = each.value.name
   role       = "roles/artifactregistry.writer"
   members    = [module.build_service_account.iam_email]
+}
+
+resource "google_project_iam_binding" "cloud_build_roles" {
+  members = [local.cloud_build_sa_member]
+  project = var.project_id
+  role    = "roles/editor"
 }
 
 /////////////

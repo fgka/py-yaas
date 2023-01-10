@@ -191,5 +191,5 @@ variable "tf_build_plan_args" {
 variable "tf_build_ignored_files" {
   description = "Which files to be ignored in all builds, typically documentation"
   type        = list(string)
-  default     = ["**/*.md", "**/doc/**"]
+  default     = ["**/*.md", "**/doc/*"]
 }

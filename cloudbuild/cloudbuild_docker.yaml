@@ -12,7 +12,7 @@ steps:
            "--no-deps",
            "--dest", "${_DIST_DIR}",
            "--extra-index-url", "${_AR_PIP_REPO}/simple/",
-           "${_PIP_INSTALL_ARG}"]
+           "${_PIP_PKG_ARG}"]
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build",
@@ -21,7 +21,6 @@ steps:
            "--progress", "plain",
            "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
            "--build-arg", "DIST_DIR=${_DIST_DIR}",
-           "--build-arg", "PIP_INSTALL_ARG=./*.whl",
            "--tag", "${_IMAGE_NAME}",
            "--tag", "${_DOCKER_IMAGE_LATEST}",
            "--tag", "${_DOCKER_IMAGE_SHA}",
@@ -36,13 +35,13 @@ options:
     - "DIST_DIR=${_DIST_DIR}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
-  machineType: E2_HIGHCPU_32
+  machineType: UNSPECIFIED
   substitution_option: "ALLOW_LOOSE"
 
 substitutions:
   _DIST_DIR: "dist"
   _DOCKERFILE: ""
-  _PIP_INSTALL_ARG: ""
+  _PIP_PKG_ARG: ""
   _BASE_IMAGE: ""
   _IMAGE_NAME: ""
   _AR_DOCKER_REPO: ""

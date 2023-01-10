@@ -25,6 +25,7 @@ RUN apt-get update \
 
 ARG DIST_DIR="./dist"
 ENV DIST_DIR=${DIST_DIR}
+CMD echo "Dest dir ${DIST_DIR}"
 COPY ${DIST_DIR}/*.whl ./
 
 ARG PIP_INSTALL_ARG=./py_yaas_playground-1.0-py2.py3-none-any.whl

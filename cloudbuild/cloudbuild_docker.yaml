@@ -10,7 +10,7 @@ steps:
     entrypoint: "python3"
     args: ["-m", "pip", "download",
            "--no-deps",
-           "--dest", "${_DIST_DIR",
+           "--dest", "${_DIST_DIR}",
            "--extra-index-url", "${_AR_PIP_REPO}/simple/",
            "${_PIP_INSTALL_ARG}"]
   - name: "gcr.io/cloud-builders/docker"

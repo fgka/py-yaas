@@ -2,6 +2,22 @@
 // Global/General //
 ////////////////////
 
+locals {
+  tf_build_plan_args = tomap({
+    project_id                     = var.project_id,
+    region                         = var.region,
+    build_monitoring_email_address = var.build_monitoring_email_address,
+    github_owner                   = var.github_owner,
+    github_repo_name               = var.github_repo_name,
+    github_branch                  = var.github_branch,
+    yaas_pip_package               = var.yaas_pip_package,
+  })
+}
+
+///////////
+// CI/CD //
+///////////
+
 module "cicd_infra" {
   source                               = "./1_cicd_infra"
   project_id                           = var.project_id
@@ -39,5 +55,6 @@ module "cicd_build" {
   github_repo_name                     = var.github_repo_name
   github_branch                        = var.github_branch
   yaas_pip_package                     = var.yaas_pip_package
+  tf_build_plan_args                   = local.tf_build_plan_args
   depends_on                           = [module.cicd_infra]
 }

@@ -1,15 +1,15 @@
 steps:
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_INIT
-    entrypoint: "bash"
+    entrypoint: "sh"
     args: ["-c", "terraform -chdir=terraform/cicd init -upgrade"]
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_PLAN
-    entrypoint: "bash"
+    entrypoint: "sh"
     args: ["-c", "terraform -chdir=terraform/cicd plan -out=${_TF_PLAN_FILE}"]
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_APPLY
-    entrypoint: "bash"
+    entrypoint: "sh"
     args: ["-c", "terraform -chdir=terraform/cicd apply ${_TF_PLAN_FILE}"]
   - name: "gcloud"
     id: BUILD_PYTHON
@@ -27,6 +27,7 @@ options:
   substitution_option: "ALLOW_LOOSE"
 
 substitutions:
+  _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
   _PYTHON_BUILD_TRIGGER: ""
 

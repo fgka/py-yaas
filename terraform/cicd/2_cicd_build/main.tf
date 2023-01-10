@@ -2,6 +2,10 @@
 // Global/General //
 ////////////////////
 
+locals {
+  tf_plan_args_str = join(" ", [for key, val in var.tf_build_plan_args : "-var \"${key}=${val}\""])
+}
+
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -27,6 +31,7 @@ resource "google_cloudbuild_trigger" "tf" {
   substitutions = {
     _BUCKET_NAME          = var.build_bucket_name
     _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
+    _TF_PLAN_ARGS         = local.tf_plan_args_str
   }
   ignored_files = [
     "**"

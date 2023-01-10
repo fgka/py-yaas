@@ -149,3 +149,13 @@ variable "yaas_pip_package" {
   description = "Python package full name with version: \"$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)\""
   type        = string
 }
+
+///////////////
+// Terraform //
+///////////////
+
+variable "tf_build_plan_args" {
+  description = "CI/CD Terraform args"
+  type        = map(any)
+  default     = {}
+}

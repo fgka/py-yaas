@@ -33,9 +33,6 @@ resource "google_cloudbuild_trigger" "tf" {
     _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
     _TF_PLAN_ARGS         = local.tf_plan_args_str
   }
-  ignored_files = [
-    "**"
-  ]
   included_files = [
     "terraform/cicd/**",
     var.tf_build_template_filename,
@@ -60,9 +57,6 @@ resource "google_cloudbuild_trigger" "python" {
     _AR_PIP_REPO          = var.python_artifact_registry_url
     _DOCKER_BUILD_TRIGGER = google_cloudbuild_trigger.docker.name
   }
-  ignored_files = [
-    "**"
-  ]
   included_files = [
     "code/**",
     var.python_build_template_filename,
@@ -91,9 +85,6 @@ resource "google_cloudbuild_trigger" "docker" {
     _AR_DOCKER_REPO = var.docker_artifact_registry_url
     _AR_PIP_REPO    = var.python_artifact_registry_url
   }
-  ignored_files = [
-    "**"
-  ]
   included_files = [
     "docker/**",
     var.docker_build_template_filename,

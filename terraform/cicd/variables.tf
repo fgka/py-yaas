@@ -137,6 +137,12 @@ variable "tf_build_trigger_name" {
   default     = "yaas-tf-cicd"
 }
 
+variable "tf_build_template_filename" {
+  description = "Cloud Build template for CI/CD Terraform code."
+  type        = string
+  default     = "cloudbuild/cloudbuild_tf_cicd.yaml"
+}
+
 ////////////
 // Github //
 ////////////

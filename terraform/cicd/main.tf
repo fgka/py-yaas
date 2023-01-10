@@ -29,11 +29,12 @@ module "cicd_build" {
   docker_base_image                    = var.docker_base_image
   yaas_image_name                      = var.yaas_image_name
   yaas_dockerfile                      = var.yaas_dockerfile
+  tf_build_trigger_name                = var.tf_build_trigger_name
+  tf_build_template_filename           = var.tf_build_template_filename
   python_build_trigger_name            = var.python_build_trigger_name
   python_build_template_filename       = var.python_build_template_filename
   docker_build_trigger_name            = var.docker_build_trigger_name
   docker_build_template_filename       = var.docker_build_template_filename
-  tf_build_trigger_name                = var.tf_build_trigger_name
   github_owner                         = var.github_owner
   github_repo_name                     = var.github_repo_name
   github_branch                        = var.github_branch

@@ -17,6 +17,12 @@ variable "region" {
 // Service Accounts //
 //////////////////////
 
+variable "tf_build_service_account_name" {
+  description = "Service account to build terraform"
+  type        = string
+  default     = "yaas-tf-build-sa"
+}
+
 variable "build_service_account_name" {
   description = "Service account to build artefacts"
   type        = string
@@ -40,13 +46,13 @@ variable "build_bucket_name_prefix" {
 variable "docker_artifact_registry_name" {
   description = "Cloud Run YAAS docker image registry name."
   type        = string
-  default     = "yaas"
+  default     = "yaas-docker"
 }
 
 variable "python_artifact_registry_name" {
   description = "Python YAAS package registry name."
   type        = string
-  default     = "py-yaas"
+  default     = "yaas-py"
 }
 
 ////////////

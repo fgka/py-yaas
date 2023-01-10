@@ -27,7 +27,7 @@ steps:
            "--file", "${_DOCKERFILE}",
            "."]
 
-logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/"
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/docker"
 
 options:
   dynamic_substitutions: true

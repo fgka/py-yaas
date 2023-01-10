@@ -17,6 +17,11 @@ variable "region" {
 // Service Accounts //
 //////////////////////
 
+variable "tf_build_service_account_email" {
+  description = "Service account to build terraform"
+  type        = string
+}
+
 variable "build_service_account_email" {
   description = "Service account to build artefacts"
   type        = string
@@ -115,6 +120,12 @@ variable "tf_build_trigger_name" {
   default     = "yaas-tf-cicd"
 }
 
+variable "tf_build_template_filename" {
+  description = "Cloud Build template for CI/CD Terraform code."
+  type        = string
+  default     = "cloudbuild/cloudbuild_tf_cicd.yaml"
+}
+
 ////////////
 // Github //
 ////////////
@@ -142,4 +153,20 @@ variable "github_branch" {
 variable "yaas_pip_package" {
   description = "Python package full name with version: \"$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)\""
   type        = string
+}
+
+///////////////
+// Terraform //
+///////////////
+
+variable "tf_build_plan_args" {
+  description = "CI/CD Terraform args"
+  type        = map(any)
+  default     = {}
+}
+
+variable "tf_build_ignored_files" {
+  description = "Which files to be ignored in all builds, typically documentation"
+  type        = list(string)
+  default     = ["**/*.md", "**/doc/*"]
 }

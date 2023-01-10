@@ -3,13 +3,15 @@
 ////////////////////
 
 locals {
+  cloud_build_sa_email  = "${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+  cloud_build_sa_member = "serviceAccount:${local.cloud_build_sa_email}"
   artifact_registry_repos = tomap({
     docker = google_artifact_registry_repository.docker_repo,
     python = google_artifact_registry_repository.python_repo,
   })
   artifact_registry_urls = tomap({
-    for k, v in local.artifact_registry_repos:
-      k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
+    for k, v in local.artifact_registry_repos :
+    k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
   })
 }
 
@@ -20,6 +22,26 @@ data "google_project" "project" {
 //////////////////////
 // Service Accounts //
 //////////////////////
+
+module "tf_build_service_account" {
+  source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
+  project_id   = var.project_id
+  name         = var.tf_build_service_account_name
+  generate_key = false
+  iam_project_roles = {
+    "${data.google_project.project.id}" = [
+      "roles/artifactregistry.admin",
+      "roles/cloudbuild.builds.editor",
+      "roles/iam.serviceAccountAdmin",
+      "roles/iam.serviceAccountUser",
+      "roles/logging.logWriter",
+      "roles/monitoring.admin",
+      "roles/pubsub.admin",
+      "roles/resourcemanager.projectIamAdmin",
+      "roles/storage.admin",
+    ]
+  }
+}
 
 module "build_service_account" {
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
@@ -43,6 +65,12 @@ resource "google_artifact_registry_repository_iam_binding" "bindings" {
   repository = each.value.name
   role       = "roles/artifactregistry.writer"
   members    = [module.build_service_account.iam_email]
+}
+
+resource "google_project_iam_binding" "cloud_build_roles" {
+  members = [local.cloud_build_sa_member]
+  project = var.project_id
+  role    = "roles/editor"
 }
 
 /////////////

@@ -51,8 +51,13 @@ steps:
         --build-number ${BUILD_NUMBER} \
         --dist-dir ${DIST_DIR}
     dir: "${_CODE_DIR}"
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: BUILD_DOCKER
+    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}",
+           "--region", "${LOCATION}",
+           "--branch", "${BRANCH_NAME}"]
 
-logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/"
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/py_code"
 
 options:
   dynamic_substitutions: true
@@ -69,13 +74,13 @@ substitutions:
   _PYTHON_PYLINT_FILE: "${SHORT_SHA}_lint_log.json"
   _PYTHON_REPO_NAME: ""
   _AR_PIP_REPO: ""
+  _DOCKER_BUILD_TRIGGER: ""
 
 artifacts:
   objects:
-    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${BUILD_ID}"
+    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
     paths:
-      - "${_CODE_DIR}/${_DIST_DIR}/${_PYTHON_PYTEST_FILE}"
-      - "${_CODE_DIR}/${_DIST_DIR}/${_PYTHON_PYLINT_FILE}"
+      - "${_CODE_DIR}/${_DIST_DIR}/**"
   pythonPackages:
    - repository: "${_AR_PIP_REPO}"
      paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]

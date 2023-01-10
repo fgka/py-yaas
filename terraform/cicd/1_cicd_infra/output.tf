@@ -3,6 +3,10 @@
 // Service Accounts //
 //////////////////////
 
+output "tf_build_service_account" {
+  value = module.tf_build_service_account.service_account
+}
+
 output "build_service_account" {
   value = module.build_service_account.service_account
 }
@@ -24,7 +28,7 @@ output "docker_repo" {
 }
 
 output "docker_repo_url" {
-  value = "${lookup(local.artifact_registry_urls, "docker", null)}"
+  value = lookup(local.artifact_registry_urls, "docker", null)
 }
 
 output "python_repo" {

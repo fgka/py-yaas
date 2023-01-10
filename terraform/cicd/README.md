@@ -35,6 +35,7 @@ Please set them properly:
 export NOTIFICATION_EMAIL="${USER}@$(uname -n)"
 export GITHUB_OWNER="${USER}"
 export GITHUB_REPO="py-yaas-playground"
+export GIT_BRANCH="main"
 ```
 
 Check:
@@ -42,6 +43,8 @@ Check:
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
+echo "PIP: ${PIP_PACKAGE}"
+echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}/${GIT_BRANCH}"
 ```
 
 ## Enable APIs
@@ -53,6 +56,7 @@ gcloud services enable \
   cloudapis.googleapis.com \
   cloudbuild.googleapis.com \
   cloudfunctions.googleapis.com \
+  cloudresourcemanager.googleapis.com \
   iam.googleapis.com \
   iamcredentials.googleapis.com \
   logging.googleapis.com \
@@ -85,6 +89,7 @@ terraform plan \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "github_owner=${GITHUB_OWNER}" \
   -var "github_repo_name=${GITHUB_REPO}" \
+  -var "github_branch=${GIT_BRANCH}" \
   -var "yaas_pip_package=${PIP_PACKAGE}"
 ```
 

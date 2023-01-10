@@ -33,6 +33,6 @@ substitutions:
 
 artifacts:
   objects:
-    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${$TRIGGER_NAME}/${BUILD_ID}"
+    location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
     paths:
       - "${_TF_PLAN_FILE}"

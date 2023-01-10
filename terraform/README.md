@@ -25,7 +25,7 @@ Code dependant:
 
 ```bash
 pushd ../code
-export PY_PACKAGE=$(python ./setup.py --fullname)
+export PIP_PACKAGE="$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)"
 popd
 ```
 
@@ -85,7 +85,7 @@ terraform plan \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "github_owner=${GITHUB_OWNER}" \
   -var "github_repo_name=${GITHUB_REPO}" \
-  -var "yaas_py_package_name=${PY_PACKAGE}"
+  -var "yaas_pip_package=${PIP_PACKAGE}"
 ```
 
 ## Apply

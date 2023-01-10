@@ -31,7 +31,7 @@ ARG PIP_INDEX_URL=""
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 
 ARG PIP_INSTALL_ARG=./py_yaas_playground-1.0-py2.py3-none-any.whl
-RUN python3 -m pip install ${PIP_INSTALL_ARG}
+RUN python3 -m pip install "${PIP_INSTALL_ARG}"
 
 ENV FLASK_APP=yaas.entry_point.flask_gunicorn:APPLICATION
 

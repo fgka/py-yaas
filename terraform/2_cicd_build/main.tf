@@ -46,7 +46,7 @@ resource "google_cloudbuild_trigger" "docker" {
   substitutions = {
     _BUCKET_NAME     = var.build_bucket_name
     _DOCKERFILE      = var.yaas_dockerfile
-    _PIP_INSTALL_ARG = var.yaas_py_package_name
+    _PIP_INSTALL_ARG = var.yaas_pip_package
     _BASE_IMAGE      = var.docker_base_image
     _IMAGE_NAME      = var.yaas_image_name
     _AR_DOCKER_REPO  = var.docker_artifact_registry_url

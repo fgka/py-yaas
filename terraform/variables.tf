@@ -160,7 +160,7 @@ variable "github_branch" {
 // Code //
 //////////
 
-variable "yaas_py_package_name" {
+variable "yaas_pip_package" {
   description = "Python package full name with version: python ./setup.py --fullname"
   type        = string
 }

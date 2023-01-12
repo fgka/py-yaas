@@ -126,6 +126,11 @@ resource "google_cloud_run_service" "yaas" {
       "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
     }
   }
+  lifecycle {
+    ignore_changes = [
+      template.0.spec.0.containers.0.image,
+    ]
+  }
 }
 
 // service SA

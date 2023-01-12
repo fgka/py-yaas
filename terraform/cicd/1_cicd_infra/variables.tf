@@ -60,7 +60,7 @@ variable "python_artifact_registry_name" {
 ////////////
 
 variable "build_monitoring_topic_name" {
-  description = "Name of the PubSub topic to send BigQuery transfer runs' notifications to."
+  description = "Name of the PubSub topic to send monitoring alerts."
   type        = string
   default     = "yass-build-notification"
 }

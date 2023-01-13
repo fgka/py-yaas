@@ -8,27 +8,19 @@ steps:
   - name: "python"
     id: PY_PIP_DOWNLOAD
     entrypoint: "python3"
-    args: ["-m", "pip", "download",
-           "--no-deps",
-           "--dest", "${_DIST_DIR}",
-           "--extra-index-url", "${_AR_PIP_REPO}/simple/",
-           "${_PIP_PKG_ARG}"]
+    args: ["-m", "pip", "download", "--no-deps", "--dest", "${_DIST_DIR}", "--extra-index-url",
+      "${_AR_PIP_REPO}/simple/", "${_PIP_PKG_ARG}"]
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
-    args: ["build",
-           "--pull",
-           "--no-cache",
-           "--progress", "plain",
-           "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
-           "--build-arg", "DIST_DIR=${_DIST_DIR}",
-           "--tag", "${_IMAGE_NAME}",
-           "--tag", "${_DOCKER_IMAGE_LATEST}",
-           "--tag", "${_DOCKER_IMAGE_SHA}",
-           "--file", "${_DOCKERFILE}",
-           "."]
-
-logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/docker"
-
+    args: ["build", "--pull", "--no-cache", "--progress", "plain", "--build-arg",
+      "BASE_IMAGE=${_BASE_IMAGE}", "--build-arg", "DIST_DIR=${_DIST_DIR}", "--tag",
+      "${_IMAGE_NAME}", "--tag", "${_DOCKER_IMAGE_LATEST}", "--tag", "${_DOCKER_IMAGE_SHA}",
+      "--file", "${_DOCKERFILE}", "."]
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: BUILD_IMAGE_DEPLOY
+    args: ["builds", "triggers", "run", "${_IMAGE_DEPLOY_TRIGGER}", "--substitutions", "_SERVICE_NAME=${_SERVICE_NAME}", "--substitutions", "_IMAGE_URL=${_DOCKER_IMAGE_SHA}",
+      "--region", "${LOCATION}", "--branch", "${BRANCH_NAME}"]
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
   env:
@@ -37,7 +29,6 @@ options:
   logStreamingOption: STREAM_DEFAULT
   machineType: UNSPECIFIED
   substitution_option: "ALLOW_LOOSE"
-
 substitutions:
   _DIST_DIR: "dist"
   _DOCKERFILE: ""
@@ -49,7 +40,8 @@ substitutions:
   _PIP_EXTRA_INDEX_URL: "${_AR_PIP_REPO}/simple/"
   _DOCKER_IMAGE_LATEST: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:latest"
   _DOCKER_IMAGE_SHA: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
-
+  _IMAGE_DEPLOY_TRIGGER: ""
+  _SERVICE_NAME: ""
 images:
   - "${_DOCKER_IMAGE_LATEST}"
   - "${_DOCKER_IMAGE_SHA}"

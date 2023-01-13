@@ -86,6 +86,22 @@ variable "yaas_dockerfile" {
   default     = "./docker/Dockerfile"
 }
 
+variable "image_name_uri" {
+  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+///////////////
+// Cloud Run //
+///////////////
+
+variable "run_name" {
+  description = "YAAS Cloud Run name."
+  type        = string
+  default     = "yaas-run"
+}
+
 /////////////////
 // Cloud Build //
 /////////////////
@@ -115,7 +131,7 @@ variable "docker_build_template_filename" {
 }
 
 variable "tf_build_trigger_name" {
-  description = "Cloud Build trigger for Terraform code."
+  description = "Cloud Build trigger for CI/CD Terraform code."
   type        = string
   default     = "yaas-tf-cicd"
 }
@@ -124,6 +140,30 @@ variable "tf_build_template_filename" {
   description = "Cloud Build template for CI/CD Terraform code."
   type        = string
   default     = "cloudbuild/cloudbuild_tf_cicd.yaml"
+}
+
+variable "tf_yaas_trigger_name" {
+  description = "Cloud Build trigger for YAAS infrastructure Terraform code."
+  type        = string
+  default     = "yaas-tf-infra"
+}
+
+variable "tf_yaas_template_filename" {
+  description = "Cloud Build template for YAAS infrastructure Terraform code."
+  type        = string
+  default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
+}
+
+variable "image_yaas_trigger_name" {
+  description = "Cloud Build trigger for YAAS docker image deployment."
+  type        = string
+  default     = "yaas-image-deploy"
+}
+
+variable "image_yaas_template_filename" {
+  description = "Cloud Build template for YAAS docker image deployment."
+  type        = string
+  default     = "cloudbuild/cloudbuild_image_yaas.yaml"
 }
 
 ////////////
@@ -159,8 +199,14 @@ variable "yaas_pip_package" {
 // Terraform //
 ///////////////
 
-variable "tf_build_plan_args" {
+variable "tf_cicd_plan_args" {
   description = "CI/CD Terraform args"
+  type        = map(any)
+  default     = {}
+}
+
+variable "tf_yaas_plan_args" {
+  description = "YAAS infrastructure Terraform args"
   type        = map(any)
   default     = {}
 }

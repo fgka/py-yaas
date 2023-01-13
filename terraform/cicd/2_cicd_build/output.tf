@@ -12,5 +12,5 @@ output "docker_build_trigger" {
 }
 
 output "tf_build_trigger" {
-  value = google_cloudbuild_trigger.tf
+  value = google_cloudbuild_trigger.tf_build
 }

@@ -38,6 +38,7 @@ module "tf_build_service_account" {
       "roles/monitoring.admin",
       "roles/pubsub.admin",
       "roles/resourcemanager.projectIamAdmin",
+      "roles/run.admin",
       "roles/secretmanager.admin",
       "roles/storage.admin",
     ]

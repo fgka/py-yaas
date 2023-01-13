@@ -34,8 +34,9 @@ Please set them properly:
 ```bash
 export NOTIFICATION_EMAIL="${USER}@$(uname -n)"
 export GITHUB_OWNER="${USER}"
-export GITHUB_REPO="py-yaas-playground"
-export GIT_BRANCH="main"
+
+export GITHUB_REPO=$(basename `git rev-parse --show-toplevel`)
+export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 ```
 
 Check:
@@ -44,7 +45,7 @@ Check:
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
 echo "PIP: ${PIP_PACKAGE}"
-echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}/${GIT_BRANCH}"
+echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 ```
 
 ## Enable APIs
@@ -84,6 +85,7 @@ terraform plan \
   -var "project_id=${PROJECT_ID}" \
   -var "region=${REGION}" \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
+  -var "monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "github_owner=${GITHUB_OWNER}" \
   -var "github_repo_name=${GITHUB_REPO}" \
   -var "github_branch=${GIT_BRANCH}" \
@@ -94,4 +96,47 @@ terraform plan \
 
 ```bash
 terraform apply ${TMP} && rm -f ${TMP}
+```
+
+## Trigger Build
+
+Get trigger name:
+
+```bash
+OUT_JSON=$(mktemp)
+terraform output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+CICD_TF_TRIGGER_NAME=$(jq -c -r ".cicd_build.value.tf_build_trigger.name" ${OUT_JSON})
+echo "CI/CD Terraform trigger name: <${CICD_TF_TRIGGER_NAME}>"
+
+rm -f ${OUT_JSON}
+```
+
+Trigger build:
+
+```bash
+TMP=$(mktemp)
+gcloud builds triggers run ${CICD_TF_TRIGGER_NAME} \
+  --branch=${GIT_BRANCH} \
+  --region=${REGION} \
+  --format=json \
+  > ${TMP}
+
+BUILD_ID=$(jq -r -c ".metadata.build.id" ${TMP})
+echo "Build ID: <${BUILD_ID}>"
+
+rm -f ${TMP}
+```
+
+Stream logs:
+
+```bash
+gcloud builds log ${BUILD_ID} --region=${REGION} --stream
+```
+
+Status:
+
+```bash
+gcloud builds describe ${BUILD_ID} --region=${REGION}
 ```

@@ -7,15 +7,16 @@ locals {
     project_id = var.project_id,
     region     = var.region,
   })
-  tf_cicd_plan_args = merge(common_tf_plan_args, tomap({
+  tf_cicd_plan_args = merge(local.common_tf_plan_args, tomap({
     build_monitoring_email_address = var.build_monitoring_email_address,
+    monitoring_email_address       = var.monitoring_email_address,
     github_owner                   = var.github_owner,
     github_repo_name               = var.github_repo_name,
     github_branch                  = var.github_branch,
     yaas_pip_package               = var.yaas_pip_package,
     }),
   var.tf_cicd_plan_args)
-  tf_infra_plan_args = merge(common_tf_plan_args, tomap({
+  tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({
     run_name                 = var.run_name
     monitoring_email_address = var.monitoring_email_address,
     }),

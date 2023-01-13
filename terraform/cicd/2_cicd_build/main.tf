@@ -36,8 +36,9 @@ resource "google_cloudbuild_trigger" "tf_build" {
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME          = var.build_bucket_name
-    _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
     _TF_PLAN_ARGS         = local.tf_cicd_plan_args_str
+    _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
+    _INFRA_BUILD_TRIGGER  = google_cloudbuild_trigger.tf_yaas.name
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

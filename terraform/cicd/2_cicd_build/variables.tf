@@ -118,16 +118,16 @@ variable "python_build_template_filename" {
   default     = "cloudbuild/cloudbuild_py.yaml"
 }
 
-variable "docker_build_trigger_name" {
+variable "app_build_trigger_name" {
   description = "Cloud Build trigger for Docker image."
   type        = string
-  default     = "yaas-docker"
+  default     = "yaas-application"
 }
 
-variable "docker_build_template_filename" {
+variable "image_build_template_filename" {
   description = "Cloud Build template for Python code."
   type        = string
-  default     = "cloudbuild/cloudbuild_docker.yaml"
+  default     = "cloudbuild/cloudbuild_image.yaml"
 }
 
 variable "tf_build_trigger_name" {
@@ -152,18 +152,6 @@ variable "tf_yaas_template_filename" {
   description = "Cloud Build template for YAAS infrastructure Terraform code."
   type        = string
   default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
-}
-
-variable "image_yaas_trigger_name" {
-  description = "Cloud Build trigger for YAAS docker image deployment."
-  type        = string
-  default     = "yaas-image-deploy"
-}
-
-variable "image_yaas_template_filename" {
-  description = "Cloud Build template for YAAS docker image deployment."
-  type        = string
-  default     = "cloudbuild/cloudbuild_image_yaas.yaml"
 }
 
 ////////////

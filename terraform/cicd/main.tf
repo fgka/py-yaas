@@ -74,10 +74,8 @@ module "cicd_build" {
   tf_yaas_template_filename      = var.tf_yaas_template_filename
   python_build_trigger_name      = var.python_build_trigger_name
   python_build_template_filename = var.python_build_template_filename
-  docker_build_trigger_name      = var.docker_build_trigger_name
-  docker_build_template_filename = var.docker_build_template_filename
-  image_yaas_trigger_name        = var.image_yaas_trigger_name
-  image_yaas_template_filename   = var.image_yaas_template_filename
+  app_build_trigger_name         = var.app_build_trigger_name
+  image_build_template_filename  = var.image_build_template_filename
   // github
   github_owner     = var.github_owner
   github_repo_name = var.github_repo_name

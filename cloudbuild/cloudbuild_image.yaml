@@ -14,12 +14,11 @@ steps:
     id: DOCKER_BUILD
     args: ["build", "--pull", "--no-cache", "--progress", "plain", "--build-arg",
       "BASE_IMAGE=${_BASE_IMAGE}", "--build-arg", "DIST_DIR=${_DIST_DIR}", "--tag",
-      "${_IMAGE_NAME}", "--tag", "${_DOCKER_IMAGE_LATEST}", "--tag", "${_DOCKER_IMAGE_SHA}",
+      "${_IMAGE_NAME}", "--tag", "${_REMOTE_IMAGE_LATEST}", "--tag", "${_REMOTE_IMAGE_SHA}",
       "--file", "${_DOCKERFILE}", "."]
   - name: "gcr.io/cloud-builders/gcloud"
-    id: BUILD_IMAGE_DEPLOY
-    args: ["builds", "triggers", "run", "${_IMAGE_DEPLOY_TRIGGER}", "--substitutions", "_SERVICE_NAME=${_SERVICE_NAME}", "--substitutions", "_IMAGE_URL=${_DOCKER_IMAGE_SHA}",
-      "--region", "${LOCATION}", "--branch", "${BRANCH_NAME}"]
+    id: IMAGE_DEPLOY
+    args: ["run", "deploy", "${_SERVICE_NAME}", "${_REMOTE_IMAGE_SHA}", "--region", "${LOCATION}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
@@ -38,10 +37,9 @@ substitutions:
   _AR_DOCKER_REPO: ""
   _AR_PIP_REPO: ""
   _PIP_EXTRA_INDEX_URL: "${_AR_PIP_REPO}/simple/"
-  _DOCKER_IMAGE_LATEST: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:latest"
-  _DOCKER_IMAGE_SHA: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
-  _IMAGE_DEPLOY_TRIGGER: ""
+  _REMOTE_IMAGE_LATEST: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:latest"
+  _REMOTE_IMAGE_SHA: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
   _SERVICE_NAME: ""
 images:
-  - "${_DOCKER_IMAGE_LATEST}"
-  - "${_DOCKER_IMAGE_SHA}"
+  - "${_REMOTE_IMAGE_LATEST}"
+  - "${_REMOTE_IMAGE_SHA}"

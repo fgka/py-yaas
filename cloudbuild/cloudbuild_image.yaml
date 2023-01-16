@@ -18,7 +18,7 @@ steps:
       "--file", "${_DOCKERFILE}", "."]
   - name: "gcr.io/cloud-builders/gcloud"
     id: IMAGE_DEPLOY
-    args: ["run", "deploy", "${_SERVICE_NAME}", "${_REMOTE_IMAGE_SHA}", "--region", "${LOCATION}"]
+    args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}", "--region", "${LOCATION}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true

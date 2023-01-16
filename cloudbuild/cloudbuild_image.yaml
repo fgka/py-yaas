@@ -16,9 +16,16 @@ steps:
       "BASE_IMAGE=${_BASE_IMAGE}", "--build-arg", "DIST_DIR=${_DIST_DIR}", "--tag",
       "${_IMAGE_NAME}", "--tag", "${_REMOTE_IMAGE_LATEST}", "--tag", "${_REMOTE_IMAGE_SHA}",
       "--file", "${_DOCKERFILE}", "."]
+  - name: "gcr.io/cloud-builders/docker"
+    id: DOCKER_PUSH_SHA
+    args: ["push", "${_REMOTE_IMAGE_SHA}"]
+  - name: "gcr.io/cloud-builders/docker"
+    id: DOCKER_PUSH_LATEST
+    args: ["push", "${_REMOTE_IMAGE_LATEST}"]
   - name: "gcr.io/cloud-builders/gcloud"
     id: IMAGE_DEPLOY
-    args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}", "--region", "${LOCATION}"]
+    args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",
+      "--region", "${LOCATION}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true

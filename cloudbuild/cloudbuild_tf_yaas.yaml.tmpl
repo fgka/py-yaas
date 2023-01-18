@@ -1,0 +1,37 @@
+steps:
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_INIT
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} init -upgrade"]
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_PLAN
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: WAIT_FOR_RUN_READY
+    script: |
+${TF_TEMPLATE_SCRIPT_CONTENT}
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_APPLY
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} apply ${_TF_PLAN_FILE}"]
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
+options:
+  dynamic_substitutions: true
+  env:
+    - "REGION=${LOCATION}"
+    - "PROJECT=${PROJECT_ID}"
+    - "SERVICE_NAME=${_SERVICE_NAME}"
+    - "MAX_RETRIES=${_MAX_RETRIES}"
+    - "RETRY_SLEEP_IN_SECS=${_RETRY_SLEEP_IN_SECS}"
+  logging: LEGACY
+  logStreamingOption: STREAM_DEFAULT
+  machineType: UNSPECIFIED
+  substitution_option: "ALLOW_LOOSE"
+substitutions:
+  _TF_DIR: "terraform/yaas"
+  _TF_PLAN_ARGS: ""
+  _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
+  _SERVICE_NAME: ""
+  _MAX_RETRIES: "10"
+  _RETRY_SLEEP_IN_SECS: "10"

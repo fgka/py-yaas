@@ -11,6 +11,34 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
+///////////////////////////
+// Cloud Build templates //
+///////////////////////////
+
+data "template_file" "tf_yaas_template_filename" {
+  template = "${file(var.tf_yaas_template_filename_tmpl)}"
+  vars = {
+    TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
+  }
+}
+
+resource "local_file" "tf_yaas_template_filename" {
+  content  = data.template_file.tf_yaas_template_filename
+  filename = "${path.module}/tf_yaas_template_filename.yaml"
+}
+
+data "template_file" "image_build_template_filename" {
+  template = "${file(var.image_build_template_filename_tmpl)}"
+  vars = {
+    TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
+  }
+}
+
+resource "local_file" "image_build_template_filename" {
+  content  = data.template_file.tf_yaas_template_filename
+  filename = "${path.module}/image_build_template_filename.yaml"
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////
@@ -59,7 +87,7 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   location           = var.region
   name               = var.tf_yaas_trigger_name
   service_account    = data.google_service_account.tf_build_service_account.id
-  filename           = var.tf_yaas_template_filename
+  filename           = local_file.tf_yaas_template_filename.filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME  = var.build_bucket_name
@@ -69,7 +97,8 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   ignored_files = var.tf_build_ignored_files
   included_files = [
     "terraform/yaas/**",
-    var.tf_yaas_template_filename,
+    var.wait_for_run_ready_script_filename,
+    var.tf_yaas_template_filename_tmpl,
   ]
   github {
     owner = var.github_owner
@@ -111,7 +140,7 @@ resource "google_cloudbuild_trigger" "application" {
   location           = var.region
   name               = var.app_build_trigger_name
   service_account    = data.google_service_account.build_service_account.id
-  filename           = var.image_build_template_filename
+  filename           = local_file.image_build_template_filename.filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME    = var.build_bucket_name
@@ -126,7 +155,8 @@ resource "google_cloudbuild_trigger" "application" {
   ignored_files = var.tf_build_ignored_files
   included_files = [
     "docker/**",
-    var.image_build_template_filename,
+    var.wait_for_run_ready_script_filename,
+    var.image_build_template_filename_tmpl,
   ]
   github {
     owner = var.github_owner

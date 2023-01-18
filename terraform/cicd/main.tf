@@ -71,11 +71,12 @@ module "cicd_build" {
   tf_build_trigger_name          = var.tf_build_trigger_name
   tf_build_template_filename     = var.tf_build_template_filename
   tf_yaas_trigger_name           = var.tf_yaas_trigger_name
-  tf_yaas_template_filename      = var.tf_yaas_template_filename
+  tf_yaas_template_filename_tmpl      = var.tf_yaas_template_filename_tmpl
   python_build_trigger_name      = var.python_build_trigger_name
   python_build_template_filename = var.python_build_template_filename
   app_build_trigger_name         = var.app_build_trigger_name
-  image_build_template_filename  = var.image_build_template_filename
+  image_build_template_filename_tmpl  = var.image_build_template_filename_tmpl
+  wait_for_run_ready_script_filename = var.wait_for_run_ready_script_filename
   // github
   github_owner     = var.github_owner
   github_repo_name = var.github_repo_name

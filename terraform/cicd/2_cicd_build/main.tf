@@ -3,8 +3,14 @@
 ////////////////////
 
 locals {
-  tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
-  tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
+  tf_cicd_plan_args_str                  = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
+  tf_yaas_plan_args_str                  = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
+  tf_yaas_template_filename_tmpl         = "${path.module}/${var.tf_yaas_template_filename_tmpl}"
+  image_build_template_filename_tmpl     = "${path.module}/${var.image_build_template_filename_tmpl}"
+  wait_for_run_ready_script_filename     = "${path.module}/${var.wait_for_run_ready_script_filename}"
+  wait_for_run_ready_script_filename_tmp = "${path.module}/${var.wait_for_run_ready_script_filename}.tmp"
+  tf_yaas_template_filename              = "${path.module}/tf_yaas_template_filename.yaml"
+  image_build_template_filename          = "${path.module}/image_build_template_filename.yaml"
 }
 
 data "google_project" "project" {
@@ -15,28 +21,66 @@ data "google_project" "project" {
 // Cloud Build templates //
 ///////////////////////////
 
-data "template_file" "tf_yaas_template_filename" {
-  template = "${file("${path.module}/${var.tf_yaas_template_filename_tmpl}")}"
-  vars = {
-    TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
+resource "null_resource" "wait_for_run_ready_script_filename" {
+  triggers = {
+    script      = filesha256(local.wait_for_run_ready_script_filename)
+    output_file = local.wait_for_run_ready_script_filename_tmp
+  }
+  provisioner "local-exec" {
+    command = <<EOF
+cat ${local.wait_for_run_ready_script_filename} | sed -e 's/^/      /g' > ${local.wait_for_run_ready_script_filename_tmp}
+EOF
   }
 }
 
-resource "local_file" "tf_yaas_template_filename" {
-  content  = data.template_file.tf_yaas_template_filename.rendered
-  filename = "${path.module}/tf_yaas_template_filename.yaml"
+data "local_file" "wait_for_run_ready_script_filename_tmp" {
+  filename = null_resource.wait_for_run_ready_script_filename.triggers.output_file
 }
 
-data "template_file" "image_build_template_filename" {
-  template = "${file("${path.module}/${var.image_build_template_filename_tmpl}")}"
-  vars = {
-    TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
+resource "local_file" "tf_yaas_template_filename" {
+  content  = templatefile("${local.tf_yaas_template_filename_tmpl}", { TF_TEMPLATE_SCRIPT_CONTENT = "${file("${data.local_file.wait_for_run_ready_script_filename_tmp.filename}")}" })
+  filename = "${local.tf_yaas_template_filename}.tmp"
+  depends_on = [
+    null_resource.wait_for_run_ready_script_filename,
+  ]
+}
+
+resource "null_resource" "tf_yaas_template_filename" {
+  triggers = {
+    script   = filesha256(local.wait_for_run_ready_script_filename)
+    template = filesha256(local.tf_yaas_template_filename_tmpl)
+  }
+  depends_on = [
+    local_file.tf_yaas_template_filename,
+  ]
+  provisioner "local-exec" {
+    command = <<EOF
+cat ${local.tf_yaas_template_filename}.tmp | sed -e 's/@@/$/g' > ${local.tf_yaas_template_filename}
+EOF
   }
 }
 
 resource "local_file" "image_build_template_filename" {
-  content  = data.template_file.tf_yaas_template_filename.rendered
-  filename = "${path.module}/image_build_template_filename.yaml"
+  content  = templatefile("${local.image_build_template_filename_tmpl}", { TF_TEMPLATE_SCRIPT_CONTENT = "${file("${data.local_file.wait_for_run_ready_script_filename_tmp.filename}")}" })
+  filename = "${local.image_build_template_filename}.tmp"
+  depends_on = [
+    null_resource.wait_for_run_ready_script_filename,
+  ]
+}
+
+resource "null_resource" "image_build_template_filename" {
+  triggers = {
+    script   = filesha256(local.wait_for_run_ready_script_filename)
+    template = filesha256(local.image_build_template_filename_tmpl)
+  }
+  depends_on = [
+    local_file.image_build_template_filename,
+  ]
+  provisioner "local-exec" {
+    command = <<EOF
+cat ${local.image_build_template_filename}.tmp | sed -e 's/@@/$/g' > ${local.image_build_template_filename}
+EOF
+  }
 }
 
 //////////////////////
@@ -87,7 +131,7 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   location           = var.region
   name               = var.tf_yaas_trigger_name
   service_account    = data.google_service_account.tf_build_service_account.id
-  filename           = local_file.tf_yaas_template_filename.filename
+  filename           = local.tf_yaas_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME  = var.build_bucket_name
@@ -107,6 +151,9 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
       branch = "^${var.github_branch}$"
     }
   }
+  depends_on = [
+    null_resource.tf_yaas_template_filename
+  ]
 }
 
 // builds python wheel
@@ -140,7 +187,7 @@ resource "google_cloudbuild_trigger" "application" {
   location           = var.region
   name               = var.app_build_trigger_name
   service_account    = data.google_service_account.build_service_account.id
-  filename           = local_file.image_build_template_filename.filename
+  filename           = local.image_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME    = var.build_bucket_name
@@ -165,4 +212,7 @@ resource "google_cloudbuild_trigger" "application" {
       branch = "^${var.github_branch}$"
     }
   }
+  depends_on = [
+    null_resource.image_build_template_filename
+  ]
 }

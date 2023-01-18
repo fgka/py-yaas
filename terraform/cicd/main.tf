@@ -68,10 +68,10 @@ module "cicd_build" {
   // cloud run
   run_name = var.run_name
   // build triggers
-  tf_build_trigger_name          = var.tf_build_trigger_name
-  tf_yaas_trigger_name           = var.tf_yaas_trigger_name
-  python_build_trigger_name      = var.python_build_trigger_name
-  app_build_trigger_name         = var.app_build_trigger_name
+  tf_build_trigger_name     = var.tf_build_trigger_name
+  tf_yaas_trigger_name      = var.tf_yaas_trigger_name
+  python_build_trigger_name = var.python_build_trigger_name
+  app_build_trigger_name    = var.app_build_trigger_name
   // github
   github_owner     = var.github_owner
   github_repo_name = var.github_repo_name

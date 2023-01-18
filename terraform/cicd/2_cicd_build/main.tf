@@ -60,7 +60,7 @@ resource "google_cloudbuild_trigger" "tf_build" {
   location           = var.region
   name               = var.tf_build_trigger_name
   service_account    = data.google_service_account.tf_build_service_account.id
-  filename           = var.tf_build_template_filename
+  filename           = "${path.module}/${var.tf_build_template_filename}"
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME          = var.build_bucket_name
@@ -114,7 +114,7 @@ resource "google_cloudbuild_trigger" "python" {
   location           = var.region
   name               = var.python_build_trigger_name
   service_account    = data.google_service_account.build_service_account.id
-  filename           = var.python_build_template_filename
+  filename           = "${path.module}/${var.python_build_template_filename}"
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
     _BUCKET_NAME          = var.build_bucket_name

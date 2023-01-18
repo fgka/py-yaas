@@ -25,7 +25,7 @@ steps:
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
     script: |
-      #!/usr/bin/env sh
+      #!/usr/bin/env bash
       VALID_LATEST_STATUS="True"
       VALID_LATEST_TYPE="Ready"
       SEPARATOR="@"
@@ -121,7 +121,7 @@ options:
     - "PROJECT=${PROJECT_ID}"
     - "SERVICE_NAME=${_SERVICE_NAME}"
     - "MAX_RETRIES=${_MAX_RETRIES}"
-    - "RETRY_SLEEP_IN_SECS=${_RETRY_SLEEP_IN_SECS}"  
+    - "RETRY_SLEEP_IN_SECS=${_RETRY_SLEEP_IN_SECS}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: UNSPECIFIED

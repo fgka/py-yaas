@@ -10,7 +10,7 @@ steps:
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
     script: |
-      #!/usr/bin/env sh
+      #!/usr/bin/env bash
       VALID_LATEST_STATUS="True"
       VALID_LATEST_TYPE="Ready"
       SEPARATOR="@"

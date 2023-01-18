@@ -9,7 +9,6 @@ steps:
     args: ["-c", "terraform -chdir=${_TF_DIR} plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
-    entrypoint: "sh"
     script: |
       #!/usr/bin/env sh
       VALID_LATEST_STATUS="True"

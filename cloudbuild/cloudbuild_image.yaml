@@ -24,7 +24,6 @@ steps:
     args: ["push", "${_REMOTE_IMAGE_LATEST}"]
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
-    entrypoint: "sh"
     script: |
       #!/usr/bin/env sh
       VALID_LATEST_STATUS="True"

@@ -25,30 +25,90 @@ steps:
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
     entrypoint: "sh"
-    script: "#!/usr/bin/env sh\nVALID_LATEST_STATUS=\"True\"\nVALID_LATEST_TYPE=\"Ready\"\nSEPARATOR=\"@\"\nVALID_TYPE_STATUS=\"${VALID_LATEST_TYPE}${SEPARATOR}${VALID_LATEST_STATUS}\"\n\nREGION=${REGION:-europe-west3}\nMAX_RETRIES=${MAX_RETRIES:-5}\nRETRY_SLEEP_IN_SECS=${RETRY_SLEEP_IN_SECS:-10}\n\nPATH_LATEST_STATUS=\"status.conditions[0].status\"\nPATH_LATEST_TYPE=\"status.conditions[0].type\"\n\nSERVICE_LOG_STR=\"${SERVICE_NAME}@${REGION}
-      in ${PROJECT}\"\n\nfunction latest_status_condition\n{\n  local STATUS_PATH=${1}\n\n
-      \ gcloud run services describe ${SERVICE_NAME} \\\n    --region=${REGION} \\\n
-      \   --project=${PROJECT} \\\n    --format=\"value(${STATUS_PATH})\"\n}\n\nfunction
-      latest_type_status\n{\n  local LATEST_STATUS=$(latest_status_condition ${PATH_LATEST_STATUS})\n
-      \ local LATEST_TYPE=$(latest_status_condition ${PATH_LATEST_TYPE})\n\n  echo
-      \"${LATEST_TYPE}${SEPARATOR}${LATEST_STATUS}\"\n}\n\nfunction is_ready\n{\n
-      \ local LATEST_TYPE_STATUS=$(latest_type_status)\n  \n  local RESULT=1\n  if
-      [ \"${LATEST_TYPE_STATUS}\" == \"${VALID_TYPE_STATUS}\" ]\n  then\n    RESULT=0\n
-      \ fi\n  return ${RESULT}\n}\n\nfunction wait_for_ready\n{\n  local IS_READY=1\n
-      \ local RESULT=1\n\n  local LATEST_TYPE_STATUS=\"\"\n\n  for SEC in $(seq 1
-      ${MAX_RETRIES})\n  do\n    is_ready\n    IS_READY=${?}\n    if [ ${IS_READY}
-      -eq 0 ]\n    then\n      RESULT=0\n      break\n    fi\n    LATEST_TYPE_STATUS=$(latest_type_status)\n
-      \   echo \"Service ${SERVICE_LOG_STR} is **NOT** ready. Got: <${LATEST_TYPE_STATUS}>.
-      Expected: <${VALID_TYPE_STATUS}>\"\n    echo \"Retry ${SEC} of ${MAX_RETRIES},
-      waiting ${RETRY_SLEEP_IN_SECS} seconds.\"\n    sleep ${RETRY_SLEEP_IN_SECS}\n
-      \ done\n  \n  LATEST_TYPE_STATUS=$(latest_type_status)\n  if [ ${RESULT} -eq
-      0 ]\n  then\n    echo \"[OK] Service ${SERVICE_LOG_STR} is ready. Got: <${LATEST_TYPE_STATUS}>.
-      Expected: <${VALID_TYPE_STATUS}>\"\n  else\n    echo \"[ERROR] Service ${SERVICE_LOG_STR}
-      is not ready. Got: <${LATEST_TYPE_STATUS}>. Expected: <${VALID_TYPE_STATUS}>\"\n
-      \ fi\n\n  return ${RESULT}\n}\n\necho \"Waiting for service ${SERVICE_LOG_STR}
-      to be ready <${VALID_TYPE_STATUS}>\"\necho \"Max retries is ${MAX_RETRY} with
-      sleep time of ${RETRY_SLEEP_IN_SECS} seconds in between.\"\n\nwait_for_ready\nexit
-      ${?}\n"
+    script: |
+      #!/usr/bin/env sh
+      VALID_LATEST_STATUS="True"
+      VALID_LATEST_TYPE="Ready"
+      SEPARATOR="@"
+      VALID_TYPE_STATUS="${VALID_LATEST_TYPE}${SEPARATOR}${VALID_LATEST_STATUS}"
+      
+      REGION=${REGION:-europe-west3}
+      MAX_RETRIES=${MAX_RETRIES:-5}
+      RETRY_SLEEP_IN_SECS=${RETRY_SLEEP_IN_SECS:-10}
+      
+      PATH_LATEST_STATUS="status.conditions[0].status"
+      PATH_LATEST_TYPE="status.conditions[0].type"
+      
+      SERVICE_LOG_STR="${SERVICE_NAME}@${REGION} in ${PROJECT}"
+      
+      function latest_status_condition
+      {
+        local STATUS_PATH=${1}
+      
+        gcloud run services describe ${SERVICE_NAME} \
+          --region=${REGION} \
+          --project=${PROJECT} \
+          --format="value(${STATUS_PATH})"
+      }
+      
+      function latest_type_status
+      {
+        local LATEST_STATUS=$(latest_status_condition ${PATH_LATEST_STATUS})
+        local LATEST_TYPE=$(latest_status_condition ${PATH_LATEST_TYPE})
+      
+        echo "${LATEST_TYPE}${SEPARATOR}${LATEST_STATUS}"
+      }
+      
+      function is_ready
+      {
+        local LATEST_TYPE_STATUS=$(latest_type_status)
+        
+        local RESULT=1
+        if [ "${LATEST_TYPE_STATUS}" == "${VALID_TYPE_STATUS}" ]
+        then
+          RESULT=0
+        fi
+        return ${RESULT}
+      }
+      
+      function wait_for_ready
+      {
+        local IS_READY=1
+        local RESULT=1
+
+        local LATEST_TYPE_STATUS=""
+      
+        for SEC in $(seq 1 ${MAX_RETRIES})
+        do
+          is_ready
+          IS_READY=${?}
+          if [ ${IS_READY} -eq 0 ]
+          then
+            RESULT=0
+            break
+          fi
+          LATEST_TYPE_STATUS=$(latest_type_status)
+          echo "Service ${SERVICE_LOG_STR} is **NOT** ready. Got: <${LATEST_TYPE_STATUS}>. Expected: <${VALID_TYPE_STATUS}>"
+          echo "Retry ${SEC} of ${MAX_RETRIES}, waiting ${RETRY_SLEEP_IN_SECS} seconds."
+          sleep ${RETRY_SLEEP_IN_SECS}
+        done
+        
+        LATEST_TYPE_STATUS=$(latest_type_status)
+        if [ ${RESULT} -eq 0 ]
+        then
+          echo "[OK] Service ${SERVICE_LOG_STR} is ready. Got: <${LATEST_TYPE_STATUS}>. Expected: <${VALID_TYPE_STATUS}>"
+        else
+          echo "[ERROR] Service ${SERVICE_LOG_STR} is not ready. Got: <${LATEST_TYPE_STATUS}>. Expected: <${VALID_TYPE_STATUS}>"
+        fi
+      
+        return ${RESULT}
+      }
+      
+      echo "Waiting for service ${SERVICE_LOG_STR} to be ready <${VALID_TYPE_STATUS}>"
+      echo "Max retries is ${MAX_RETRY} with sleep time of ${RETRY_SLEEP_IN_SECS} seconds in between."
+      
+      wait_for_ready
+      exit ${?}
   - name: "gcr.io/cloud-builders/gcloud"
     id: IMAGE_DEPLOY
     args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",

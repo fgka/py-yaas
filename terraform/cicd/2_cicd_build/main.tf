@@ -64,6 +64,7 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   substitutions = {
     _BUCKET_NAME  = var.build_bucket_name
     _TF_PLAN_ARGS = local.tf_yaas_plan_args_str
+    _SERVICE_NAME = var.run_name
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

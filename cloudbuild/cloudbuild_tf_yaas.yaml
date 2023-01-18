@@ -115,5 +115,5 @@ substitutions:
   _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
   _SERVICE_NAME: ""
-  _MAX_RETRIES: 10
-  _RETRY_SLEEP_IN_SECS: 10
+  _MAX_RETRIES: "10"
+  _RETRY_SLEEP_IN_SECS: "10"

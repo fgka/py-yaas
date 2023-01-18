@@ -133,7 +133,7 @@ variable "image_build_template_filename_tmpl" {
 variable "wait_for_run_ready_script_filename" {
   description = "BASH script for waiting until Cloud Run is ready."
   type        = string
-  default     = "bin/wait_for_run_ready.sh"
+  default     = "scripts/wait_for_run_ready.sh"
 }
 
 variable "tf_build_trigger_name" {

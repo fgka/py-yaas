@@ -16,26 +16,26 @@ data "google_project" "project" {
 ///////////////////////////
 
 data "template_file" "tf_yaas_template_filename" {
-  template = "${file(var.tf_yaas_template_filename_tmpl)}"
+  template = "${file("${path.module}/${var.tf_yaas_template_filename_tmpl}")}"
   vars = {
     TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
   }
 }
 
 resource "local_file" "tf_yaas_template_filename" {
-  content  = data.template_file.tf_yaas_template_filename
+  content  = data.template_file.tf_yaas_template_filename.rendered
   filename = "${path.module}/tf_yaas_template_filename.yaml"
 }
 
 data "template_file" "image_build_template_filename" {
-  template = "${file(var.image_build_template_filename_tmpl)}"
+  template = "${file("${path.module}/${var.image_build_template_filename_tmpl}")}"
   vars = {
     TF_TEMPLATE_SCRIPT_CONTENT = file(var.wait_for_run_ready_script_filename)
   }
 }
 
 resource "local_file" "image_build_template_filename" {
-  content  = data.template_file.tf_yaas_template_filename
+  content  = data.template_file.tf_yaas_template_filename.rendered
   filename = "${path.module}/image_build_template_filename.yaml"
 }
 

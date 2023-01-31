@@ -296,6 +296,7 @@ class _StubInstalledAppFlow:
         return self._creds
 
 
+# TODO with credentials for appflow and regular, currently only regular
 @pytest.mark.asyncio
 async def test__secret_credentials_ok(monkeypatch):
     secret_name = "TEST_SECRET"
@@ -310,6 +311,13 @@ async def test__secret_credentials_ok(monkeypatch):
         called["from_client_secrets_file"] = (in_file, scopes)
         return app_flow
 
+    def mocked_from_authorized_user_file(
+        in_file: pathlib.Path,
+    ) -> credentials.Credentials:
+        nonlocal called
+        called["from_authorized_user_file"] = in_file
+        return _TEST_CREDENTIALS
+
     async def mocked_get(value: str) -> str:
         nonlocal called
         called["get"] = value
@@ -319,6 +327,12 @@ async def test__secret_credentials_ok(monkeypatch):
         google_cal.flow.InstalledAppFlow,
         google_cal.flow.InstalledAppFlow.from_client_secrets_file.__name__,
         mocked_from_client_secrets_file,
+    )
+
+    monkeypatch.setattr(
+        google_cal.credentials.Credentials,
+        google_cal.credentials.Credentials.from_authorized_user_file.__name__,
+        mocked_from_authorized_user_file,
     )
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
     # When

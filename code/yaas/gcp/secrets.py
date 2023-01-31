@@ -103,3 +103,36 @@ def validate_secret_resource_name(
         tokens=secrets_const.SECRET_NAME_TOKENS,
         raise_if_invalid=raise_if_invalid,
     )
+
+
+async def put(secret_name: str, content: str) -> str:
+    """
+    Puts a secret, by name.
+
+    Args:
+        secret_name: a secret name in the format:
+            `projects/<<project id>>/secrets/<<secret id>>`
+        content: secret content.
+    Returns:
+        The secret full name, with version.
+    """
+    if not isinstance(secret_name, str) or not secret_name:
+        raise SecretManagerAccessError(
+            f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
+        )
+    if not isinstance(content, str):
+        raise SecretManagerAccessError(
+            f"Content must be a string. Got: <{content}>({type(content)})"
+        )
+    _LOGGER.info("Adding a version to secret <%s>", secret_name)
+    try:
+        request = {
+            "parent": secret_name,
+            "payload": {"data": content.encode(const.ENCODING_UTF8)},
+        }
+        response = await _secret_client().add_secret_version(request=request)
+    except Exception as err:
+        msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
+        _LOGGER.critical(msg)
+        raise SecretManagerAccessError(msg) from err
+    return response.name

@@ -3,14 +3,16 @@
 ////////////////////
 
 locals {
-  tf_cicd_plan_args_str                  = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
-  tf_yaas_plan_args_str                  = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
-wait_for_run_ready_script_filename = "${path.module}/${var.wait_for_run_ready_script_filename}"
-  tf_build_template_filename = "${path.module}/${var.tf_build_template_filename}"
-  python_build_template_filename     = "${path.module}/${var.python_build_template_filename}"
-  tf_yaas_template_filename = "${path.module}/${var.tf_yaas_template_filename}"
+  # Terraform args
+  tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
+  tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
+  # Wait script
+  wait_for_run_ready_script_filename = "${path.module}/${var.wait_for_run_ready_script_filename}"
+  # Cloud build template files
+  tf_build_template_filename     = "${path.module}/${var.tf_build_template_filename}"
+  tf_yaas_template_filename      = "${path.module}/${var.tf_yaas_template_filename}"
   python_build_template_filename = "${path.module}/${var.python_build_template_filename}"
-  image_build_template_filename = "${path.module}/${var.image_build_template_filename}"
+  image_build_template_filename  = "${path.module}/${var.image_build_template_filename}"
 }
 
 data "google_project" "project" {
@@ -71,7 +73,7 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
     _BUCKET_NAME  = var.build_bucket_name
     _TF_PLAN_ARGS = local.tf_yaas_plan_args_str
     _SERVICE_NAME = var.run_name
-    _WAIT_SCRIPT = local.wait_for_run_ready_script_filename
+    _WAIT_SCRIPT  = local.wait_for_run_ready_script_filename
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
@@ -130,7 +132,7 @@ resource "google_cloudbuild_trigger" "application" {
     _AR_DOCKER_REPO = var.docker_artifact_registry_url
     _AR_PIP_REPO    = var.python_artifact_registry_url
     _SERVICE_NAME   = var.run_name
-    _WAIT_SCRIPT = local.wait_for_run_ready_script_filename
+    _WAIT_SCRIPT    = local.wait_for_run_ready_script_filename
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

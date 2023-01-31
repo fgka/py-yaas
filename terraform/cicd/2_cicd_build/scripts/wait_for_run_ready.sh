@@ -17,27 +17,17 @@ ALL_CLI_ARGS="${*}"
 LINUX_GETOPT_CMD="getopt"
 MAC_GETOPT_CMD="/usr/local/opt/gnu-getopt/bin/getopt"
 GETOPT_CMD="${LINUX_GETOPT_CMD}"
-LINUX_SED_CMD="sed"
-MAC_SED_CMD="/usr/local/opt/gnu-sed/libexec/gnubin/sed"
-SED_CMD="${LINUX_SED_CMD}"
 
 unset REQUIRED_UTILITIES
 set -a REQUIRED_UTILITIES
 REQUIRED_UTILITIES=(
   "bash"
-  "bq"
-  "jq"
   "getopt"
   "gcloud"
-  "gsutil"
-  "sed"
-  "tee"
 )
 if [ "Darwin" == $(uname -s) ]; then
   REQUIRED_UTILITIES+=("${MAC_GETOPT_CMD}")
-  REQUIRED_UTILITIES+=("${MAC_SED_CMD}")
   GETOPT_CMD="${MAC_GETOPT_CMD}"
-  SED_CMD="${MAC_SED_CMD}"
 fi
 
 ###############################################################
@@ -134,6 +124,10 @@ function check_utilities {
       HAS_ALL=1
     fi
   done
+  if [ ${HAS_ALL} -ne 0 ]; then
+    echo "Missing required utilities. Check logs."
+    exit 1
+  fi
 }
 
 function check_opts
@@ -149,7 +143,6 @@ function check_opts
             help
             exit 1
         fi
-
     done
 }
 

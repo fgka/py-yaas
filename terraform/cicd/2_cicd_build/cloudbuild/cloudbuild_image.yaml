@@ -25,7 +25,7 @@ steps:
   - name: "gcr.io/cloud-builders/gcloud"
     id: WAIT_FOR_RUN_READY
     entrypoint: "bash"
-    args: ["-c", "${_WAIT_SCRIPT}", "--project", "${PROJECT_ID}", "--region", "${LOCATION}", "--service", "${_SERVICE_NAME}"]
+    args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
   - name: "gcr.io/cloud-builders/gcloud"
     id: IMAGE_DEPLOY
     args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",

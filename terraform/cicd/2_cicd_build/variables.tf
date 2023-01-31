@@ -124,10 +124,10 @@ variable "app_build_trigger_name" {
   default     = "yaas-application"
 }
 
-variable "image_build_template_filename_tmpl" {
+variable "image_build_template_filename" {
   description = "Cloud Build template for docker image."
   type        = string
-  default     = "cloudbuild/cloudbuild_image.yaml.tmpl"
+  default     = "cloudbuild/cloudbuild_image.yaml"
 }
 
 variable "wait_for_run_ready_script_filename" {
@@ -154,10 +154,10 @@ variable "tf_yaas_trigger_name" {
   default     = "yaas-tf-infra"
 }
 
-variable "tf_yaas_template_filename_tmpl" {
+variable "tf_yaas_template_filename" {
   description = "Cloud Build template for YAAS infrastructure Terraform code."
   type        = string
-  default     = "cloudbuild/cloudbuild_tf_yaas.yaml.tmpl"
+  default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
 }
 
 ////////////

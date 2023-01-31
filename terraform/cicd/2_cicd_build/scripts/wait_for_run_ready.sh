@@ -292,7 +292,7 @@ while [[ ${#} -gt 0 ]]; do
     ;;
     ## Options with arguments
   --${OPT_PRJ_ID})
-    PROJECT_ID=${2}
+    PROJECT=${2}
     shift 2
     ;;
   --${OPT_NAME})

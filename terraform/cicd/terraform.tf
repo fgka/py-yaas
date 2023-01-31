@@ -4,6 +4,9 @@ terraform {
   required_providers {
     google      = ">= 4.44.0"
     google-beta = ">= 4.44.0"
+    local = {
+      source = "hashicorp/local"
+    }
   }
   backend "gcs" {
     bucket = "yaas-tf-state-245814988234"

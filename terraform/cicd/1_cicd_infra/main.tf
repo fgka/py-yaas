@@ -32,12 +32,15 @@ module "tf_build_service_account" {
     "${data.google_project.project.id}" = [
       "roles/artifactregistry.admin",
       "roles/cloudbuild.builds.editor",
+      "roles/cloudscheduler.admin",
       "roles/iam.serviceAccountAdmin",
       "roles/iam.serviceAccountUser",
       "roles/logging.logWriter",
       "roles/monitoring.admin",
       "roles/pubsub.admin",
       "roles/resourcemanager.projectIamAdmin",
+      "roles/run.admin",
+      "roles/secretmanager.admin",
       "roles/storage.admin",
     ]
   }
@@ -50,9 +53,11 @@ module "build_service_account" {
   generate_key = false
   iam_project_roles = {
     "${data.google_project.project.id}" = [
+      "roles/artifactregistry.writer",
       "roles/cloudbuild.builds.builder",
       "roles/iam.serviceAccountUser",
       "roles/logging.logWriter",
+      "roles/run.developer",
     ]
   }
 }

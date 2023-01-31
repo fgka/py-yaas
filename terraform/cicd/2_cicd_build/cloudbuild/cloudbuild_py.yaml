@@ -8,8 +8,7 @@ steps:
   - name: "python"
     id: PY_MINIMUM
     entrypoint: "python3"
-    args: ["-m", "pip", "install", "--user", "--upgrade",
-           "pip", "wheel", "setuptools"]
+    args: ["-m", "pip", "install", "--user", "--upgrade", "pip", "wheel", "setuptools"]
     waitFor:
       - PY_DIST_DIR
   - name: "python"
@@ -25,19 +24,15 @@ steps:
   - name: "python"
     id: PY_LINT
     entrypoint: "python3"
-    args: ["-m", "pylint",
-           "--output-format=json",
-           "--output=./${_DIST_DIR}/${_PYTHON_PYLINT_FILE}",
-           "setup.py", "tests", "yaas"]
+    args: ["-m", "pylint", "--output-format=json", "--output=./${_DIST_DIR}/${_PYTHON_PYLINT_FILE}",
+      "setup.py", "tests", "yaas"]
     dir: "${_CODE_DIR}"
     waitFor:
       - PY_BUILD
   - name: "python"
     id: PY_TESTS
     entrypoint: "python3"
-    args: ["-m", "pytest",
-           "-m", "not doesnt_work_cloudbuild",
-           "--junitxml=./${_DIST_DIR}/${_PYTHON_PYTEST_FILE}"]
+    args: ["-m", "pytest", "-m", "not doesnt_work_cloudbuild", "--junitxml=./${_DIST_DIR}/${_PYTHON_PYTEST_FILE}"]
     dir: "${_CODE_DIR}"
     waitFor:
       - PY_BUILD
@@ -53,12 +48,9 @@ steps:
     dir: "${_CODE_DIR}"
   - name: "gcr.io/cloud-builders/gcloud"
     id: BUILD_DOCKER
-    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}",
-           "--region", "${LOCATION}",
-           "--branch", "${BRANCH_NAME}"]
-
-logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/py_code"
-
+    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
+      "--branch", "${BRANCH_NAME}"]
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
   env:
@@ -66,7 +58,6 @@ options:
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: E2_HIGHCPU_8
-
 substitutions:
   _CODE_DIR: "./code"
   _DIST_DIR: "dist"
@@ -75,12 +66,11 @@ substitutions:
   _PYTHON_REPO_NAME: ""
   _AR_PIP_REPO: ""
   _DOCKER_BUILD_TRIGGER: ""
-
 artifacts:
   objects:
     location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
     paths:
       - "${_CODE_DIR}/${_DIST_DIR}/**"
   pythonPackages:
-   - repository: "${_AR_PIP_REPO}"
-     paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]
+    - repository: "${_AR_PIP_REPO}"
+      paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]

@@ -1,0 +1,38 @@
+steps:
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_INIT
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} init -upgrade"]
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_PLAN
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
+  - name: "hashicorp/terraform:1.3.7"
+    id: TERRAFORM_APPLY
+    entrypoint: "sh"
+    args: ["-c", "terraform -chdir=${_TF_DIR} apply ${_TF_PLAN_FILE}"]
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: BUILD_PYTHON
+    args: ["builds", "triggers", "run", "${_PYTHON_BUILD_TRIGGER}", "--region", "${LOCATION}",
+      "--branch", "${BRANCH_NAME}"]
+    waitFor:
+      - TERRAFORM_APPLY
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: BUILD_YAAS_INFRA
+    args: ["builds", "triggers", "run", "${_INFRA_BUILD_TRIGGER}", "--region", "${LOCATION}",
+      "--branch", "${BRANCH_NAME}"]
+    waitFor:
+      - TERRAFORM_APPLY
+logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
+options:
+  dynamic_substitutions: true
+  logging: LEGACY
+  logStreamingOption: STREAM_DEFAULT
+  machineType: UNSPECIFIED
+  substitution_option: "ALLOW_LOOSE"
+substitutions:
+  _TF_DIR: "terraform/cicd"
+  _TF_PLAN_ARGS: ""
+  _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
+  _PYTHON_BUILD_TRIGGER: ""
+  _INFRA_BUILD_TRIGGER: ""

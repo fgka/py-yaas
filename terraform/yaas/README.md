@@ -54,7 +54,7 @@ gcloud services enable \
 ## Init
 
 ```bash
-terraform init
+terraform init -upgrade
 ```
 
 ## Plan

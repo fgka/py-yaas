@@ -6,13 +6,18 @@ locals {
   # Terraform args
   tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
   tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
+  # absolute root paths
+  code_root_dir                  = "code"
+  docker_root_dir                = "docker"
+  terraform_cicd_module_root_dir = "terraform/cicd/${path.module}"
+  terraform_yaas_root_dir        = "terraform/yaas"
   # Wait script
-  wait_for_run_ready_script_filename = "${path.module}/${var.wait_for_run_ready_script_filename}"
+  wait_for_run_ready_script_filename = "${local.terraform_cicd_module_root_dir}/${var.wait_for_run_ready_script_filename}"
   # Cloud build template files
-  tf_build_template_filename     = "${path.module}/${var.tf_build_template_filename}"
-  tf_yaas_template_filename      = "${path.module}/${var.tf_yaas_template_filename}"
-  python_build_template_filename = "${path.module}/${var.python_build_template_filename}"
-  image_build_template_filename  = "${path.module}/${var.image_build_template_filename}"
+  tf_build_template_filename     = "${local.terraform_cicd_module_root_dir}/${var.tf_build_template_filename}"
+  tf_yaas_template_filename      = "${local.terraform_cicd_module_root_dir}/${var.tf_yaas_template_filename}"
+  python_build_template_filename = "${local.terraform_cicd_module_root_dir}/${var.python_build_template_filename}"
+  image_build_template_filename  = "${local.terraform_cicd_module_root_dir}/${var.image_build_template_filename}"
 }
 
 data "google_project" "project" {
@@ -50,7 +55,7 @@ resource "google_cloudbuild_trigger" "tf_build" {
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
-    "terraform/cicd/**",
+    "${local.terraform_cicd_module_root_dir}/**",
     local.tf_build_template_filename,
   ]
   github {
@@ -77,7 +82,7 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
-    "terraform/yaas/**",
+    "${local.terraform_yaas_root_dir}/**",
     local.tf_yaas_template_filename,
     local.wait_for_run_ready_script_filename,
   ]
@@ -104,7 +109,7 @@ resource "google_cloudbuild_trigger" "python" {
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
-    "code/**",
+    "${local.code_root_dir}/**",
     local.python_build_template_filename,
   ]
   github {
@@ -136,7 +141,7 @@ resource "google_cloudbuild_trigger" "application" {
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
-    "docker/**",
+    "${local.docker_root_dir}/**",
     local.image_build_template_filename,
     local.wait_for_run_ready_script_filename,
   ]

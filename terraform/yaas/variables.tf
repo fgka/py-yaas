@@ -173,6 +173,12 @@ variable "run_max_instances" {
 // Scheduler/Cronjob //
 ///////////////////////
 
+variable "scheduler_calendar_credentials_refresh_name" {
+  description = "Name of the Cloud Scheduler that triggers YAAS calendar credentials refresh"
+  type        = string
+  default     = "yaas-calendar-credentials-refresh"
+}
+
 variable "scheduler_cache_refresh_name" {
   description = "Name of the Cloud Scheduler that triggers YAAS calendar cache refresh"
   type        = string
@@ -190,6 +196,13 @@ variable "scheduler_cache_refresh_rate_in_hours" {
   description = "YAAS calendar cache refresh rate in hours, i.e., how many hours after a refresh to repeat it."
   type        = number
   default     = 6
+}
+
+// This is to avoid clashing between scheduler and keep debugging easier.
+variable "scheduler_calendar_credentials_refresh_cron_entry_triggering_minute" {
+  description = "YAAS calendar calendar credentials refresh triggering minute. Please only change if you know what you are doing."
+  type        = number
+  default     = 13
 }
 
 // This is to avoid clashing between scheduler and keep debugging easier.

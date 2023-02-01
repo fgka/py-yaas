@@ -91,7 +91,7 @@ module "secrets_calendar_credentials" {
   }
   iam = {
     "${var.secrets_calendar_credentials_name}" = {
-      "roles/secretmanager.secretAccessor" = [google_service_account.run_sa.member]
+      "roles/secretmanager.secretVersionAdder" = [google_service_account.run_sa.member]
     }
   }
 }

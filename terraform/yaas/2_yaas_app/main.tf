@@ -4,8 +4,9 @@
 
 locals {
   // service accounts
-  run_sa_email_member = "serviceAccount:${var.run_sa_email}"
-  pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
+  pubsub_sa_member          = "serviceAccount:${var.pubsub_sa_email}"
+  run_sa_email_member       = "serviceAccount:${var.run_sa_email}"
+  scheduler_sa_email_member = "serviceAccount:${var.scheduler_sa_email}"
   // scheduler
   scheduler_calendar_credentials_refresh_url = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_update_calendar_credentials}"
   scheduler_cache_refresh_url                = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_update_cache}"
@@ -151,6 +152,15 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
   location = var.region
   role     = "roles/run.invoker"
   member   = local.pubsub_sa_member
+}
+
+// scheduler SA
+
+resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
+  service  = google_cloud_run_service.yaas.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = local.scheduler_sa_email_member
 }
 
 ///////////////////////

@@ -156,7 +156,7 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
 
 // scheduler SA
 
-resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
+resource "google_cloud_run_service_iam_member" "scheduler_pubsub_invoker" {
   service  = google_cloud_run_service.yaas.name
   location = var.region
   role     = "roles/run.invoker"

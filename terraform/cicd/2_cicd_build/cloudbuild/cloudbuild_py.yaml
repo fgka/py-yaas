@@ -24,7 +24,7 @@ steps:
   - name: "python"
     id: PY_LINT
     entrypoint: "python3"
-    args: ["-m", "pylint", "--output-format=json", "--output=./${_DIST_DIR}/${_PYTHON_PYLINT_FILE}",
+    args: ["-m", "pylint", "--output-format=json:./${_DIST_DIR}/${_PYTHON_PYLINT_FILE},colorized",
       "setup.py", "tests", "yaas"]
     dir: "${_CODE_DIR}"
     waitFor:

@@ -75,8 +75,9 @@ class _StubResponse:
         def __init__(self, data: Any):
             self.data = data
 
-    def __init__(self, data: Any):
+    def __init__(self, data: Any = None, name: str = None):
         self.payload = _StubResponse._StubPayload(data)
+        self.name = name
 
 
 class _StubSecretAsyncClient:
@@ -84,15 +85,26 @@ class _StubSecretAsyncClient:
         self,
         *,
         data: Optional[str] = "TEST_DATA",
+        name: Optional[str] = "TEST_SECRET",
         raise_on_access: Optional[bool] = False,
+        raise_on_add: Optional[bool] = False,
     ):
-        self._response = _StubResponse(bytes(data.encode(const.ENCODING_UTF8)))
+        self._response = _StubResponse(
+            data=bytes(data.encode(const.ENCODING_UTF8)), name=name
+        )
         self._raise_on_access = raise_on_access
+        self._raise_on_add = raise_on_add
         self._request = None
 
     async def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
         if self._raise_on_access:
+            raise RuntimeError
+        return self._response
+
+    async def add_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+        self._request = request
+        if self._raise_on_add:
             raise RuntimeError
         return self._response
 
@@ -149,3 +161,32 @@ def test_validate_secret_resource_name_ok(value: str, amount_errors: int):
     result = secrets.validate_secret_resource_name(value, raise_if_invalid=False)
     # Then
     assert len(result) == amount_errors
+
+
+@pytest.mark.asyncio
+async def test_put_ok(monkeypatch):
+    # Given
+    content = "EXPECTED"
+    secret_name = "TEST_SECRET"
+    client = _StubSecretAsyncClient(name=secret_name)
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    # When
+    result = await secrets.put(secret_name=secret_name, content=content)
+    # Then
+    assert result == secret_name
+    assert client._request.get("parent") == secret_name
+    assert client._request.get("payload", {}).get("data") == content.encode(
+        const.ENCODING_UTF8
+    )
+
+
+@pytest.mark.asyncio
+async def test_put_nok(monkeypatch):
+    # Given
+    content = "EXPECTED"
+    secret_name = "TEST_SECRET"
+    client = _StubSecretAsyncClient(raise_on_add=True)
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    # When/Then
+    with pytest.raises(secrets.SecretManagerAccessError):
+        await secrets.put(secret_name=secret_name, content=content)

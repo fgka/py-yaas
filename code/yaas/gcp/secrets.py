@@ -105,7 +105,7 @@ def validate_secret_resource_name(
     )
 
 
-async def put(secret_name: str, content: str) -> str:
+async def put(*, secret_name: str, content: str) -> str:
     """
     Puts a secret, by name.
 

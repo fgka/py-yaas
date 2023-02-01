@@ -90,6 +90,34 @@ def configuration() -> str:
     return flask.jsonify(_configuration().as_dict())
 
 
+@MAIN_BP.route("/update-calendar-credentials-secret", methods=["GET"])
+async def update_calendar_credentials() -> str:
+    # pylint: disable=anomalous-backslash-in-string
+    """
+    Wrapper to :py:func:`entry.update_calendar_credentials`.
+
+    `curl`::
+        curl \
+            -H "Content-Type: application/json" \
+            -X GET \
+            http://localhost:8080/update-calendar-credentials-secret
+    """
+    # pylint: enable=anomalous-backslash-in-string
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        await entry.update_calendar_credentials(
+            configuration=_configuration(),
+        )
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not update calendar credentials. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
 @MAIN_BP.route("/update-cache", methods=["POST"])
 async def update_cache() -> str:
     # pylint: disable=anomalous-backslash-in-string

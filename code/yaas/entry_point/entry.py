@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Callable, Optional, Tuple, Union
 
 import flask
 
+from yaas.cal import google_cal
 from yaas.dto import config, event
 from yaas.entry_point import pubsub_dispatcher
 from yaas.event.store import base, calendar, factory
@@ -21,6 +22,24 @@ def _merge_strategy_always_a(
     comparison: event.EventSnapshotComparison,
 ) -> event.EventSnapshot:
     return comparison.snapshot_a
+
+
+async def update_calendar_credentials(  # pylint: disable=too-many-arguments
+    configuration: config.Config,
+) -> None:
+    """
+    Will update the credentials for Google Calendar, if needed.
+
+    Args:
+        configuration:
+
+    Returns:
+
+    """
+    await google_cal.update_secret_credentials(
+        calendar_id=configuration.calendar_config.calendar_id,
+        secret_name=configuration.calendar_config.secret_name,
+    )
 
 
 async def update_cache(

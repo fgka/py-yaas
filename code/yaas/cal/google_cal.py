@@ -23,7 +23,7 @@ from googleapiclient import discovery
 from google_auth_oauthlib import flow
 
 from yaas.gcp import secrets
-from yaas import logger
+from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
 
@@ -242,7 +242,7 @@ async def _calendar_service(
             f"JSON: <{credentials_json}>, "
             f"and Pickle: <{credentials_pickle}>. "
             f"Error: {err}"
-        )
+        ) from err
     await _refresh_credentials_if_needed(cal_creds)
     result: discovery.Resource = None
     if isinstance(cal_creds, credentials.Credentials):
@@ -489,8 +489,13 @@ _INITIAL_CREDENTIALS_KEYS: List[str] = ["installed", "web"]
 
 def _is_initial_credentials(value: pathlib.Path) -> bool:
     result = False
-    with open(value, "r") as in_json:
-        content = json.load(in_json)
+    try:
+        with open(value, "r", encoding=const.ENCODING_UTF8) as in_json:
+            content = json.load(in_json)
+    except Exception as err:
+        raise RuntimeError(
+            f"Could not decode JSON content from <{value}>. Error: {err}"
+        ) from err
     if isinstance(content, dict):
         for key in _INITIAL_CREDENTIALS_KEYS:
             if key in content:
@@ -555,10 +560,12 @@ async def update_secret_credentials(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     # push initial credentials
-    await _put_secret_credentials(secret_name, initial_credentials_json)
+    await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
     # to by-pass caching
+    # pylint: disable=consider-using-with
     credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)
     credentials_pickle = pathlib.Path(tempfile.NamedTemporaryFile().name)
+    # pylint: enable=consider-using-with
     # force checking credentials
     try:
         await list_upcoming_events(
@@ -566,6 +573,7 @@ async def update_secret_credentials(
             secret_name=secret_name,
             credentials_pickle=credentials_pickle,
             credentials_json=credentials_json,
+            amount=1,
         )
     except Exception as err:
         raise RuntimeError(
@@ -581,16 +589,21 @@ async def update_secret_credentials(
         credentials_pickle,
     )
     # push credentials with authorization.
-    await _put_secret_credentials(secret_name, credentials_json)
+    await _put_secret_credentials(secret_name, credentials_json.absolute())
 
 
 async def _put_secret_credentials(
     secret_name: str,
     credentials_json: Optional[pathlib.Path] = None,
-):
+) -> None:
+    _LOGGER.info(
+        "Updating secret <%s> with content from JSON file: <%s>",
+        secret_name,
+        credentials_json,
+    )
     if isinstance(credentials_json, pathlib.Path):
         if credentials_json.exists():
-            with open(credentials_json, "r") as in_json:
+            with open(credentials_json, "r", encoding=const.ENCODING_UTF8) as in_json:
                 content = in_json.read()
             actual_secret_name = secret_name.split("/versions")[0]
             try:

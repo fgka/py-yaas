@@ -7,10 +7,12 @@ locals {
   pubsub_sa_member          = "serviceAccount:${var.pubsub_sa_email}"
   run_sa_email_member       = "serviceAccount:${var.run_sa_email}"
   scheduler_sa_email_member = "serviceAccount:${var.scheduler_sa_email}"
+  // cloud run
+  run_service_url = google_cloud_run_service.yaas.status[0].url
   // scheduler
-  scheduler_calendar_credentials_refresh_url = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_update_calendar_credentials}"
-  scheduler_cache_refresh_url                = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_update_cache}"
-  scheduler_request_url                      = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_request_emission}"
+  scheduler_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
+  scheduler_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
+  scheduler_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
   scheduler_cron_entry_credentials_refresh   = "${var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
   scheduler_cron_entry_cache_refresh         = "${var.scheduler_cache_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
   scheduler_cron_entry_request               = "*/${var.scheduler_request_rate_in_minutes} * * * *"
@@ -175,8 +177,9 @@ resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
   http_target {
     http_method = "GET"
     uri         = local.scheduler_calendar_credentials_refresh_url
-    oidc_token {
+    oauth_token {
       service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
     }
   }
 }
@@ -189,8 +192,9 @@ resource "google_cloud_scheduler_job" "cache_refresh" {
   http_target {
     http_method = "POST"
     uri         = local.scheduler_cache_refresh_url
-    oidc_token {
+    oauth_token {
       service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
     }
   }
 }
@@ -203,8 +207,9 @@ resource "google_cloud_scheduler_job" "request_emission" {
   http_target {
     http_method = "POST"
     uri         = local.scheduler_request_url
-    oidc_token {
+    oauth_token {
       service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
     }
   }
 }

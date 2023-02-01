@@ -179,7 +179,7 @@ resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
     uri         = local.scheduler_calendar_credentials_refresh_url
     oauth_token {
       service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
+      scope                 = local.run_service_url
     }
   }
 }
@@ -194,7 +194,7 @@ resource "google_cloud_scheduler_job" "cache_refresh" {
     uri         = local.scheduler_cache_refresh_url
     oauth_token {
       service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
+      scope                 = local.run_service_url
     }
   }
 }
@@ -209,7 +209,7 @@ resource "google_cloud_scheduler_job" "request_emission" {
     uri         = local.scheduler_request_url
     oauth_token {
       service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
+      scope                 = local.run_service_url
     }
   }
 }

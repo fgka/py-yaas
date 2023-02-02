@@ -99,7 +99,7 @@ async def update_calendar_credentials() -> str:
     `curl`::
         curl \
             -H "Content-Type: application/json" \
-            -X GET \
+            -X POST \
             http://localhost:8080/update-calendar-credentials-secret
     """
     # pylint: enable=anomalous-backslash-in-string
@@ -162,9 +162,8 @@ async def send_requests() -> str:
     Wrapper to :py:func:`entry.send_requests`.
 
     `curl`::
-        PERIOD_DAYS="3"
-        PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
-        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}"
+        PERIOD_MINUTES=10
+        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":-${PERIOD_MINUTES}}"
         DATA_BASE64=$(echo ${DATA} | base64)
         curl \
             -d "{\"data\":\"${DATA_BASE64}\"}" \

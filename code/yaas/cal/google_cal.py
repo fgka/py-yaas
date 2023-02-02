@@ -560,7 +560,9 @@ async def update_secret_credentials(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     # push initial credentials
-    await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
+    if initial_credentials_json is not None:
+        initial_credentials_json = initial_credentials_json.absolute()
+    await _put_secret_credentials(secret_name, initial_credentials_json)
     # to by-pass caching
     # pylint: disable=consider-using-with
     credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)

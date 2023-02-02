@@ -122,6 +122,7 @@ resource "google_cloudbuild_trigger" "python" {
   }
 }
 
+// TODO change to pubsub, attached to AR push
 // application image
 resource "google_cloudbuild_trigger" "application" {
   location           = var.region

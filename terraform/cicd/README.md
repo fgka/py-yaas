@@ -82,6 +82,7 @@ Without integration test data:
 TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
+  -var "run_cicd=false" \
   -var "project_id=${PROJECT_ID}" \
   -var "region=${REGION}" \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \

@@ -13,6 +13,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "run_cicd" {
+  description = "If it is run through Cloud Build."
+  type        = bool
+  default     = true
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////

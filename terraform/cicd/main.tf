@@ -51,6 +51,7 @@ module "cicd_build" {
   source     = "./2_cicd_build"
   project_id = var.project_id
   region     = var.region
+  run_cicd   = var.run_cicd
   // service accounts
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email

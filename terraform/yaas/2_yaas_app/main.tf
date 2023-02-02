@@ -169,21 +169,23 @@ resource "google_cloud_run_service_iam_member" "scheduler_pubsub_invoker" {
 // Scheduler/Cronjob //
 ///////////////////////
 
+# TODO: trigger pubsub with a payload instead
 resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
   name        = var.scheduler_calendar_credentials_refresh_name
   description = "Cronjob to trigger YAAS calendar credentials OAuth2 refresh."
   schedule    = local.scheduler_cron_entry_credentials_refresh
   time_zone   = var.scheduler_cron_timezone
   http_target {
-    http_method = "GET"
+    http_method = "POST"
     uri         = local.scheduler_calendar_credentials_refresh_url
-    oauth_token {
+    oidc_token {
       service_account_email = var.scheduler_sa_email
-      scope                 = local.run_service_url
+      audience              = local.run_service_url
     }
   }
 }
 
+# TODO: trigger pubsub with a payload instead
 resource "google_cloud_scheduler_job" "cache_refresh" {
   name        = var.scheduler_cache_refresh_name
   description = "Cronjob to trigger YAAS calendar cache refresh."
@@ -192,13 +194,14 @@ resource "google_cloud_scheduler_job" "cache_refresh" {
   http_target {
     http_method = "POST"
     uri         = local.scheduler_cache_refresh_url
-    oauth_token {
+    oidc_token {
       service_account_email = var.scheduler_sa_email
-      scope                 = local.run_service_url
+      audience              = local.run_service_url
     }
   }
 }
 
+# TODO: trigger pubsub with a payload instead
 resource "google_cloud_scheduler_job" "request_emission" {
   name        = var.scheduler_request_name
   description = "Cronjob to trigger YAAS scaling request emission."
@@ -207,9 +210,9 @@ resource "google_cloud_scheduler_job" "request_emission" {
   http_target {
     http_method = "POST"
     uri         = local.scheduler_request_url
-    oauth_token {
+    oidc_token {
       service_account_email = var.scheduler_sa_email
-      scope                 = local.run_service_url
+      audience              = local.run_service_url
     }
   }
 }

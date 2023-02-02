@@ -7,11 +7,11 @@ locals {
   tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
   tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
   # absolute root paths
-  root_dir                       = var.run_cicd ? "." : "../.."
-  code_root_dir                  = "${local.root_dir}/code"
-  docker_root_dir                = "${local.root_dir}/docker"
-  terraform_cicd_module_root_dir = "${local.root_dir}/terraform/cicd/${path.module}"
-  terraform_yaas_root_dir        = "${local.root_dir}/terraform/yaas"
+  root_dir                       = var.run_cicd ? "" : "../../"
+  code_root_dir                  = "${local.root_dir}code"
+  docker_root_dir                = "${local.root_dir}docker"
+  terraform_cicd_module_root_dir = "${local.root_dir}terraform/cicd/${path.module}"
+  terraform_yaas_root_dir        = "${local.root_dir}terraform/yaas"
   # Wait script
   wait_for_run_ready_script_filename = "${local.terraform_cicd_module_root_dir}/${var.wait_for_run_ready_script_filename}"
   # Cloud build template files

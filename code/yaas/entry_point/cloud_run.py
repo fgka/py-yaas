@@ -90,7 +90,7 @@ def configuration() -> str:
     return flask.jsonify(_configuration().as_dict())
 
 
-@MAIN_BP.route("/update-calendar-credentials-secret", methods=["GET"])
+@MAIN_BP.route("/update-calendar-credentials-secret", methods=["POST"])
 async def update_calendar_credentials() -> str:
     # pylint: disable=anomalous-backslash-in-string
     """

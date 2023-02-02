@@ -98,6 +98,7 @@ async def update_calendar_credentials() -> str:
 
     `curl`::
         curl \
+            -d "{}" \
             -H "Content-Type: application/json" \
             -X POST \
             http://localhost:8080/update-calendar-credentials-secret

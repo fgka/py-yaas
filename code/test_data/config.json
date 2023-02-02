@@ -1,0 +1,15 @@
+{
+    "calendar_config": {
+        "type": "calendar",
+        "calendar_id": "calendar_id",
+        "secret_name": "projects/my-project/secrets/my-secret/versions/latest"
+    },
+    "cache_config": {
+        "type": "gcs_sqlite",
+        "bucket_name": "my-bucket",
+        "object_path": "yaas/calendar_cache.sql"
+    },
+    "topic_to_pubsub": {
+        "standard": "projects/my-project/topics/my-topic"
+    }
+}

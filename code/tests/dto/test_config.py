@@ -8,6 +8,7 @@ import tempfile
 
 import pytest
 
+from yaas import const
 from yaas.dto import config
 
 from tests import common
@@ -98,7 +99,9 @@ class TestConfig:
         assert result == expected, f"JSON: {json}"
 
     def test_from_disk_ok(self):
-        with open(common.TEST_DATA_CONFIG_JSON, "r") as in_json:
+        with open(
+            common.TEST_DATA_CONFIG_JSON, "r", encoding=const.ENCODING_UTF8
+        ) as in_json:
             result = config.Config.from_json(in_json.read())
         assert result.calendar_config.calendar_id == "calendar_id"
         assert result.retention_config is not None

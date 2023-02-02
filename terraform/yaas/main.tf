@@ -62,14 +62,19 @@ module "yaas_app" {
   run_min_instances         = var.run_min_instances
   run_max_instances         = var.run_max_instances
   // scheduler
+  scheduler_cron_timezone = var.scheduler_cron_timezone
+  // scheduler: calendar
+  scheduler_calendar_credentials_refresh_name                         = var.scheduler_calendar_credentials_refresh_name
+  scheduler_calendar_credentials_refresh_cron_entry_triggering_minute = var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute
+  // scheduler: cache
   scheduler_cache_refresh_name                         = var.scheduler_cache_refresh_name
   scheduler_cache_refresh_data                         = var.scheduler_cache_refresh_data
   scheduler_cache_refresh_rate_in_hours                = var.scheduler_cache_refresh_rate_in_hours
   scheduler_cache_refresh_cron_entry_triggering_minute = var.scheduler_cache_refresh_cron_entry_triggering_minute
-  scheduler_request_name                               = var.scheduler_request_name
-  scheduler_request_data                               = var.scheduler_request_data
-  scheduler_request_rate_in_minutes                    = var.scheduler_request_rate_in_minutes
-  scheduler_cron_timezone                              = var.scheduler_cron_timezone
+  // scheduler: request
+  scheduler_request_name            = var.scheduler_request_name
+  scheduler_request_data            = var.scheduler_request_data
+  scheduler_request_rate_in_minutes = var.scheduler_request_rate_in_minutes
   // monitoring
   monitoring_email_channel_name                        = module.yaas_infra.monitoring_channel_email.id
   monitoring_pubsub_channel_name                       = module.yaas_infra.monitoring_channel_pubsub.id

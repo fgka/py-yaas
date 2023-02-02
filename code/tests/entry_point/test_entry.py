@@ -4,6 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
+import pathlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import flask
@@ -21,6 +22,123 @@ _TEST_REQUEST: request.ScaleRequest = common.create_scale_request()
 _TEST_TOPIC_TO_PUBSUB: Dict[str, str] = {_TEST_REQUEST.topic: "test_pubsub_topic"}
 _TEST_START_TS_UTC: int = 100
 _TEST_END_TS_UTC: int = _TEST_START_TS_UTC + 1000
+
+
+@pytest.mark.asyncio
+async def test_update_calendar_credentials_ok(monkeypatch):
+    # Given
+    called = _mock_entry(monkeypatch)
+    kwargs = dict(
+        configuration=common.TEST_CONFIG_LOCAL_JSON,
+    )
+    # When
+    await entry.update_calendar_credentials(**kwargs)
+    # Then: calendar
+    called_update = called.get(entry.google_cal.update_secret_credentials.__name__)
+    assert (
+        called_update.get("calendar_id")
+        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.calendar_id
+    )
+    assert (
+        called_update.get("secret_name")
+        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.secret_name
+    )
+    assert called_update.get("initial_credentials_json") is None
+
+
+def _mock_entry(
+    monkeypatch,
+    *,
+    calendar_snapshot: Optional[event.EventSnapshot] = None,
+    cache_store: Optional[base.StoreContextManager] = None,
+    cache_snapshot: Optional[event.EventSnapshot] = None,
+    event_requests: Optional[List[request.ScaleRequest]] = None,
+) -> Dict[str, Any]:
+    called = {}
+    if cache_store is None:
+        cache_store = common.MyStoreContextManager()
+
+    async def mocked_update_secret_credentials(  # pylint: disable=unused-argument
+        *,
+        calendar_id: str,
+        secret_name: str,
+        initial_credentials_json: Optional[pathlib.Path] = None,
+    ) -> None:
+        nonlocal called
+        called[entry.google_cal.update_secret_credentials.__name__] = locals()
+
+    async def mocked_clean_up(  # pylint: disable=unused-argument
+        value: config.DataRetentionConfig,
+    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
+        nonlocal cache_store
+        cache_store.called[base.StoreContextManager.clean_up.__name__] = locals()
+        return cache_store.result_snapshot, cache_store.result_snapshot
+
+    async def mocked_calendar_snapshot(  # pylint: disable=unused-argument
+        *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
+    ) -> event.EventSnapshot:
+        nonlocal called, calendar_snapshot
+        if calendar_snapshot is None:
+            calendar_snapshot = common.create_event_snapshot("calendar")
+        called[entry._calendar_snapshot.__name__] = locals()
+        return calendar_snapshot
+
+    async def mocked_cache_store_and_snapshot(  # pylint: disable=unused-argument
+        *,
+        cache_config: config.CacheConfig,
+        start_ts_utc: int,
+        end_ts_utc: int,
+    ) -> Tuple[base.StoreContextManager, event.EventSnapshot]:
+        nonlocal called, cache_snapshot, cache_store
+        if cache_snapshot is None:
+            cache_snapshot = common.create_event_snapshot("cache")
+        called[entry._cache_store_and_snapshot.__name__] = locals()
+        return cache_store, cache_snapshot
+
+    async def mocked_dispatch(  # pylint: disable=unused-argument
+        topic_to_pubsub: Dict[str, str],
+        *value: request.ScaleRequest,
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> None:
+        nonlocal called
+        called[entry.pubsub_dispatcher.dispatch.__name__] = locals()
+
+    def mocked_from_event(  # pylint: disable=unused-argument
+        *,
+        event: Union[flask.Request, Dict[str, Any]],
+        iso_str_timestamp: Optional[str] = None,
+    ) -> List[request.ScaleRequest]:
+        nonlocal called, event_requests
+        if event_requests is None:
+            event_requests = [
+                common.create_scale_request(topic=common.MyCategoryType.CATEGORY_A.name)
+            ]
+        called[entry.pubsub_dispatcher.from_event.__name__] = locals()
+        return event_requests
+
+    monkeypatch.setattr(
+        entry.google_cal,
+        entry.google_cal.update_secret_credentials.__name__,
+        mocked_update_secret_credentials,
+    )
+    monkeypatch.setattr(cache_store, cache_store.clean_up.__name__, mocked_clean_up)
+    monkeypatch.setattr(
+        entry, entry._calendar_snapshot.__name__, mocked_calendar_snapshot
+    )
+    monkeypatch.setattr(
+        entry, entry._cache_store_and_snapshot.__name__, mocked_cache_store_and_snapshot
+    )
+    monkeypatch.setattr(
+        entry.pubsub_dispatcher,
+        entry.pubsub_dispatcher.dispatch.__name__,
+        mocked_dispatch,
+    )
+    monkeypatch.setattr(
+        entry.pubsub_dispatcher,
+        entry.pubsub_dispatcher.from_event.__name__,
+        mocked_from_event,
+    )
+    return called
 
 
 @pytest.mark.asyncio
@@ -72,88 +190,6 @@ def _verify_cache_snapshot_called(
     assert cache_snapshot.get("cache_config") == kwargs["configuration"].cache_config
     assert cache_snapshot.get("start_ts_utc") == kwargs["start_ts_utc"]
     assert cache_snapshot.get("end_ts_utc") == kwargs["end_ts_utc"]
-
-
-def _mock_entry(
-    monkeypatch,
-    *,
-    calendar_snapshot: Optional[event.EventSnapshot] = None,
-    cache_store: Optional[base.StoreContextManager] = None,
-    cache_snapshot: Optional[event.EventSnapshot] = None,
-    event_requests: Optional[List[request.ScaleRequest]] = None,
-) -> Dict[str, Any]:
-    called = {}
-    if cache_store is None:
-        cache_store = common.MyStoreContextManager()
-
-    async def mocked_clean_up(  # pylint: disable=unused-argument
-        value: config.DataRetentionConfig,
-    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
-        nonlocal cache_store
-        cache_store.called[base.StoreContextManager.clean_up.__name__] = locals()
-        return cache_store.result_snapshot, cache_store.result_snapshot
-
-    monkeypatch.setattr(cache_store, cache_store.clean_up.__name__, mocked_clean_up)
-
-    async def mocked_calendar_snapshot(  # pylint: disable=unused-argument
-        *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
-    ) -> event.EventSnapshot:
-        nonlocal called, calendar_snapshot
-        if calendar_snapshot is None:
-            calendar_snapshot = common.create_event_snapshot("calendar")
-        called[entry._calendar_snapshot.__name__] = locals()
-        return calendar_snapshot
-
-    async def mocked_cache_store_and_snapshot(  # pylint: disable=unused-argument
-        *,
-        cache_config: config.CacheConfig,
-        start_ts_utc: int,
-        end_ts_utc: int,
-    ) -> Tuple[base.StoreContextManager, event.EventSnapshot]:
-        nonlocal called, cache_snapshot, cache_store
-        if cache_snapshot is None:
-            cache_snapshot = common.create_event_snapshot("cache")
-        called[entry._cache_store_and_snapshot.__name__] = locals()
-        return cache_store, cache_snapshot
-
-    async def mocked_dispatch(  # pylint: disable=unused-argument
-        topic_to_pubsub: Dict[str, str],
-        *value: request.ScaleRequest,
-        raise_if_invalid_request: Optional[bool] = True,
-    ) -> None:
-        nonlocal called
-        called[entry.pubsub_dispatcher.dispatch.__name__] = locals()
-
-    def mocked_from_event(  # pylint: disable=unused-argument
-        *,
-        event: Union[flask.Request, Dict[str, Any]],
-        iso_str_timestamp: Optional[str] = None,
-    ) -> List[request.ScaleRequest]:
-        nonlocal called, event_requests
-        if event_requests is None:
-            event_requests = [
-                common.create_scale_request(topic=common.MyCategoryType.CATEGORY_A.name)
-            ]
-        called[entry.pubsub_dispatcher.from_event.__name__] = locals()
-        return event_requests
-
-    monkeypatch.setattr(
-        entry, entry._calendar_snapshot.__name__, mocked_calendar_snapshot
-    )
-    monkeypatch.setattr(
-        entry, entry._cache_store_and_snapshot.__name__, mocked_cache_store_and_snapshot
-    )
-    monkeypatch.setattr(
-        entry.pubsub_dispatcher,
-        entry.pubsub_dispatcher.dispatch.__name__,
-        mocked_dispatch,
-    )
-    monkeypatch.setattr(
-        entry.pubsub_dispatcher,
-        entry.pubsub_dispatcher.from_event.__name__,
-        mocked_from_event,
-    )
-    return called
 
 
 @pytest.mark.asyncio

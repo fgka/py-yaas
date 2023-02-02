@@ -2,6 +2,11 @@
 // Global/General //
 ////////////////////
 
+locals {
+  serverless_system_sa_iam_member = "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
+  scheduler_system_sa_iam_member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
+}
+
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -33,7 +38,13 @@ resource "google_project_iam_member" "serverless_service_agent" {
   ])
   project = var.project_id
   role    = each.key
-  member  = "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
+  member  = local.serverless_system_sa_iam_member
+}
+
+resource "google_service_account_iam_member" "scheduler_impersonate" {
+  service_account_id = google_service_account.scheduler_sa.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = local.scheduler_system_sa_iam_member
 }
 
 /////////////
@@ -91,7 +102,7 @@ module "secrets_calendar_credentials" {
   }
   iam = {
     "${var.secrets_calendar_credentials_name}" = {
-      "roles/secretmanager.secretAccessor" = [google_service_account.run_sa.member]
+      "roles/secretmanager.secretVersionAdder" = [google_service_account.run_sa.member]
     }
   }
 }

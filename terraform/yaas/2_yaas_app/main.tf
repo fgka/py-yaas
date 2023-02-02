@@ -4,13 +4,18 @@
 
 locals {
   // service accounts
-  run_sa_email_member = "serviceAccount:${var.run_sa_email}"
-  pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
+  pubsub_sa_member          = "serviceAccount:${var.pubsub_sa_email}"
+  run_sa_email_member       = "serviceAccount:${var.run_sa_email}"
+  scheduler_sa_email_member = "serviceAccount:${var.scheduler_sa_email}"
+  // cloud run
+  run_service_url = google_cloud_run_service.yaas.status[0].url
   // scheduler
-  scheduler_cache_refresh_url        = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_update_cache}"
-  scheduler_request_url              = "${google_cloud_run_service.yaas.status[0].url}${var.service_path_request_emission}"
-  scheduler_cron_entry_cache_refresh = "${var.scheduler_cache_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
-  scheduler_cron_entry_request       = "*/${var.scheduler_request_rate_in_minutes} * * * *"
+  scheduler_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
+  scheduler_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
+  scheduler_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
+  scheduler_cron_entry_credentials_refresh   = "${var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
+  scheduler_cron_entry_cache_refresh         = "${var.scheduler_cache_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
+  scheduler_cron_entry_request               = "*/${var.scheduler_request_rate_in_minutes} * * * *"
   // monitoring
   monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
   monitoring_alert_channel_type_to_name = tomap({
@@ -151,10 +156,36 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
   member   = local.pubsub_sa_member
 }
 
+// scheduler SA
+
+resource "google_cloud_run_service_iam_member" "scheduler_pubsub_invoker" {
+  service  = google_cloud_run_service.yaas.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = local.scheduler_sa_email_member
+}
+
 ///////////////////////
 // Scheduler/Cronjob //
 ///////////////////////
 
+# TODO: trigger pubsub with a payload instead
+resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
+  name        = var.scheduler_calendar_credentials_refresh_name
+  description = "Cronjob to trigger YAAS calendar credentials OAuth2 refresh."
+  schedule    = local.scheduler_cron_entry_credentials_refresh
+  time_zone   = var.scheduler_cron_timezone
+  http_target {
+    http_method = "POST"
+    uri         = local.scheduler_calendar_credentials_refresh_url
+    oidc_token {
+      service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
+    }
+  }
+}
+
+# TODO: trigger pubsub with a payload instead
 resource "google_cloud_scheduler_job" "cache_refresh" {
   name        = var.scheduler_cache_refresh_name
   description = "Cronjob to trigger YAAS calendar cache refresh."
@@ -165,10 +196,12 @@ resource "google_cloud_scheduler_job" "cache_refresh" {
     uri         = local.scheduler_cache_refresh_url
     oidc_token {
       service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
     }
   }
 }
 
+# TODO: trigger pubsub with a payload instead
 resource "google_cloud_scheduler_job" "request_emission" {
   name        = var.scheduler_request_name
   description = "Cronjob to trigger YAAS scaling request emission."
@@ -179,6 +212,7 @@ resource "google_cloud_scheduler_job" "request_emission" {
     uri         = local.scheduler_request_url
     oidc_token {
       service_account_email = var.scheduler_sa_email
+      audience              = local.run_service_url
     }
   }
 }

@@ -24,7 +24,7 @@ export REGION="europe-west3"
 Code dependant:
 
 ```bash
-pushd ../code
+pushd ../../code
 export PIP_PACKAGE="$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)"
 popd
 ```

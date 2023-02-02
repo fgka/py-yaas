@@ -1,0 +1,7 @@
+- Code
+-- Request/ScalingDef:
+--- multiple commands per resource (combine them)
+-- Secret/Calendar creds cycle: constant refresh into secret manager
+
+- Terraform
+-- Remove references to state bucket

@@ -5,6 +5,7 @@ CLI entry point to test individual parts of the code.
 """
 # pylint: enable=line-too-long
 import asyncio
+import pathlib
 from datetime import datetime, timedelta
 import functools
 from typing import Callable, Optional, Tuple
@@ -12,6 +13,7 @@ from typing import Callable, Optional, Tuple
 import click
 
 from yaas import logger
+from yaas.cal import google_cal
 from yaas.dto import event, request
 from yaas.event.store import calendar, gcs
 from yaas.gcp import cloud_run
@@ -328,6 +330,51 @@ async def get_cloud_run(name: str) -> None:
     """
     result = await cloud_run.get_service(name)
     print(f"Service {name} resulted in:\n{result}\n")
+
+
+@cli.command(
+    help="Updates the Google Calendar credentials to include user authorization."
+)
+@click.option(
+    "--calendar-id", required=True, type=str, help="Which calendar ID to read"
+)
+@click.option(
+    "--secret-name", required=False, type=str, help="Secret name with credentials"
+)
+@click.option(
+    "--credentials-json",
+    required=False,
+    type=str,
+    help="Google Calendar initial credentials JSON file",
+)
+@coro
+async def update_calendar_credentials(  # pylint: disable=too-many-arguments
+    calendar_id: str,
+    secret_name: Optional[str] = None,
+    credentials_json: Optional[str] = None,
+) -> None:
+    """
+    Will update the credentials for Google Calendar, if needed.
+
+    Args:
+        calendar_id: Google calendar ID
+        secret_name: Google calendar JSON credentials
+        credentials_json: JSON file retrieved from Google Calendar account
+
+    Returns:
+
+    """
+    actual_credentials_json = None
+    if credentials_json:
+        actual_credentials_json = pathlib.Path(credentials_json)
+    try:
+        await google_cal.update_secret_credentials(
+            calendar_id=calendar_id,
+            secret_name=secret_name,
+            initial_credentials_json=actual_credentials_json,
+        )
+    except Exception as err:  # pylint: disable=broad-except
+        print(f"An error occurred: {err}")
 
 
 if __name__ == "__main__":

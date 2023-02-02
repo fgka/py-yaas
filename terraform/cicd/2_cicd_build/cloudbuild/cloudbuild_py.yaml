@@ -14,7 +14,7 @@ steps:
   - name: "python"
     id: PY_BUILD_DEPENDENCIES
     entrypoint: "python3"
-    args: ["-m", "pip", "install", "--user", ".[all]"]
+    args: ["-m", "pip", "install", "--no-warn-script-location", "--user", ".[all]"]
     dir: "${_CODE_DIR}"
   - name: "python"
     id: PY_BUILD

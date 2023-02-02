@@ -6,10 +6,6 @@ output "run_sa" {
   value = google_service_account.run_sa
 }
 
-output "scheduler_sa" {
-  value = google_service_account.scheduler_sa
-}
-
 output "pubsub_sa" {
   value = google_service_account.pubsub_sa
 }
@@ -26,12 +22,40 @@ output "bucket" {
 // Pub/Sub Topics //
 ////////////////////
 
-output "pubsub_topic" {
-  value = module.pubsub_topic
+output "pubsub_cal_creds_refresh" {
+  value = module.pubsub_cal_creds_refresh
+}
+
+output "pubsub_cache_refresh" {
+  value = module.pubsub_cache_refresh
+}
+
+output "pubsub_send_request" {
+  value = module.pubsub_send_request
+}
+
+output "pubsub_enact_request" {
+  value = module.pubsub_enact_request
 }
 
 output "pubsub_notification_topic" {
   value = module.pubsub_notification_topic
+}
+
+///////////////////////
+// Scheduler/Cronjob //
+///////////////////////
+
+output "scheduler_calendar_credentials_refresh" {
+  value = google_cloud_scheduler_job.calendar_credentials_refresh
+}
+
+output "scheduler_cache_refresh" {
+  value = google_cloud_scheduler_job.cache_refresh
+}
+
+output "scheduler_request_emission" {
+  value = google_cloud_scheduler_job.request_emission
 }
 
 ////////////////////

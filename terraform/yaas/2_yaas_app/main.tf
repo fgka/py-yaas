@@ -4,18 +4,15 @@
 
 locals {
   // service accounts
-  pubsub_sa_member          = "serviceAccount:${var.pubsub_sa_email}"
-  run_sa_email_member       = "serviceAccount:${var.run_sa_email}"
-  scheduler_sa_email_member = "serviceAccount:${var.scheduler_sa_email}"
+  pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
+  run_sa_email_member = "serviceAccount:${var.run_sa_email}"
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url
-  // scheduler
-  scheduler_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
-  scheduler_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
-  scheduler_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
-  scheduler_cron_entry_credentials_refresh   = "${var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
-  scheduler_cron_entry_cache_refresh         = "${var.scheduler_cache_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
-  scheduler_cron_entry_request               = "*/${var.scheduler_request_rate_in_minutes} * * * *"
+  // pubsub endpoints
+  pubsub_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
+  pubsub_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
+  pubsub_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
+  pubsub_enact_url                        = "${local.run_service_url}${var.service_path_enact_request}"
   // monitoring
   monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
   monitoring_alert_channel_type_to_name = tomap({
@@ -34,17 +31,18 @@ locals {
   })
   // let at least 1 fail, therefore the '2 *' prefix
   monitoring_not_executed_align_period_in_seconds = tomap({
-    cache_update     = 2 * var.scheduler_cache_refresh_rate_in_hours * 60 * 60
-    request_emission = 2 * var.scheduler_request_rate_in_minutes * 60
+    calendar_credentials_refresh = var.monitoring_not_executed_align_period_in_seconds.calendar_credentials_refresh
+    cache_refresh                = var.monitoring_not_executed_align_period_in_seconds.cache_refresh
+    send_request                 = var.monitoring_not_executed_align_period_in_seconds.send_request
   })
   monitoring_alert_policies_not_executed = flatten([
-    for method, period_in_sesc in local.monitoring_not_executed_align_period_in_seconds : [
+    for method, period_in_sec in local.monitoring_not_executed_align_period_in_seconds : [
       for type, channel in local.monitoring_alert_channel_type_to_name : {
         channel_type         = type
         channel_name         = channel
         duration_in_secs     = local.monitoring_alert_policies_error_log[type].period_in_secs
         invoke_method        = method
-        align_period_in_secs = period_in_sesc
+        align_period_in_secs = period_in_sec
       }
     ]
   ])
@@ -58,16 +56,67 @@ data "google_project" "project" {
 // Pub/Sub Subscriptions //
 ///////////////////////////
 
-resource "google_pubsub_subscription" "run" {
-  name                       = "${google_cloud_run_service.yaas.name}_http_push_subscription"
-  topic                      = var.pubsub_topic_id
+resource "google_pubsub_subscription" "cal_creds_refresh" {
+  name                       = "${google_cloud_run_service.yaas.name}_cal_creds_http_push_subscription"
+  topic                      = var.pubsub_cal_creds_refresh_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
-    push_endpoint = google_cloud_run_service.yaas.status[0].url
+    push_endpoint = local.pubsub_calendar_credentials_refresh_url
     oidc_token {
       service_account_email = var.run_sa_email
-      audience              = google_cloud_run_service.yaas.status[0].url
+      audience              = local.pubsub_calendar_credentials_refresh_url
+    }
+  }
+  retry_policy {
+    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
+  }
+}
+
+resource "google_pubsub_subscription" "cache_refresh" {
+  name                       = "${google_cloud_run_service.yaas.name}_cache_http_push_subscription"
+  topic                      = var.pubsub_cache_refresh_id
+  ack_deadline_seconds       = var.run_timeout
+  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
+  push_config {
+    push_endpoint = local.pubsub_cache_refresh_url
+    oidc_token {
+      service_account_email = var.run_sa_email
+      audience              = local.run_service_url
+    }
+  }
+  retry_policy {
+    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
+  }
+}
+
+resource "google_pubsub_subscription" "send_request" {
+  name                       = "${google_cloud_run_service.yaas.name}_send_http_push_subscription"
+  topic                      = var.pubsub_send_request_id
+  ack_deadline_seconds       = var.run_timeout
+  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
+  push_config {
+    push_endpoint = local.pubsub_request_url
+    oidc_token {
+      service_account_email = var.run_sa_email
+      audience              = local.run_service_url
+    }
+  }
+  retry_policy {
+    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
+  }
+}
+
+resource "google_pubsub_subscription" "enact_request" {
+  name                       = "${google_cloud_run_service.yaas.name}_enact_http_push_subscription"
+  topic                      = var.pubsub_enact_request_id
+  ack_deadline_seconds       = var.run_timeout
+  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
+  push_config {
+    push_endpoint = local.pubsub_enact_url
+    oidc_token {
+      service_account_email = var.run_sa_email
+      audience              = local.run_service_url
     }
   }
   retry_policy {
@@ -156,67 +205,6 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
   member   = local.pubsub_sa_member
 }
 
-// scheduler SA
-
-resource "google_cloud_run_service_iam_member" "scheduler_pubsub_invoker" {
-  service  = google_cloud_run_service.yaas.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = local.scheduler_sa_email_member
-}
-
-///////////////////////
-// Scheduler/Cronjob //
-///////////////////////
-
-# TODO: trigger pubsub with a payload instead
-resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
-  name        = var.scheduler_calendar_credentials_refresh_name
-  description = "Cronjob to trigger YAAS calendar credentials OAuth2 refresh."
-  schedule    = local.scheduler_cron_entry_credentials_refresh
-  time_zone   = var.scheduler_cron_timezone
-  http_target {
-    http_method = "POST"
-    uri         = local.scheduler_calendar_credentials_refresh_url
-    oidc_token {
-      service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
-    }
-  }
-}
-
-# TODO: trigger pubsub with a payload instead
-resource "google_cloud_scheduler_job" "cache_refresh" {
-  name        = var.scheduler_cache_refresh_name
-  description = "Cronjob to trigger YAAS calendar cache refresh."
-  schedule    = local.scheduler_cron_entry_cache_refresh
-  time_zone   = var.scheduler_cron_timezone
-  http_target {
-    http_method = "POST"
-    uri         = local.scheduler_cache_refresh_url
-    oidc_token {
-      service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
-    }
-  }
-}
-
-# TODO: trigger pubsub with a payload instead
-resource "google_cloud_scheduler_job" "request_emission" {
-  name        = var.scheduler_request_name
-  description = "Cronjob to trigger YAAS scaling request emission."
-  schedule    = local.scheduler_cron_entry_request
-  time_zone   = var.scheduler_cron_timezone
-  http_target {
-    http_method = "POST"
-    uri         = local.scheduler_request_url
-    oidc_token {
-      service_account_email = var.scheduler_sa_email
-      audience              = local.run_service_url
-    }
-  }
-}
-
 /////////////////////////////
 // Monitoring and Alerting //
 /////////////////////////////
@@ -244,6 +232,7 @@ resource "google_monitoring_alert_policy" "alert_error_log" {
   notification_channels = [each.value.channel_name]
 }
 
+// TODO
 resource "google_monitoring_alert_policy" "alert_not_executed" {
   for_each     = { for index, val in local.monitoring_alert_policies_not_executed : index => val }
   display_name = "${google_cloud_run_service.yaas.name}-${each.value.invoke_method}-${each.value.channel_type}-not-executed-monitoring"

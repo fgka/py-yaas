@@ -3,8 +3,13 @@
 ////////////////////
 
 locals {
-  secrets_calendar_credentials_id_map = tomap(module.yaas_infra.secrets_calendar_credentials_ids)
-  secrets_calendar_credentials_id     = "${local.secrets_calendar_credentials_id_map[var.secrets_calendar_credentials_name]}/versions/latest"
+  secrets_calendar_credentials_prj_name = tomap(module.yaas_infra.secrets_calendar_credentials_ids)[var.secrets_calendar_credentials_name]
+  secrets_calendar_credentials_prj_num  = replace(local.secrets_calendar_credentials_prj_name, var.project_id, data.google_project.project.number)
+  secrets_calendar_credentials_id       = "${local.secrets_calendar_credentials_prj_num}/versions/latest"
+}
+
+data "google_project" "project" {
+  project_id = var.project_id
 }
 
 //////////

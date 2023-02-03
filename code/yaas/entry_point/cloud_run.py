@@ -87,6 +87,7 @@ def configuration() -> str:
     _LOGGER.debug(
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
+    _LOGGER.info("Calling %s", configuration.__name__)
     return flask.jsonify(_configuration().as_dict())
 
 
@@ -108,6 +109,7 @@ async def update_calendar_credentials() -> str:
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
     try:
+        _LOGGER.info("Calling %s", update_calendar_credentials.__name__)
         await entry.update_calendar_credentials(
             configuration=_configuration(),
         )
@@ -142,6 +144,9 @@ async def update_cache() -> str:
     )
     try:
         update_range = pubsub_dispatcher.range_from_event(event=flask.request)
+        _LOGGER.info(
+            "Calling %s with range %s", update_cache.__name__, update_range.as_log_str()
+        )
         start_ts_utc, end_ts_utc = update_range.timestamp_range()
         await entry.update_cache(
             start_ts_utc=start_ts_utc,
@@ -177,8 +182,11 @@ async def send_requests() -> str:
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
     try:
-        update_range = pubsub_dispatcher.range_from_event(event=flask.request)
-        start_ts_utc, end_ts_utc = update_range.timestamp_range()
+        send_range = pubsub_dispatcher.range_from_event(event=flask.request)
+        _LOGGER.info(
+            "Calling %s with range %s", send_requests.__name__, send_range.as_log_str()
+        )
+        start_ts_utc, end_ts_utc = send_range.timestamp_range()
         await entry.send_requests(
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
@@ -218,6 +226,7 @@ async def enact_requests() -> str:
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
     try:
+        _LOGGER.info("Calling %s", enact_requests.__name__)
         parser = standard.StandardScalingCommandParser()
         await entry.enact_requests(parser=parser, pubsub_event=flask.request)
         result = flask.make_response(("OK", 200))

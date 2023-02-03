@@ -33,6 +33,16 @@ class Range(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-m
         end_utc = start_utc + timedelta(minutes=self.period_minutes)
         return start_utc.timestamp(), end_utc.timestamp()
 
+    def as_log_str(self) -> str:
+        """
+        A nicer way to log an object.
+        """
+        start_utc, end_utc = self.timestamp_range()
+        start_dt = datetime.fromtimestamp(start_utc)
+        end_dt = datetime.fromtimestamp(end_utc)
+        delta = end_dt - start_dt
+        return f"{self} = [{start_dt}, {end_dt}] ~ {delta}"
+
 
 @attrs.define(**const.ATTRS_DEFAULTS)
 class ScaleRequest(  # pylint: disable=too-few-public-methods

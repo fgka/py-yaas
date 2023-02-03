@@ -46,29 +46,30 @@ steps:
         --build-number ${BUILD_NUMBER} \
         --dist-dir ${DIST_DIR}
     dir: "${_CODE_DIR}"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: TWINE
     script: |
       #!/usr/bin/env bash
-      IDENTITY=$(gcloud config config-helper --format='value(configuration.properties.core.account)')
       
-      echo "Identity: ${IDENTITY}"
-      
+      # add curl to download pip
       apt-get install curl
       
+      # install pip
       curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
       python3 get-pip.py
-
+      
+      # install twine
       python3 -m pip install --upgrade \
         pip \
         twine \
         keyrings.google-artifactregistry-auth
       
+      # upload package
       python3 -m twine upload \
         --repository-url ${AR_PIP_REPO} \
         ${DIST_DIR}/*.whl
     dir: "${_CODE_DIR}"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_DOCKER
     entrypoint: "gcloud"
     args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",

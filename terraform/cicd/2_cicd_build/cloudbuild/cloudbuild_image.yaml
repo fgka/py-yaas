@@ -22,11 +22,11 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_PUSH_LATEST
     args: ["push", "${_REMOTE_IMAGE_LATEST}"]
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: WAIT_FOR_RUN_READY
     entrypoint: "bash"
     args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: IMAGE_DEPLOY
     entrypoint: "gcloud"
     args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",

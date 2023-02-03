@@ -11,14 +11,14 @@ steps:
     id: TERRAFORM_APPLY
     entrypoint: "sh"
     args: ["-c", "terraform -chdir=${_TF_DIR} apply ${_TF_PLAN_FILE}"]
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_PYTHON
     entrypoint: "gcloud"
     args: ["builds", "triggers", "run", "${_PYTHON_BUILD_TRIGGER}", "--region", "${LOCATION}",
       "--branch", "${BRANCH_NAME}"]
     waitFor:
       - TERRAFORM_APPLY
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_YAAS_INFRA
     entrypoint: "gcloud"
     args: ["builds", "triggers", "run", "${_INFRA_BUILD_TRIGGER}", "--region", "${LOCATION}",

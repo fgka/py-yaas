@@ -3,8 +3,10 @@
 ////////////////////
 
 locals {
+  // service account
   cloud_build_sa_email  = "${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
   cloud_build_sa_member = "serviceAccount:${local.cloud_build_sa_email}"
+  // artifact registry
   artifact_registry_repos = tomap({
     docker = google_artifact_registry_repository.docker_repo,
     python = google_artifact_registry_repository.python_repo,
@@ -128,6 +130,7 @@ module "build_monitoring_topic" {
     ]
   }
 }
+
 
 /////////////////////////////
 // Monitoring and Alerting //

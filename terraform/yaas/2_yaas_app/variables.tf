@@ -13,6 +13,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "run_cicd" {
+  description = "If it is run through Cloud Build."
+  type        = bool
+  default     = true
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////
@@ -89,6 +95,23 @@ variable "secrets_calendar_credentials_id" {
 //////////
 // Code //
 //////////
+
+variable "calendar_id" {
+  description = "YAAS Google Calendar ID to use"
+  type        = string
+}
+
+variable "config_json_tmpl" {
+  description = "Template for config json"
+  type        = string
+  default     = "templates/config.json.tmpl"
+}
+
+variable "sqlite_cache_path" {
+  description = "YAAS Google Calendar cache SQLite GCS object path"
+  type        = string
+  default     = "yaas/calendar_cache.sql"
+}
 
 variable "log_level" {
   description = "YAAS Cloud Run log level."

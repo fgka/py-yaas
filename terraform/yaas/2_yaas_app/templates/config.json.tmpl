@@ -1,0 +1,16 @@
+{
+    "calendar_config": {
+        "type": "calendar",
+        "calendar_id": "${CALENDAR_ID}",
+        "secret_name": "${SECRET_NAME}"
+    },
+    "cache_config": {
+        "type": "gcs_sqlite",
+        "bucket_name": "${BUCKET_NAME}",
+        "object_path": "${SQLITE_OBJECT_PATH}"
+    },
+    "topic_to_pubsub": {
+        "standard": "${PUBSUB_TOPIC_ENACT_STANDARD}"
+        "yaas": "${PUBSUB_TOPIC_ENACT_STANDARD}"
+    }
+}

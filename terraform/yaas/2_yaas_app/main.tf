@@ -6,6 +6,10 @@ locals {
   // service accounts
   pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
   run_sa_email_member = "serviceAccount:${var.run_sa_email}"
+  // config JSON
+  root_dir                  = var.run_cicd ? "." : "../.."
+  terraform_module_root_dir = "${local.root_dir}/terraform/yaas/${path.module}"
+  config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url
   // pubsub endpoints
@@ -50,6 +54,27 @@ locals {
 
 data "google_project" "project" {
   project_id = var.project_id
+}
+
+/////////////////
+// Config JSON //
+/////////////////
+
+resource "local_file" "config_json" {
+  content = templatefile(local.config_json_tmpl, {
+    CALENDAR_ID                 = var.calendar_id,
+    SECRET_NAME                 = var.secrets_calendar_credentials_id,
+    BUCKET_NAME                 = var.bucket_name,
+    SQLITE_OBJECT_PATH          = var.sqlite_cache_path,
+    PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_request_id
+  })
+  filename = "${local.terraform_module_root_dir}/config.json"
+}
+
+resource "google_storage_bucket_object" "config_json" {
+  name   = var.config_path
+  source = local_file.config_json.filename
+  bucket = var.bucket_name
 }
 
 ///////////////////////////

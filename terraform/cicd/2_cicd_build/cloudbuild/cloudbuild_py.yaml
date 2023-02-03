@@ -54,7 +54,10 @@ steps:
       
       echo "Identity: ${IDENTITY}"
       
-      python -m ensurepip --upgrade
+      apt-get install curl
+      
+      curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
+      python3 get-pip.py
 
       python3 -m pip install --upgrade \
         pip \
@@ -91,6 +94,3 @@ artifacts:
     location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
     paths:
       - "${_CODE_DIR}/${_DIST_DIR}/**"
-  pythonPackages:
-    - repository: "${_AR_PIP_REPO}"
-      paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]

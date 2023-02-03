@@ -50,7 +50,7 @@ resource "google_project_iam_member" "serverless_service_agent" {
 // Service Accounts: YAAS permissions //
 ////////////////////////////////////////
 
-resource "google_project_iam_member" "serverless_service_agent" {
+resource "google_project_iam_member" "yaas_permissions" {
   for_each = toset(var.run_service_account_roles)
   project  = var.project_id
   role     = each.key

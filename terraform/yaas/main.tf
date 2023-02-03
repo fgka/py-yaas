@@ -19,6 +19,7 @@ module "yaas_infra" {
   // service accounts
   run_service_account_name    = var.run_service_account_name
   pubsub_service_account_name = var.pubsub_service_account_name
+  run_service_account_roles   = var.run_service_account_roles
   // bucket
   bucket_name_prefix = var.bucket_name_prefix
   // pubsub
@@ -54,6 +55,7 @@ module "yaas_app" {
   source     = "./2_yaas_app"
   project_id = var.project_id
   region     = var.region
+  run_cicd   = var.run_cicd
   // service accounts
   run_sa_email    = module.yaas_infra.run_sa.email
   pubsub_sa_email = module.yaas_infra.pubsub_sa.email
@@ -70,8 +72,8 @@ module "yaas_app" {
   // image
   image_name_uri = var.image_name_uri
   // code
+  calendar_id                              = var.calendar_id
   log_level                                = var.log_level
-  config_path                              = var.config_path
   service_path_update_calendar_credentials = var.service_path_update_calendar_credentials
   service_path_update_cache                = var.service_path_update_cache
   service_path_request_emission            = var.service_path_request_emission

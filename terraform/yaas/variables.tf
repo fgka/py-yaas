@@ -13,6 +13,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "run_cicd" {
+  description = "If it is run through Cloud Build."
+  type        = bool
+  default     = true
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////
@@ -33,6 +39,21 @@ variable "pubsub_service_account_name" {
   description = "Service account to be used by Pub/Sub to trigger YAAS."
   type        = string
   default     = "yaas-pubsub-sa"
+}
+
+////////////////////////////////////////
+// Service Accounts: YAAS permissions //
+////////////////////////////////////////
+
+variable "run_service_account_roles" {
+  description = "All admin roles required to let YAAS manage resources"
+  type        = list(string)
+  default = [
+    "roles/compute.instanceAdmin.v1",
+    "roles/cloudfunctions.admin",
+    "roles/cloudsql.admin",
+    "roles/run.admin",
+  ]
 }
 
 /////////////
@@ -176,17 +197,15 @@ variable "image_name_uri" {
 // Code //
 //////////
 
+variable "calendar_id" {
+  description = "YAAS Google Calendar ID to use"
+  type        = string
+}
 
 variable "log_level" {
   description = "YAAS Cloud Run log level."
   type        = string
   default     = "INFO"
-}
-
-variable "config_path" {
-  description = "YAAS configuration object path in the bucket. E.g.: yaas/config.json"
-  type        = string
-  default     = "yaas/config.json"
 }
 
 // Do **NOT** change. Check code first

@@ -164,7 +164,7 @@ async def list_upcoming_events(
         amount = None
     # Retrieve entries
     try:
-        result = await _list_all_events(
+        result = _list_all_events(
             service=service, amount=amount, kwargs_for_list=kwargs_for_list
         )
     except Exception as err:
@@ -193,7 +193,7 @@ def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
     return value.isoformat() + "Z"
 
 
-async def _list_all_events(
+def _list_all_events(
     *,
     service: discovery.Resource,
     amount: Optional[int],
@@ -201,11 +201,8 @@ async def _list_all_events(
 ) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
     # pagination/while trick
-    loop = asyncio.get_event_loop()
     while amount is None or len(result) < amount:
-        events_result = await loop.run_in_executor(
-            None, _list_events_for_kwargs, service, kwargs_for_list
-        )
+        events_result = service.events().list(**kwargs_for_list).execute()
         result.extend(events_result.get("items", []))
         # next page token
         next_page_token = events_result.get("nextPageToken")
@@ -216,13 +213,6 @@ async def _list_all_events(
     if amount is not None:
         result = result[:amount]
     return result
-
-
-def _list_events_for_kwargs(
-    service: discovery.Resource, kwargs_for_list: Dict[str, Any]
-) -> Dict[str, Any]:
-    """To make async"""
-    return service.events().list(**kwargs_for_list).execute()
 
 
 async def _calendar_service(

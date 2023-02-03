@@ -75,7 +75,7 @@ async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
         credentials_json_arg = kwargs.get("credentials_json")
         return service_arg
 
-    async def mocked_list_all_events(
+    def mocked_list_all_events(
         *, service: Any, amount: int, kwargs_for_list: Dict[str, Any]
     ) -> List[Any]:
         nonlocal amount_used, kwargs_for_list_arg
@@ -149,8 +149,7 @@ class _StubGoogleCalServiceResource:
         return self._events
 
 
-@pytest.mark.asyncio
-async def test__list_all_events_ok_amount_given():
+def test__list_all_events_ok_amount_given():
     # Given
     amount = 10
     list_results = []
@@ -159,7 +158,7 @@ async def test__list_all_events_ok_amount_given():
     service = _StubGoogleCalServiceResource(result=list_results)
     kwargs_for_list = dict(arg_1="value_1", arg_2="value_2")
     # When
-    result = await google_cal._list_all_events(
+    result = google_cal._list_all_events(
         service=service, amount=amount, kwargs_for_list=kwargs_for_list
     )
     # Then

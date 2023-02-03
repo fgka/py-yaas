@@ -183,6 +183,7 @@ async def send_requests() -> str:
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
             configuration=_configuration(),
+            raise_if_invalid_request=False,
         )
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except

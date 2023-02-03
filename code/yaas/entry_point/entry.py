@@ -171,6 +171,7 @@ async def send_requests(
     start_ts_utc: int,
     end_ts_utc: int,
     configuration: config.Config,
+    raise_if_invalid_request: Optional[bool] = True,
 ) -> None:
     """
     Will read the cached snapshot within the range and dispatch them via PubSub.
@@ -179,6 +180,7 @@ async def send_requests(
         start_ts_utc:
         end_ts_utc:
         configuration:
+        raise_if_invalid_request:
 
     Returns:
 
@@ -197,7 +199,7 @@ async def send_requests(
         await pubsub_dispatcher.dispatch(
             configuration.topic_to_pubsub,
             *cache_snapshot.all_requests(),
-            raise_if_invalid_request=True,
+            raise_if_invalid_request=raise_if_invalid_request,
         )
     else:
         _LOGGER.debug(

@@ -47,6 +47,26 @@ steps:
         --dist-dir ${DIST_DIR}
     dir: "${_CODE_DIR}"
   - name: "gcr.io/cloud-builders/gcloud"
+    id: TWINE
+    script: |
+      #!/usr/bin/env bash
+      IDENTITY=$(gcloud config config-helper --format='value(configuration.properties.core.account)')
+      
+      echo "Identity: ${IDENTITY}"
+
+      python3 -m pip install --upgrade \
+        pip \
+        twine \
+        keyrings.google-artifactregistry-auth
+      
+      python3 -m twine upload \
+        --repository-url ${AR_PIP_REPO} \
+        ${DIST_DIR}/*.whl
+    entrypoint: "bash"
+    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
+      "--branch", "${BRANCH_NAME}"]
+    dir: "${_CODE_DIR}"
+  - name: "gcr.io/cloud-builders/gcloud"
     id: BUILD_DOCKER
     args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
       "--branch", "${BRANCH_NAME}"]
@@ -55,6 +75,7 @@ options:
   dynamic_substitutions: true
   env:
     - "DIST_DIR=${_DIST_DIR}"
+    - "AR_PIP_REPO=${_AR_PIP_REPO}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: E2_HIGHCPU_8

@@ -53,6 +53,7 @@ variable "run_service_account_roles" {
     "roles/cloudfunctions.admin",
     "roles/cloudsql.admin",
     "roles/run.admin",
+    "roles/iam.serviceAccountUser", // for impersonation
   ]
 }
 

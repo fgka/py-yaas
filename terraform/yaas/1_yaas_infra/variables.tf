@@ -29,6 +29,21 @@ variable "pubsub_service_account_name" {
   default     = "yaas-pubsub-sa"
 }
 
+////////////////////////////////////////
+// Service Accounts: YAAS permissions //
+////////////////////////////////////////
+
+variable "run_service_account_roles" {
+  description = "All admin roles required to let YAAS manage resources"
+  type        = list(string)
+  default     = [
+    "roles/compute.instanceAdmin.v1",
+    "roles/cloudfunctions.admin",
+    "roles/cloudsql.admin",
+    "roles/run.admin",
+  ]
+}
+
 /////////////
 // Buckets //
 /////////////

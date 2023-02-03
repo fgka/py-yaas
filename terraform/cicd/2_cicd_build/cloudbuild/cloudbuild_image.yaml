@@ -28,6 +28,7 @@ steps:
     args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: IMAGE_DEPLOY
+    entrypoint: "gcloud"
     args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",
       "--region", "${LOCATION}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"

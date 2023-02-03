@@ -14,8 +14,6 @@ import pickle
 from typing import Any, Dict, List, Optional, Union
 
 import aiofiles
-import asyncache
-import cachetools
 
 from google.auth.transport import requests
 from google.oauth2 import credentials
@@ -258,7 +256,6 @@ async def _calendar_service(
     return result
 
 
-@asyncache.cached(cachetools.LRUCache(maxsize=1))
 async def _calendar_credentials(
     *,
     credentials_pickle: Optional[pathlib.Path] = None,

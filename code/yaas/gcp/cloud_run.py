@@ -9,8 +9,6 @@ GCP `Cloud Run`_ entry point focused on control plane APIs.
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
 
-import cachetools
-
 from google.cloud import run_v2
 
 from yaas import logger
@@ -110,7 +108,6 @@ def validate_cloud_run_resource_name(
     )
 
 
-@cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
 def _run_client() -> run_v2.ServicesAsyncClient:
     return run_v2.ServicesAsyncClient()
 

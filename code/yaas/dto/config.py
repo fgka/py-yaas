@@ -63,7 +63,13 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
 
         """
         from_json_cls_method = dto_defaults.HasFromJsonString.from_json.__func__
-        return cls._factory(from_json_cls_method, json_string, context)
+        try:
+            result = cls._factory(from_json_cls_method, json_string, context)
+        except Exception as err:
+            raise ValueError(
+                f"Could not parse content into {cls.__name__}. Content: {json_string}"
+            ) from err
+        return result
 
     @classmethod
     def _factory(cls, factory_fn: Callable, *args, **kwargs) -> Any:
@@ -225,6 +231,11 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
         )
     )
     retention_config: DataRetentionConfig = attrs.field(
-        default=attrs.Factory(DataRetentionConfig),
-        validator=attrs.validators.instance_of(DataRetentionConfig),
+        default=None,
+        converter=attrs.converters.default_if_none(
+            default=attrs.Factory(DataRetentionConfig)
+        ),
+        validator=attrs.validators.optional(
+            attrs.validators.instance_of(DataRetentionConfig)
+        ),
     )

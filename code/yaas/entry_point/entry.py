@@ -3,6 +3,7 @@
 """
 Main entry-points.
 """
+from datetime import datetime
 from typing import Any, Dict, List, Callable, Optional, Tuple, Union
 
 import flask
@@ -144,11 +145,20 @@ async def _cache_store_and_snapshot(
     start_ts_utc: int,
     end_ts_utc: int,
 ) -> Tuple[base.StoreContextManager, event.EventSnapshot]:
+    _LOGGER.info(
+        "Reading range [%d, %d] (%s, %s) from cache <%s>",
+        start_ts_utc,
+        end_ts_utc,
+        datetime.fromtimestamp(start_ts_utc),
+        datetime.fromtimestamp(end_ts_utc),
+        cache_config,
+    )
     cache_store = factory.store_from_cache_config(cache_config)
     async with cache_store as obj:
         result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     _LOGGER.info(
-        "Got cache snapshot using id <%s>. Range <%s> and amount of requests: <%d>",
+        "Got snapshot from <%s>. "
+        "Retrieved range <%s> and amount of requests retrieved: <%d>",
         cache_config,
         result.range(),
         result.amount_requests(),
@@ -161,6 +171,7 @@ async def send_requests(
     start_ts_utc: int,
     end_ts_utc: int,
     configuration: config.Config,
+    raise_if_invalid_request: Optional[bool] = True,
 ) -> None:
     """
     Will read the cached snapshot within the range and dispatch them via PubSub.
@@ -169,6 +180,7 @@ async def send_requests(
         start_ts_utc:
         end_ts_utc:
         configuration:
+        raise_if_invalid_request:
 
     Returns:
 
@@ -187,7 +199,7 @@ async def send_requests(
         await pubsub_dispatcher.dispatch(
             configuration.topic_to_pubsub,
             *cache_snapshot.all_requests(),
-            raise_if_invalid_request=True,
+            raise_if_invalid_request=raise_if_invalid_request,
         )
     else:
         _LOGGER.debug(

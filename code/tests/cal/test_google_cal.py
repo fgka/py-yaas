@@ -75,7 +75,7 @@ async def test_list_upcoming_events_ok(  # pylint: disable=too-many-locals
         credentials_json_arg = kwargs.get("credentials_json")
         return service_arg
 
-    async def mocked_list_all_events(
+    def mocked_list_all_events(
         *, service: Any, amount: int, kwargs_for_list: Dict[str, Any]
     ) -> List[Any]:
         nonlocal amount_used, kwargs_for_list_arg
@@ -149,8 +149,7 @@ class _StubGoogleCalServiceResource:
         return self._events
 
 
-@pytest.mark.asyncio
-async def test__list_all_events_ok_amount_given():
+def test__list_all_events_ok_amount_given():
     # Given
     amount = 10
     list_results = []
@@ -159,7 +158,7 @@ async def test__list_all_events_ok_amount_given():
     service = _StubGoogleCalServiceResource(result=list_results)
     kwargs_for_list = dict(arg_1="value_1", arg_2="value_2")
     # When
-    result = await google_cal._list_all_events(
+    result = google_cal._list_all_events(
         service=service, amount=amount, kwargs_for_list=kwargs_for_list
     )
     # Then
@@ -270,9 +269,8 @@ async def test__persist_credentials_pickle_nok_no_file(monkeypatch):
         await google_cal._persist_credentials_pickle(value, None)
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("expired", [True, False])
-async def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
+def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
     creds = _create_credentials(expired=expired)
     called = {}
 
@@ -282,7 +280,7 @@ async def test__refresh_credentials_if_needed_ok(monkeypatch, expired):
 
     monkeypatch.setattr(creds, creds.refresh.__name__, mocked_refresh)
     # When
-    result = await google_cal._refresh_credentials_if_needed(creds)
+    result = google_cal._refresh_credentials_if_needed(creds)
     # Then
     assert result == creds
     assert (called.get("refresh") is not None) == expired
@@ -405,8 +403,7 @@ async def test__secret_credentials_ok_no_env_secret_name(monkeypatch):
     assert called.get(google_cal.secrets.get.__name__) is None
 
 
-@pytest.mark.asyncio
-async def test__json_credentials_ok_non_initial(monkeypatch):
+def test__json_credentials_ok_non_initial(monkeypatch):
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
@@ -416,7 +413,7 @@ async def test__json_credentials_ok_non_initial(monkeypatch):
     with open(value, "w", encoding=const.ENCODING_UTF8) as out_json:
         out_json.write(creds.to_json())
     # When
-    result = await google_cal._json_credentials(value)
+    result = google_cal._json_credentials(value)
     # Then
     assert result == creds
     assert (
@@ -428,8 +425,7 @@ async def test__json_credentials_ok_non_initial(monkeypatch):
     assert app_flow.called.get(_StubInstalledAppFlow.run_local_server.__name__) is None
 
 
-@pytest.mark.asyncio
-async def test__json_credentials_ok_initial(monkeypatch):
+def test__json_credentials_ok_initial(monkeypatch):
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=False).name)
@@ -439,7 +435,7 @@ async def test__json_credentials_ok_initial(monkeypatch):
     with open(value, "w", encoding=const.ENCODING_UTF8) as out_json:
         json.dump(_TEST_INITIAL_CREDENTIALS_JSON, out_json)
     # When
-    result = await google_cal._json_credentials(value)
+    result = google_cal._json_credentials(value)
     # Then
     assert result == creds
     assert called.get(
@@ -448,13 +444,12 @@ async def test__json_credentials_ok_initial(monkeypatch):
     assert app_flow.called.get(_StubInstalledAppFlow.run_local_server.__name__) == 0
 
 
-@pytest.mark.asyncio
-async def test__json_credentials_ok_file_does_not_exist():
+def test__json_credentials_ok_file_does_not_exist():
     # Given
     # pylint: disable=consider-using-with
     value = pathlib.Path(tempfile.NamedTemporaryFile(delete=True).name)
     # When
-    result = await google_cal._json_credentials(value)
+    result = google_cal._json_credentials(value)
     # Then
     assert result is None
 

@@ -7,7 +7,7 @@ steps:
     id: TERRAFORM_PLAN
     entrypoint: "sh"
     args: ["-c", "terraform -chdir=${_TF_DIR} plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
-  - name: "gcr.io/cloud-builders/gcloud"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: WAIT_FOR_RUN_READY
     entrypoint: "bash"
     args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]

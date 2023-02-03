@@ -14,7 +14,7 @@ steps:
   - name: "python"
     id: PY_BUILD_DEPENDENCIES
     entrypoint: "python3"
-    args: ["-m", "pip", "install", "--user", ".[all]"]
+    args: ["-m", "pip", "install", "--no-warn-script-location", "--user", ".[all]"]
     dir: "${_CODE_DIR}"
   - name: "python"
     id: PY_BUILD
@@ -46,8 +46,32 @@ steps:
         --build-number ${BUILD_NUMBER} \
         --dist-dir ${DIST_DIR}
     dir: "${_CODE_DIR}"
-  - name: "gcr.io/cloud-builders/gcloud"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    id: TWINE
+    script: |
+      #!/usr/bin/env bash
+      
+      # add curl to download pip
+      apt-get install curl
+      
+      # install pip
+      curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
+      python3 get-pip.py
+      
+      # install twine
+      python3 -m pip install --upgrade \
+        pip \
+        twine \
+        keyrings.google-artifactregistry-auth
+      
+      # upload package
+      python3 -m twine upload \
+        --repository-url ${AR_PIP_REPO} \
+        ${DIST_DIR}/*.whl
+    dir: "${_CODE_DIR}"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_DOCKER
+    entrypoint: "gcloud"
     args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
       "--branch", "${BRANCH_NAME}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
@@ -55,6 +79,7 @@ options:
   dynamic_substitutions: true
   env:
     - "DIST_DIR=${_DIST_DIR}"
+    - "AR_PIP_REPO=${_AR_PIP_REPO}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: E2_HIGHCPU_8
@@ -71,6 +96,3 @@ artifacts:
     location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"
     paths:
       - "${_CODE_DIR}/${_DIST_DIR}/**"
-  pythonPackages:
-    - repository: "${_AR_PIP_REPO}"
-      paths: ["${_CODE_DIR}/${_DIST_DIR}/*.whl"]

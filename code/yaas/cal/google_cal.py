@@ -5,7 +5,6 @@ Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
 # pylint: enable=line-too-long
-import asyncio
 import json
 import tempfile
 from datetime import datetime
@@ -15,7 +14,6 @@ import pickle
 from typing import Any, Dict, List, Optional, Union
 
 import aiofiles
-import cachetools
 
 from google.auth.transport import requests
 from google.oauth2 import credentials
@@ -141,7 +139,7 @@ async def list_upcoming_events(
         )
     except Exception as err:
         raise RuntimeError(
-            f"Could create calendar client for secret <{secret_name}>, "
+            f"Could NOT create calendar client for secret <{secret_name}>, "
             f"JSON file: <{credentials_json}>, "
             f"and Pickle file: <{credentials_pickle}>. "
             f"Error: {err}"
@@ -163,7 +161,7 @@ async def list_upcoming_events(
         amount = None
     # Retrieve entries
     try:
-        result = await _list_all_events(
+        result = _list_all_events(
             service=service, amount=amount, kwargs_for_list=kwargs_for_list
         )
     except Exception as err:
@@ -192,7 +190,7 @@ def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
     return value.isoformat() + "Z"
 
 
-async def _list_all_events(
+def _list_all_events(
     *,
     service: discovery.Resource,
     amount: Optional[int],
@@ -200,11 +198,8 @@ async def _list_all_events(
 ) -> List[Dict[str, Any]]:
     result: List[Dict[str, Any]] = []
     # pagination/while trick
-    loop = asyncio.get_event_loop()
     while amount is None or len(result) < amount:
-        events_result = await loop.run_in_executor(
-            None, _list_events_for_kwargs, service, kwargs_for_list
-        )
+        events_result = service.events().list(**kwargs_for_list).execute()
         result.extend(events_result.get("items", []))
         # next page token
         next_page_token = events_result.get("nextPageToken")
@@ -215,13 +210,6 @@ async def _list_all_events(
     if amount is not None:
         result = result[:amount]
     return result
-
-
-def _list_events_for_kwargs(
-    service: discovery.Resource, kwargs_for_list: Dict[str, Any]
-) -> Dict[str, Any]:
-    """To make async"""
-    return service.events().list(**kwargs_for_list).execute()
 
 
 async def _calendar_service(
@@ -243,7 +231,7 @@ async def _calendar_service(
             f"and Pickle: <{credentials_pickle}>. "
             f"Error: {err}"
         ) from err
-    await _refresh_credentials_if_needed(cal_creds)
+    _refresh_credentials_if_needed(cal_creds)
     result: discovery.Resource = None
     if isinstance(cal_creds, credentials.Credentials):
         _LOGGER.debug(
@@ -268,7 +256,6 @@ async def _calendar_service(
     return result
 
 
-@cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
 async def _calendar_credentials(
     *,
     credentials_pickle: Optional[pathlib.Path] = None,
@@ -286,7 +273,7 @@ async def _calendar_credentials(
         result = await _secret_credentials(secret_name, credentials_json)
     # Third: JSON
     if not result:
-        result = await _json_credentials(credentials_json)
+        result = _json_credentials(credentials_json)
     if not result:
         raise RuntimeError(
             "Could not find credentials for cal access."
@@ -397,11 +384,11 @@ async def _secret_credentials(
             type(value),
         )
         await _persist_json_credentials(json.loads(result), credentials_json)
-        result = await _json_credentials(credentials_json)
+        result = _json_credentials(credentials_json)
     return result
 
 
-async def _refresh_credentials_if_needed(
+def _refresh_credentials_if_needed(
     value: credentials.Credentials,
 ) -> credentials.Credentials:
     if (
@@ -410,21 +397,9 @@ async def _refresh_credentials_if_needed(
         and value.refresh_token
     ):
         _LOGGER.debug("Refreshing cal credentials for client ID: %s", value.client_id)
-        loop = asyncio.get_event_loop()
-        req = await loop.run_in_executor(None, _create_request)
-        await loop.run_in_executor(None, _refresh_credentials, value, req)
+        value.refresh(requests.Request())
         _LOGGER.info("Refreshed cal credentials for client ID: %s", value.client_id)
     return value
-
-
-def _refresh_credentials(value: credentials.Credentials, req: requests.Request) -> None:
-    """To make async"""
-    value.refresh(req)
-
-
-def _create_request() -> requests.Request:
-    """To make async"""
-    return requests.Request()
 
 
 async def _persist_json_credentials(
@@ -458,7 +433,12 @@ async def _persist_json_credentials(
     return result
 
 
-async def _json_credentials(
+_CALENDAR_SCOPES: List[str] = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
+
+
+def _json_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
@@ -468,17 +448,14 @@ async def _json_credentials(
     value = _json_filepath(value)
     if value.exists():
         if _is_initial_credentials(value):
-            loop = asyncio.get_event_loop()
-            app_flow = await loop.run_in_executor(
-                None, _app_flow_from_client_secrets_file, value
+            app_flow = flow.InstalledAppFlow.from_client_secrets_file(
+                value, _CALENDAR_SCOPES
             )
-            result = await loop.run_in_executor(
-                None, _app_flow_run_local_server, app_flow, dict(port=0)
-            )
+            result = app_flow.run_local_server(port=0)
         else:
             result = credentials.Credentials.from_authorized_user_file(value)
         _LOGGER.info("Retrieved cal credentials from JSON file %s", value)
-        await _refresh_credentials_if_needed(result)
+        _refresh_credentials_if_needed(result)
     else:
         _LOGGER.info("JSON file %s does not exist, ignoring", value)
     return result
@@ -502,25 +479,6 @@ def _is_initial_credentials(value: pathlib.Path) -> bool:
                 result = True
                 break
     return result
-
-
-_CALENDAR_SCOPES: List[str] = [
-    "https://www.googleapis.com/auth/calendar.readonly",
-]
-
-
-def _app_flow_from_client_secrets_file(
-    value: Optional[pathlib.Path],
-) -> flow.InstalledAppFlow:
-    """To make async"""
-    return flow.InstalledAppFlow.from_client_secrets_file(value, _CALENDAR_SCOPES)
-
-
-def _app_flow_run_local_server(
-    app_flow: flow.InstalledAppFlow, kwargs: Dict[str, Any]
-) -> credentials.Credentials:
-    """To make async"""
-    return app_flow.run_local_server(**kwargs)
 
 
 _CREDENTIALS_JSON_FILE_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_JSON_FILENAME"
@@ -560,7 +518,8 @@ async def update_secret_credentials(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     # push initial credentials
-    await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
+    if initial_credentials_json is not None:
+        await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
     # to by-pass caching
     # pylint: disable=consider-using-with
     credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)
@@ -622,7 +581,7 @@ async def _put_secret_credentials(
             )
     else:
         _LOGGER.warning(
-            "Credentials JSON is not valid. Ignoring put to secret <%s>. Got <%s>(%s)",
+            "Credentials JSON is not valid. Ignoring put to secret <%s>. Got file: <%s>(%s)",
             secret_name,
             credentials_json,
             type(credentials_json),

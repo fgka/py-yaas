@@ -18,6 +18,16 @@ from yaas.gcp import pubsub
 from yaas.scaler import base as scaler_base, standard
 from yaas.event.store import base
 
+
+#############
+# Test Data #
+#############
+
+_TEST_DATA_DIR: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath(
+    "test_data"
+)
+TEST_DATA_CONFIG_JSON: pathlib.Path = _TEST_DATA_DIR / "config.json"
+
 ################
 # ScaleRequest #
 ################

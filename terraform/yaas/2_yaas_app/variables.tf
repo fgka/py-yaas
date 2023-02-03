@@ -13,17 +13,18 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "run_cicd" {
+  description = "If it is run through Cloud Build."
+  type        = bool
+  default     = true
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////
 
 variable "run_sa_email" {
   description = "YAAS Cloud Run Service Account identity email"
-  type        = string
-}
-
-variable "scheduler_sa_email" {
-  description = "YAAS Cloud Scheduler Service Account identity email"
   type        = string
 }
 
@@ -41,22 +42,27 @@ variable "bucket_name" {
   type        = string
 }
 
-//////////////////
-// Docker image //
-//////////////////
-
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-}
-
 /////////////
 // Pub/Sub //
 /////////////
 
-variable "pubsub_topic_id" {
-  description = "ID of the Pub/Sub topic to send DTOs to YAAS Cloud Run."
+variable "pubsub_cal_creds_refresh_id" {
+  description = "ID of the Pub/Sub topic to send Google Calendar credentials refresh requests."
+  type        = string
+}
+
+variable "pubsub_cache_refresh_id" {
+  description = "Name of the Pub/Sub topic to send Google Calendar cache refresh requests."
+  type        = string
+}
+
+variable "pubsub_send_request_id" {
+  description = "ID of the Pub/Sub topic to send requests to process all upcoming scaling requests."
+  type        = string
+}
+
+variable "pubsub_enact_request_id" {
+  description = "ID of the Pub/Sub topic to send specific scaling requests."
   type        = string
 }
 
@@ -90,6 +96,23 @@ variable "secrets_calendar_credentials_id" {
 // Code //
 //////////
 
+variable "calendar_id" {
+  description = "YAAS Google Calendar ID to use"
+  type        = string
+}
+
+variable "config_json_tmpl" {
+  description = "Template for config json"
+  type        = string
+  default     = "templates/config.json.tmpl"
+}
+
+variable "sqlite_cache_path" {
+  description = "YAAS Google Calendar cache SQLite GCS object path"
+  type        = string
+  default     = "yaas/calendar_cache.sql"
+}
+
 variable "log_level" {
   description = "YAAS Cloud Run log level."
   type        = string
@@ -121,6 +144,23 @@ variable "service_path_request_emission" {
   description = "YAAS Coud Run service path to trigger scaling requests emission."
   type        = string
   default     = "/send-requests"
+}
+
+// Do **NOT** change. Check code first
+variable "service_path_enact_request" {
+  description = "YAAS Coud Run service path to enact requests."
+  type        = string
+  default     = "/enact-standard-requests"
+}
+
+//////////////////
+// Docker image //
+//////////////////
+
+variable "image_name_uri" {
+  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
 ///////////////
@@ -169,75 +209,6 @@ variable "run_max_instances" {
   default     = 10
 }
 
-///////////////////////
-// Scheduler/Cronjob //
-///////////////////////
-
-variable "scheduler_calendar_credentials_refresh_name" {
-  description = "Name of the Cloud Scheduler that triggers YAAS calendar credentials refresh"
-  type        = string
-  default     = "yaas-calendar-credentials-refresh"
-}
-
-variable "scheduler_cache_refresh_name" {
-  description = "Name of the Cloud Scheduler that triggers YAAS calendar cache refresh"
-  type        = string
-  default     = "yaas-cache-refresh"
-}
-
-variable "scheduler_cache_refresh_data" {
-  description = "YAAS calendar cache refresh trigger payload."
-  type        = string
-  default     = ""
-}
-
-// Set to run, by default, every 6 hours (minute 17)
-variable "scheduler_cache_refresh_rate_in_hours" {
-  description = "YAAS calendar cache refresh rate in hours, i.e., how many hours after a refresh to repeat it."
-  type        = number
-  default     = 6
-}
-
-// This is to avoid clashing between scheduler and keep debugging easier.
-variable "scheduler_calendar_credentials_refresh_cron_entry_triggering_minute" {
-  description = "YAAS calendar calendar credentials refresh triggering minute. Please only change if you know what you are doing."
-  type        = number
-  default     = 13
-}
-
-// This is to avoid clashing between scheduler and keep debugging easier.
-variable "scheduler_cache_refresh_cron_entry_triggering_minute" {
-  description = "YAAS calendar cache refresh triggering minute. Please only change if you know what you are doing."
-  type        = number
-  default     = 17
-}
-
-variable "scheduler_request_name" {
-  description = "Name of the Cloud Scheduler that triggers YAAS request emission."
-  type        = string
-  default     = "yaas-request-emission"
-}
-
-variable "scheduler_request_data" {
-  description = "YAAS request emission trigger payload."
-  type        = string
-  default     = ""
-}
-
-// Set to run, by default, every hour
-variable "scheduler_request_rate_in_minutes" {
-  description = "YAAS calendar cache refresh rate in hours, i.e., how many hours after a refresh to repeat it."
-  type        = number
-  default     = 30
-}
-
-// By default, uses UTC
-variable "scheduler_cron_timezone" {
-  description = "Crontab entry timezone."
-  type        = string
-  default     = "Etc/UTC"
-}
-
 /////////////////////////////
 // Monitoring and Alerting //
 /////////////////////////////
@@ -250,6 +221,15 @@ variable "monitoring_email_channel_name" {
 variable "monitoring_pubsub_channel_name" {
   description = "Runtime monitoring channel name."
   type        = string
+}
+
+variable "monitoring_not_executed_align_period_in_seconds" {
+  description = "Maximum period to tolerate lack of execution for specific commands"
+  type = object({
+    calendar_credentials_refresh = number
+    cache_refresh                = number
+    send_request                 = number
+  })
 }
 
 variable "monitoring_alert_severity" {

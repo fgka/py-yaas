@@ -13,6 +13,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "run_cicd" {
+  description = "If it is run through Cloud Build."
+  type        = bool
+  default     = true
+}
+
 //////////////////////
 // Service Accounts //
 //////////////////////
@@ -156,6 +162,15 @@ variable "tf_yaas_trigger_name" {
   description = "Cloud Build trigger for YAAS infrastructure Terraform code."
   type        = string
   default     = "yaas-tf-infra"
+}
+
+//////////
+// Code //
+//////////
+
+variable "calendar_id" {
+  description = "YAAS Google Calendar ID to use"
+  type        = string
 }
 
 ////////////

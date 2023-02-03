@@ -8,8 +8,6 @@ GCP `Secret Manager`_ entry point
 # pylint: enable=line-too-long
 from typing import List, Optional
 
-import cachetools
-
 from google.cloud import secretmanager
 
 from yaas import const, logger
@@ -78,7 +76,6 @@ async def get(secret_name: str) -> str:
     return response.payload.data.decode(const.ENCODING_UTF8)
 
 
-@cachetools.cached(cache=cachetools.LRUCache(maxsize=1))
 def _secret_client() -> secretmanager.SecretManagerServiceAsyncClient:
     return secretmanager.SecretManagerServiceAsyncClient()
 

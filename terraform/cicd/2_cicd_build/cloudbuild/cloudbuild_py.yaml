@@ -62,9 +62,6 @@ steps:
       python3 -m twine upload \
         --repository-url ${AR_PIP_REPO} \
         ${DIST_DIR}/*.whl
-    entrypoint: "bash"
-    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
-      "--branch", "${BRANCH_NAME}"]
     dir: "${_CODE_DIR}"
   - name: "gcr.io/cloud-builders/gcloud"
     id: BUILD_DOCKER

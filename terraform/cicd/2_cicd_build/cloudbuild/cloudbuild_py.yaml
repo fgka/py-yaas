@@ -68,7 +68,7 @@ steps:
         --repository-url ${AR_PIP_REPO} \
         ${DIST_DIR}/*.whl
     dir: "${_CODE_DIR}"
-  - name: "gcr.io/cloud-builders/gcloud"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: BUILD_DOCKER
     args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
       "--branch", "${BRANCH_NAME}"]

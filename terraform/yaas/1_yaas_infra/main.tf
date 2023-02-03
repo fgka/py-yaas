@@ -12,8 +12,9 @@ locals {
   scheduler_cron_entry_request             = "*/${var.scheduler_request_rate_in_minutes} * * * *"
   // scheduler data
   cache_refresh_range_in_minutes = var.cache_refresh_range_in_days * 24 * 60
-  scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":-${var.scheduler_request_rate_in_minutes}}"
-  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes}, \"now_diff_minutes\":-${var.scheduler_request_rate_in_minutes}}"
+  calendar_creds_refresh_data    = "{\"to_be_ignored\": \"this not used anywhere\"}"
+  scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}"
+  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes}, \"now_diff_minutes\":-1}"
 }
 
 data "google_project" "project" {
@@ -136,7 +137,7 @@ resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
   pubsub_target {
     # topic.id is the topic's full resource name.
     topic_name = module.pubsub_cal_creds_refresh.topic.id
-    data       = base64encode("refresh")
+    data       = base64encode(local.calendar_creds_refresh_data)
   }
 }
 

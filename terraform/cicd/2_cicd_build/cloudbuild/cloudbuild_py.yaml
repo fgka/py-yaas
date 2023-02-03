@@ -53,6 +53,8 @@ steps:
       IDENTITY=$(gcloud config config-helper --format='value(configuration.properties.core.account)')
       
       echo "Identity: ${IDENTITY}"
+      
+      python -m ensurepip --upgradeß
 
       python3 -m pip install --upgrade \
         pip \

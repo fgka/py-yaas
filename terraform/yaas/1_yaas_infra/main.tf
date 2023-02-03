@@ -51,9 +51,9 @@ resource "google_project_iam_member" "serverless_service_agent" {
 
 resource "google_project_iam_member" "serverless_service_agent" {
   for_each = toset(var.run_service_account_roles)
-  project = var.project_id
-  role    = each.key
-  member  = google_service_account.run_sa.member
+  project  = var.project_id
+  role     = each.key
+  member   = google_service_account.run_sa.member
 }
 
 /////////////
@@ -182,7 +182,7 @@ module "secrets_calendar_credentials" {
   iam = {
     "${var.secrets_calendar_credentials_name}" = {
       "roles/secretmanager.secretVersionAdder" = [google_service_account.run_sa.member],
-      "roles/secretmanager.secretAccessor" = [google_service_account.run_sa.member],
+      "roles/secretmanager.secretAccessor"     = [google_service_account.run_sa.member],
     }
   }
 }

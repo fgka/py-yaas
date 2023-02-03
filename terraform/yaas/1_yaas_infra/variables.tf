@@ -36,7 +36,7 @@ variable "pubsub_service_account_name" {
 variable "run_service_account_roles" {
   description = "All admin roles required to let YAAS manage resources"
   type        = list(string)
-  default     = [
+  default = [
     "roles/compute.instanceAdmin.v1",
     "roles/cloudfunctions.admin",
     "roles/cloudsql.admin",

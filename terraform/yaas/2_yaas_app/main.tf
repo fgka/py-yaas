@@ -7,8 +7,8 @@ locals {
   pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
   run_sa_email_member = "serviceAccount:${var.run_sa_email}"
   // config JSON
-  root_dir                  = var.run_cicd ? "." : "../.."
-  terraform_module_root_dir = "${local.root_dir}/terraform/yaas/${path.module}"
+  root_dir                  = var.run_cicd ? "" : "../../"
+  terraform_module_root_dir = "${local.root_dir}terraform/yaas/${path.module}"
   config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url

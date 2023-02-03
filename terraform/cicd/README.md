@@ -39,6 +39,12 @@ export GITHUB_REPO=$(basename `git rev-parse --show-toplevel`)
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 ```
 
+Calendar ID:
+
+```bash
+export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
+```
+
 Check:
 
 ```bash
@@ -46,6 +52,7 @@ echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
 echo "PIP: ${PIP_PACKAGE}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
+echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
 ## Enable APIs
@@ -82,7 +89,6 @@ Without integration test data:
 TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
-  -var "run_cicd=false" \
   -var "project_id=${PROJECT_ID}" \
   -var "region=${REGION}" \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
@@ -90,6 +96,7 @@ terraform plan \
   -var "github_owner=${GITHUB_OWNER}" \
   -var "github_repo_name=${GITHUB_REPO}" \
   -var "github_branch=${GIT_BRANCH}" \
+  -var "calendar_id=${CALENDAR_ID}" \
   -var "yaas_pip_package=${PIP_PACKAGE}"
 ```
 

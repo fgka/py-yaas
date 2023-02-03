@@ -164,6 +164,15 @@ variable "tf_yaas_trigger_name" {
   default     = "yaas-tf-infra"
 }
 
+//////////
+// Code //
+//////////
+
+variable "calendar_id" {
+  description = "YAAS Google Calendar ID to use"
+  type        = string
+}
+
 ////////////
 // Github //
 ////////////

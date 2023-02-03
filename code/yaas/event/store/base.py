@@ -155,8 +155,9 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         UN-Blocks all file operations globally.
         """
         result = self._fcntl_flock(False)
-        if result and self._thread_lock.locked():
-            self._thread_lock.release()
+        if result:
+            if self._thread_lock.locked():
+                self._thread_lock.release()
         else:
             _LOGGER.info("Could not unlock file %s", self._lock_file)
         return result

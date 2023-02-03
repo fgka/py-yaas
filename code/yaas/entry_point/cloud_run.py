@@ -169,7 +169,7 @@ async def send_requests() -> str:
 
     `curl`::
         PERIOD_MINUTES=10
-        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":-${PERIOD_MINUTES}}"
+        DATA="{\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":-1}"
         DATA_BASE64=$(echo ${DATA} | base64)
         curl \
             -d "{\"data\":\"${DATA_BASE64}\"}" \

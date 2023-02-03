@@ -5,7 +5,6 @@ Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
 # pylint: enable=line-too-long
-import asyncio
 import json
 import tempfile
 from datetime import datetime
@@ -234,7 +233,7 @@ async def _calendar_service(
             f"and Pickle: <{credentials_pickle}>. "
             f"Error: {err}"
         ) from err
-    await _refresh_credentials_if_needed(cal_creds)
+    _refresh_credentials_if_needed(cal_creds)
     result: discovery.Resource = None
     if isinstance(cal_creds, credentials.Credentials):
         _LOGGER.debug(
@@ -277,7 +276,7 @@ async def _calendar_credentials(
         result = await _secret_credentials(secret_name, credentials_json)
     # Third: JSON
     if not result:
-        result = await _json_credentials(credentials_json)
+        result = _json_credentials(credentials_json)
     if not result:
         raise RuntimeError(
             "Could not find credentials for cal access."
@@ -388,11 +387,11 @@ async def _secret_credentials(
             type(value),
         )
         await _persist_json_credentials(json.loads(result), credentials_json)
-        result = await _json_credentials(credentials_json)
+        result = _json_credentials(credentials_json)
     return result
 
 
-async def _refresh_credentials_if_needed(
+def _refresh_credentials_if_needed(
     value: credentials.Credentials,
 ) -> credentials.Credentials:
     if (
@@ -401,21 +400,9 @@ async def _refresh_credentials_if_needed(
         and value.refresh_token
     ):
         _LOGGER.debug("Refreshing cal credentials for client ID: %s", value.client_id)
-        loop = asyncio.get_event_loop()
-        req = await loop.run_in_executor(None, _create_request)
-        await loop.run_in_executor(None, _refresh_credentials, value, req)
+        value.refresh(requests.Request())
         _LOGGER.info("Refreshed cal credentials for client ID: %s", value.client_id)
     return value
-
-
-def _refresh_credentials(value: credentials.Credentials, req: requests.Request) -> None:
-    """To make async"""
-    value.refresh(req)
-
-
-def _create_request() -> requests.Request:
-    """To make async"""
-    return requests.Request()
 
 
 async def _persist_json_credentials(
@@ -449,7 +436,12 @@ async def _persist_json_credentials(
     return result
 
 
-async def _json_credentials(
+_CALENDAR_SCOPES: List[str] = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
+
+
+def _json_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
@@ -459,17 +451,14 @@ async def _json_credentials(
     value = _json_filepath(value)
     if value.exists():
         if _is_initial_credentials(value):
-            loop = asyncio.get_event_loop()
-            app_flow = await loop.run_in_executor(
-                None, _app_flow_from_client_secrets_file, value
+            app_flow = flow.InstalledAppFlow.from_client_secrets_file(
+                value, _CALENDAR_SCOPES
             )
-            result = await loop.run_in_executor(
-                None, _app_flow_run_local_server, app_flow, dict(port=0)
-            )
+            result = app_flow.run_local_server(port=0)
         else:
             result = credentials.Credentials.from_authorized_user_file(value)
         _LOGGER.info("Retrieved cal credentials from JSON file %s", value)
-        await _refresh_credentials_if_needed(result)
+        _refresh_credentials_if_needed(result)
     else:
         _LOGGER.info("JSON file %s does not exist, ignoring", value)
     return result
@@ -493,25 +482,6 @@ def _is_initial_credentials(value: pathlib.Path) -> bool:
                 result = True
                 break
     return result
-
-
-_CALENDAR_SCOPES: List[str] = [
-    "https://www.googleapis.com/auth/calendar.readonly",
-]
-
-
-def _app_flow_from_client_secrets_file(
-    value: Optional[pathlib.Path],
-) -> flow.InstalledAppFlow:
-    """To make async"""
-    return flow.InstalledAppFlow.from_client_secrets_file(value, _CALENDAR_SCOPES)
-
-
-def _app_flow_run_local_server(
-    app_flow: flow.InstalledAppFlow, kwargs: Dict[str, Any]
-) -> credentials.Credentials:
-    """To make async"""
-    return app_flow.run_local_server(**kwargs)
 
 
 _CREDENTIALS_JSON_FILE_ENV_VAR_NAME: str = "CALENDAR_CREDENTIALS_JSON_FILENAME"

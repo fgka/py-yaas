@@ -195,7 +195,7 @@ async def send_requests() -> str:
         )
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not update cache. Error: {err}"
+        msg = f"Could not send requests. Error: {err}"
         _LOGGER.exception(msg)
         result = flask.jsonify({"error": msg})
     return result

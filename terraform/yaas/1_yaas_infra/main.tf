@@ -14,7 +14,8 @@ locals {
   cache_refresh_range_in_minutes = var.cache_refresh_range_in_days * 24 * 60
   calendar_creds_refresh_data    = "{\"to_be_ignored\": \"this not used anywhere\"}"
   scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}"
-  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes}, \"now_diff_minutes\":-1}"
+  scheduler_request_now_diff     = -1
+  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}"
 }
 
 data "google_project" "project" {
@@ -160,7 +161,7 @@ resource "google_cloud_scheduler_job" "request_emission" {
   time_zone   = var.scheduler_cron_timezone
   pubsub_target {
     # topic.id is the topic's full resource name.
-    topic_name = module.pubsub_enact_request.topic.id
+    topic_name = module.pubsub_send_request.topic.id
     data       = base64encode(local.scheduler_request_data)
   }
 }

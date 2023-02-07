@@ -35,3 +35,5 @@ python3 ./setup.py install
 ```
 
 ## [Design](../DESIGN.md)
+
+## [CLI Usage](./CLI.md)

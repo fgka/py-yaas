@@ -55,7 +55,7 @@ Rel(schedRequests, requestQueue, "Publish: Send Upcoming Scaling Requests Comman
 'PubSub
 Rel(cacheQueue, eventCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
 Rel(credsQueue, credentialsCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
-Rel(requestQueue, eventCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
+Rel(requestQueue, requestSender, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
 'Calendar caching
 Rel(eventCache, secretCache, "Get Credentials")
 Rel(eventCache, googleCal, "Get Requests", "Constantly refresh\nappointments' cache\nfor changes: pulling")

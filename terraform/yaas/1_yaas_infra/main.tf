@@ -7,7 +7,7 @@ locals {
   serverless_system_sa_iam_member = "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
   scheduler_system_sa_iam_member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
   // scheduler
-  scheduler_cron_entry_credentials_refresh = "${var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute} */${var.scheduler_calendar_credentials_refresh_rate_in_hourss} * * *"
+  scheduler_cron_entry_credentials_refresh = "${var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute} */${var.scheduler_calendar_credentials_refresh_rate_in_hours} * * *"
   scheduler_cron_entry_cache_refresh       = "${var.scheduler_cache_refresh_cron_entry_triggering_minute} */${var.scheduler_cache_refresh_rate_in_hours} * * *"
   scheduler_cron_entry_request             = "*/${var.scheduler_request_rate_in_minutes} * * * *"
   // scheduler data

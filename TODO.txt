@@ -1,4 +1,5 @@
 - Code
+-- Control plane as command pattern to reduce amount of pubsub topics
 -- Request/ScalingDef:
 --- multiple commands per resource (combine them)
 -- Secret/Calendar creds cycle: constant refresh into secret manager

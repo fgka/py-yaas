@@ -6,11 +6,13 @@ YAAS stands for Yet Another Auto Scaler.
 
 Inside `code` you have all pointer to the code and how to navigate all the branches. 
 
-## [High Level Design](./doc/DESIGN.md)
+### [Development](./DEVELOPMENT.md)
 
-## [Design](./code/DESIGN.md)
+Follow [development documentation](./DEVELOPMENT.md) to setup your environment.
 
-To understand the code and how it works, check out the [design documentation](./code/DESIGN.md).
+## [High Level Design](./DESIGN.md)
+
+To understand the code and how it works, check out the [design documentation](./DESIGN.md).
 Note that this document corresponds to the design in the specific branch.
 
 ## [Terraform](./terraform)

@@ -26,7 +26,7 @@ You will need:
 - [jq](https://stedolan.github.io/jq/) (tested with `v1.6`)
 - [terraform](https://www.terraform.io/) (tested with `v1.2.7`)
 
-## [Development](DEVELOPMENT.md)
+## [Development](../DEVELOPMENT.md)
 
 ## Install
 
@@ -34,4 +34,4 @@ You will need:
 python3 ./setup.py install
 ```
 
-## [Design](DESIGN.md)
+## [Design](../DESIGN.md)

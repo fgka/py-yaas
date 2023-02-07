@@ -40,6 +40,7 @@ module "yaas_infra" {
   // scheduler: calendar
   scheduler_calendar_credentials_refresh_name                         = var.scheduler_calendar_credentials_refresh_name
   scheduler_calendar_credentials_refresh_cron_entry_triggering_minute = var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute
+  scheduler_calendar_credentials_refresh_rate_in_hours                = var.scheduler_calendar_credentials_refresh_rate_in_hours
   // scheduler: cache
   scheduler_cache_refresh_name                         = var.scheduler_cache_refresh_name
   scheduler_cache_refresh_rate_in_hours                = var.scheduler_cache_refresh_rate_in_hours

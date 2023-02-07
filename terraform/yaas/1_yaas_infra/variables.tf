@@ -125,6 +125,13 @@ variable "scheduler_calendar_credentials_refresh_cron_entry_triggering_minute" {
   default     = 13
 }
 
+// Set to run, by default, every 4 hours (minute 13)
+variable "scheduler_calendar_credentials_refresh_rate_in_hours" {
+  description = "YAAS calendar credentials refresh rate in hours, i.e., how many hours after a refresh to repeat it."
+  type        = number
+  default     = 4
+}
+
 // Calendar Cache Refresh
 
 variable "scheduler_cache_refresh_name" {

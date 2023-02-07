@@ -34,13 +34,22 @@ def canonical_resource_type_and_name(resource: str) -> Tuple[ResourceType, str]:
     Returns:
         Canonical resource name.
     """
+    res_type, res_canonical = None, None
+    _LOGGER.debug("Finding resource and type for <%s>", resource)
     if isinstance(resource, str):
         # Cloud Run
         cloud_run_resource = _parse_cloud_run_name(resource)
         if cloud_run_resource:
-            return ResourceType.CLOUD_RUN, cloud_run_resource
+            res_type = ResourceType.CLOUD_RUN
+            res_canonical = cloud_run_resource
+    _LOGGER.info(
+        "Parsed resource <%s> to type <%s> and canonical name <%s>",
+        resource,
+        res_type,
+        res_canonical,
+    )
     # Nothing found
-    return None, None
+    return res_type, res_canonical
 
 
 ######################

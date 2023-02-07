@@ -227,7 +227,7 @@ async def enact_requests() -> str:
     )
     try:
         _LOGGER.info("Calling %s", enact_requests.__name__)
-        parser = standard.StandardScalingCommandParser()
+        parser = standard.StandardScalingCommandParser(strict_mode=False)
         await entry.enact_requests(parser=parser, pubsub_event=flask.request)
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except

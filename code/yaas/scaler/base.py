@@ -102,11 +102,14 @@ class CategoryScaleRequestParser(abc.ABC):
     For a given category process all :py:class:`request.ScaleRequest`.
     """
 
+    def __init__(self, *, strict_mode: Optional[bool] = True):
+        self._strict_mode = bool(strict_mode)
+
     async def enact(
         self,
         *value: request.ScaleRequest,
         singulate_if_only_one: Optional[bool] = True,
-        raise_if_invalid_request: Optional[bool] = True,
+        raise_if_invalid_request: Optional[bool] = None,
     ) -> Union[List[Tuple[bool, Scaler]], Tuple[bool, Scaler]]:
         """
         Will create the corresponding :py:class:`Scaler`
@@ -122,6 +125,10 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Used :py:class:`Scaler`
         """
+        # validate input
+        if raise_if_invalid_request is None:
+            raise_if_invalid_request = self._strict_mode
+        # logic
         item_lst = self.scaler(
             *value,
             singulate_if_only_one=False,
@@ -135,7 +142,7 @@ class CategoryScaleRequestParser(abc.ABC):
         self,
         *value: request.ScaleRequest,
         singulate_if_only_one: Optional[bool] = True,
-        raise_if_invalid_request: Optional[bool] = True,
+        raise_if_invalid_request: Optional[bool] = None,
     ) -> Union[List[Scaler], Scaler]:
         """
         Returns the :py:cls:`Scaler` instance corresponding to the resource and command.
@@ -150,10 +157,12 @@ class CategoryScaleRequestParser(abc.ABC):
         """
         # validate input
         self._validate_request(*value)
+        if raise_if_invalid_request is None:
+            raise_if_invalid_request = self._strict_mode
         # logic
         result = []
         scaling_def_lst: Iterable[scaling.ScalingDefinition] = self._filter_requests(
-            self._to_scaling_definition(value),
+            self._to_scaling_definition(value, raise_if_error=self._strict_mode),
             raise_if_invalid_request=raise_if_invalid_request,
         )
         for ndx, val in enumerate(scaling_def_lst):
@@ -194,12 +203,16 @@ class CategoryScaleRequestParser(abc.ABC):
 
     @abc.abstractmethod
     def _to_scaling_definition(
-        self, value: Iterable[request.ScaleRequest]
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
     ) -> Iterable[scaling.ScalingDefinition]:
         """
         To convert the request into its proper, supported, scaling definition.
         Args:
             value:
+            raise_if_error
 
         Returns:
 

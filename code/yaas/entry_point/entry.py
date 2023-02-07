@@ -240,7 +240,7 @@ async def enact_requests(
             f"Event: {pubsub_event}"
         )
     result: List[Tuple[bool, base_scaler.Scaler]] = await parser.enact(
-        *req_lst, singulate_if_only_one=False, raise_if_invalid_request=True
+        *req_lst, singulate_if_only_one=False
     )
     for success_scaler in result:
         success, scaler = success_scaler

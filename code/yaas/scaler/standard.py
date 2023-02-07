@@ -36,7 +36,10 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
     """
 
     def _to_scaling_definition(
-        self, value: Iterable[request.ScaleRequest]
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
     ) -> Iterable[scaling.ScalingDefinition]:
         result = []
         for ndx, val in enumerate(value):
@@ -46,12 +49,15 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
             if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
                 result.append(run.CloudRunScalingDefinition.from_request(val))
             else:
-                raise TypeError(
+                msg = (
                     f"Request <{val}>[{ndx}]) of type {res_type} is not supported. "
                     f"Check implementation of {self._to_scaling_definition.__name__} "
                     f"in {self.__class__.__name__}. "
                     f"Values: {value}"
                 )
+                if raise_if_error:
+                    raise TypeError(msg)
+                _LOGGER.warning(msg)
         return result
 
     def _filter_requests(
@@ -63,6 +69,11 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
         for ndx, scaling_def in enumerate(
             sorted(value, key=lambda val: val.timestamp_utc, reverse=True)
         ):
+            if not isinstance(scaling_def, scaling.ScalingDefinition):
+                msg = f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
+                if raise_if_invalid_request:
+                    raise TypeError(msg)
+                _LOGGER.warning(msg)
             key = scaling_def.resource, scaling_def.command
             previous = result.get(key)
             if previous is not None:

@@ -15,7 +15,7 @@ locals {
   calendar_creds_refresh_data    = "{\"to_be_ignored\": \"this not used anywhere\"}"
   scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}"
   scheduler_request_now_diff     = -1
-  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}"
+  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}}"
 }
 
 data "google_project" "project" {

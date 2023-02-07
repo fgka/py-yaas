@@ -231,7 +231,7 @@ async def enact_requests() -> str:
         await entry.enact_requests(parser=parser, pubsub_event=flask.request)
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not update cache. Error: {err}"
+        msg = f"Could not enact request. Error: {err}"
         _LOGGER.exception(msg)
         result = flask.jsonify({"error": msg})
     return result

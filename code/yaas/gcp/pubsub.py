@@ -127,11 +127,17 @@ def _parse_json_data(value: Union[str, bytes]) -> Any:
 
     """
     # parse PubSub payload
+    str_data = None
     try:
-        result = json.loads(_parse_str_data(value))
+        str_data = _parse_str_data(value)
+        if isinstance(str_data, str):
+            result = json.loads(str_data)
+        else:
+            raise RuntimeError(f"Could not parse input value <{value}>")
     except Exception as err:
         raise RuntimeError(
-            f"Could not parse PubSub JSON data. Raw data: <{value}>. Error: {err}"
+            f"Could not parse PubSub JSON data. Raw data: <{value}>, string data: <{str_data}>. "
+            f"Error: {err}"
         ) from err
     return result
 

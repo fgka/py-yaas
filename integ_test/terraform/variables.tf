@@ -28,7 +28,23 @@ variable "image_name_uri" {
 ///////////////
 
 variable "run_name" {
-  description = "YAAS Cloud Run name."
+  description = "Integration tests Cloud Run name."
   type        = string
-  default     = "yaas-run"
+  default     = "integ-test"
+}
+
+///////////////
+// Cloud SQL //
+///////////////
+
+variable "sql_name" {
+  description = "Integration tests Cloud SQL name."
+  type        = string
+  default     = "integ-test"
+}
+
+variable "sql_database_version" {
+  description = "Integration tests Cloud SQL name."
+  type        = string
+  default     = "POSTGRES_14"
 }

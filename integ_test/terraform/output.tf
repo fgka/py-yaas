@@ -2,10 +2,11 @@
 // Modules //
 /////////////
 
-output "yaas_infra" {
-  value = module.yaas_infra
+output "cloud_run" {
+  value = google_cloud_run_service.main
 }
 
-output "yaas_build" {
-  value = module.yaas_app
+output "cloud_sql" {
+  value = google_sql_database_instance.main
+  sensitive = true
 }

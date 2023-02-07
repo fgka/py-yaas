@@ -7,6 +7,10 @@ output "cloud_run" {
 }
 
 output "cloud_sql" {
-  value = google_sql_database_instance.main
+  value     = google_sql_database_instance.main
   sensitive = true
+}
+
+output "request_body" {
+  value = local_file.request_body.filename
 }

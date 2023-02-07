@@ -2,3 +2,4 @@ init.tf
 **/.terraform*
 **/dist
 **/terraform.tfstate*
+**/request_body.txt

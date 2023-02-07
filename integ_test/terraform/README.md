@@ -36,6 +36,7 @@ gcloud services enable \
   logging.googleapis.com \
   monitoring.googleapis.com \
   run.googleapis.com \
+  servicenetworking.googleapis.com \
   sqladmin.googleapis.com \
   --project="${PROJECT_ID}"
 ```
@@ -62,4 +63,25 @@ terraform plan \
 
 ```bash
 terraform apply ${TMP} && rm -f ${TMP}
+```
+
+## Get the YASS scaling request body
+
+Get the file name:
+
+```bash
+OUT_JSON=$(mktemp)
+terraform output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+REQUEST_FILENAME=$(jq -c -r ".request_body.value" ${OUT_JSON})
+echo "Request body filename: <${REQUEST_FILENAME}>"
+
+rm -f ${OUT_JSON}
+```
+
+Get the content:
+
+```bash
+cat ${REQUEST_FILENAME}
 ```

@@ -48,3 +48,19 @@ variable "sql_database_version" {
   type        = string
   default     = "POSTGRES_14"
 }
+
+////////////////////////
+// YAAS: request body //
+////////////////////////
+
+variable "request_body_tmpl" {
+  description = "Template for YAAS request body"
+  type        = string
+  default     = "templates/request_body.txt.tmpl"
+}
+
+variable "request_body" {
+  description = "YAAS request body"
+  type        = string
+  default     = "request_body.txt"
+}

@@ -3,9 +3,12 @@
 """
 GCP `Secret Manager`_ entry point
 
+**NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
+
 .. _Secret Manager: https://cloud.google.com/secret-manager/docs/quickstart#secretmanager-quickstart-python
 """
 # pylint: enable=line-too-long
+import asyncio
 from typing import List, Optional
 
 from google.cloud import secretmanager
@@ -65,10 +68,10 @@ async def get(secret_name: str) -> str:
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     _LOGGER.info("Retrieving secret <%s>", secret_name)
+    await asyncio.sleep(0)
     try:
-        response = await _secret_client().access_secret_version(
-            request={"name": secret_name}
-        )
+        response = _secret_client().access_secret_version(request={"name": secret_name})
+        await asyncio.sleep(0)
     except Exception as err:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
         _LOGGER.critical(msg)
@@ -76,8 +79,8 @@ async def get(secret_name: str) -> str:
     return response.payload.data.decode(const.ENCODING_UTF8)
 
 
-def _secret_client() -> secretmanager.SecretManagerServiceAsyncClient:
-    return secretmanager.SecretManagerServiceAsyncClient()
+def _secret_client() -> secretmanager.SecretManagerServiceClient:
+    return secretmanager.SecretManagerServiceClient()
 
 
 def validate_secret_resource_name(
@@ -122,12 +125,14 @@ async def put(*, secret_name: str, content: str) -> str:
             f"Content must be a string. Got: <{content}>({type(content)})"
         )
     _LOGGER.info("Adding a version to secret <%s>", secret_name)
+    await asyncio.sleep(0)
     try:
         request = {
             "parent": secret_name,
             "payload": {"data": content.encode(const.ENCODING_UTF8)},
         }
-        response = await _secret_client().add_secret_version(request=request)
+        response = _secret_client().add_secret_version(request=request)
+        await asyncio.sleep(0)
     except Exception as err:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
         _LOGGER.critical(msg)

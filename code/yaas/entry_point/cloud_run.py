@@ -3,6 +3,8 @@
 """
 GCP Cloud Run entry point:
 * https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service
+
+**NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
 """
 # pylint: enable=line-too-long
 import os

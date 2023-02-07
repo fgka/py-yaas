@@ -38,7 +38,7 @@ class _StubCloudRunService:
         setattr(parent, path_lst[-1], value)
 
 
-class _StubCloudRunAsyncOperation:
+class _StubCloudRunOperation:
     def __init__(
         self, *, value: Optional[Any] = None, raise_on_result: Optional[bool] = False
     ):
@@ -46,19 +46,19 @@ class _StubCloudRunAsyncOperation:
         self._raise_on_result = raise_on_result
         self._result = value
 
-    async def result(self) -> Any:
-        self.called[_StubCloudRunAsyncOperation.result.__name__] = True
+    def result(self) -> Any:
+        self.called[_StubCloudRunOperation.result.__name__] = True
         if self._raise_on_result:
             raise RuntimeError
         return self._result
 
 
-class _StubCloudRunAsyncClient:
+class _StubCloudRunClient:
     def __init__(
         self,
         *,
         service: Optional[_StubCloudRunService] = None,
-        update_operation: Optional[_StubCloudRunAsyncOperation] = None,
+        update_operation: Optional[_StubCloudRunOperation] = None,
         raise_on_get: Optional[bool] = False,
         raise_on_update: Optional[bool] = False,
     ):
@@ -68,14 +68,14 @@ class _StubCloudRunAsyncClient:
         self._raise_on_update = raise_on_update
         self.called = {}
 
-    async def get_service(self, request: Dict[str, Any]) -> _StubCloudRunService:
-        self.called[_StubCloudRunAsyncClient.get_service.__name__] = request
+    def get_service(self, request: Dict[str, Any]) -> _StubCloudRunService:
+        self.called[_StubCloudRunClient.get_service.__name__] = request
         if self._raise_on_get:
             raise ValueError
         return self._service
 
-    async def update_service(self, request: Dict[str, Any]) -> Any:
-        self.called[_StubCloudRunAsyncClient.update_service.__name__] = request
+    def update_service(self, request: Dict[str, Any]) -> Any:
+        self.called[_StubCloudRunClient.update_service.__name__] = request
         if self._raise_on_update:
             raise ValueError
         return self._update_operation
@@ -84,13 +84,13 @@ class _StubCloudRunAsyncClient:
 @pytest.mark.asyncio
 async def test_get_service_nok_raises(monkeypatch):
     # Given
-    client = _StubCloudRunAsyncClient(raise_on_get=True)
+    client = _StubCloudRunClient(raise_on_get=True)
     monkeypatch.setattr(cloud_run, cloud_run._run_client.__name__, lambda: client)
     # When/Then
     with pytest.raises(cloud_run.CloudRunServiceError):
         await cloud_run.get_service(_TEST_SERVICE_NAME)
     # Then:called
-    request = client.called.get(_StubCloudRunAsyncClient.get_service.__name__)
+    request = client.called.get(_StubCloudRunClient.get_service.__name__)
     assert isinstance(request, dict)
     assert request.get("name") == _TEST_SERVICE_NAME
 
@@ -108,7 +108,7 @@ async def test_can_be_deployed_ok(
     monkeypatch, reconciling: bool, raise_on_get: bool, expected: bool
 ):
     # Given
-    client = _StubCloudRunAsyncClient(
+    client = _StubCloudRunClient(
         service=_StubCloudRunService(path="reconciling", value=reconciling),
         raise_on_get=raise_on_get,
     )
@@ -125,8 +125,8 @@ async def test_update_service_ok(monkeypatch):
     path = "root.attr.sub_attr"
     value = "TEST_VALUE"
     service = _StubCloudRunService(path=path, value=f"NOT_{value}")
-    update_operation = _StubCloudRunAsyncOperation(value=service)
-    client = _StubCloudRunAsyncClient(
+    update_operation = _StubCloudRunOperation(value=service)
+    client = _StubCloudRunClient(
         service=service,
         update_operation=update_operation,
     )
@@ -140,9 +140,9 @@ async def test_update_service_ok(monkeypatch):
     )
     # Then
     assert result.root.attr.sub_attr == value
-    assert client.called.get(_StubCloudRunAsyncClient.get_service.__name__)
-    assert update_operation.called.get(_StubCloudRunAsyncOperation.result.__name__)
-    request = client.called.get(_StubCloudRunAsyncClient.update_service.__name__)
+    assert client.called.get(_StubCloudRunClient.get_service.__name__)
+    assert update_operation.called.get(_StubCloudRunOperation.result.__name__)
+    request = client.called.get(_StubCloudRunClient.update_service.__name__)
     assert request.get("service") == service
 
 
@@ -162,10 +162,10 @@ async def test_update_service_nok_raises(
     path = "root.attr.sub_attr"
     value = "TEST_VALUE"
     service = _StubCloudRunService(path=path, value=f"NOT_{value}")
-    update_operation = _StubCloudRunAsyncOperation(
+    update_operation = _StubCloudRunOperation(
         value=service, raise_on_result=raise_on_result
     )
-    client = _StubCloudRunAsyncClient(
+    client = _StubCloudRunClient(
         service=service,
         update_operation=update_operation,
         raise_on_get=raise_on_get,

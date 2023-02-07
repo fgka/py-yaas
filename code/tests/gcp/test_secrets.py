@@ -80,7 +80,7 @@ class _StubResponse:
         self.name = name
 
 
-class _StubSecretAsyncClient:
+class _StubSecretClient:
     def __init__(
         self,
         *,
@@ -96,13 +96,13 @@ class _StubSecretAsyncClient:
         self._raise_on_add = raise_on_add
         self._request = None
 
-    async def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+    def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
         if self._raise_on_access:
             raise RuntimeError
         return self._response
 
-    async def add_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+    def add_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
         if self._raise_on_add:
             raise RuntimeError
@@ -114,7 +114,7 @@ async def test_get_ok(monkeypatch):
     # Given
     expected = "EXPECTED"
     secret_name = "TEST_SECRET"
-    client = _StubSecretAsyncClient(data=expected)
+    client = _StubSecretClient(data=expected)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When
     result = await secrets.get(secret_name)
@@ -126,7 +126,7 @@ async def test_get_ok(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_nok(monkeypatch):
     # Given
-    client = _StubSecretAsyncClient(raise_on_access=True)
+    client = _StubSecretClient(raise_on_access=True)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When/Then
     with pytest.raises(secrets.SecretManagerAccessError):
@@ -168,7 +168,7 @@ async def test_put_ok(monkeypatch):
     # Given
     content = "EXPECTED"
     secret_name = "TEST_SECRET"
-    client = _StubSecretAsyncClient(name=secret_name)
+    client = _StubSecretClient(name=secret_name)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When
     result = await secrets.put(secret_name=secret_name, content=content)
@@ -185,7 +185,7 @@ async def test_put_nok(monkeypatch):
     # Given
     content = "EXPECTED"
     secret_name = "TEST_SECRET"
-    client = _StubSecretAsyncClient(raise_on_add=True)
+    client = _StubSecretClient(raise_on_add=True)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When/Then
     with pytest.raises(secrets.SecretManagerAccessError):

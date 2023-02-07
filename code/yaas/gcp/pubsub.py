@@ -1,9 +1,13 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
+# pylint: disable=line-too-long
 """
 Manages PubSub boilerplate. How to parse the data and publish it.
 * https://cloud.google.com/pubsub/docs/push
 * https://cloud.google.com/pubsub/docs/publisher
+
+**NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
 """
+# pylint: enable=line-too-long
 import asyncio
 import base64
 import calendar

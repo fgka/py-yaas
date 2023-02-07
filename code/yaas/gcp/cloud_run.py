@@ -6,6 +6,7 @@ GCP `Cloud Run`_ entry point focused on control plane APIs.
 .. _Cloud Run: https://cloud.google.com/python/docs/reference/run/latest
 """
 # pylint: enable=line-too-long
+import asyncio
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
 
@@ -48,8 +49,10 @@ async def get_service(name: str) -> run_v2.Service:
     # validate
     validate_cloud_run_resource_name(name)
     # get service definition
+    await asyncio.sleep(0)
     try:
-        result = await _run_client().get_service(request={"name": name})
+        result = _run_client().get_service(request={"name": name})
+        await asyncio.sleep(0)
     except Exception as err:  # pylint: disable=broad-except
         raise CloudRunServiceError(
             f"Could not retrieve service <{name}>. Error: {err}"
@@ -108,8 +111,8 @@ def validate_cloud_run_resource_name(
     )
 
 
-def _run_client() -> run_v2.ServicesAsyncClient:
-    return run_v2.ServicesAsyncClient()
+def _run_client() -> run_v2.ServicesClient:
+    return run_v2.ServicesClient()
 
 
 async def update_service(
@@ -148,9 +151,11 @@ async def update_service(
         )
     )
     request = _create_update_request(service)
+    await asyncio.sleep(0)
     try:
-        operation = await _run_client().update_service(request=request)
-        result = await operation.result()
+        operation = _run_client().update_service(request=request)
+        await asyncio.sleep(0)
+        result = operation.result()
     except Exception as err:
         raise CloudRunServiceError(
             f"Could not update service <{name}> with <{path}> set to <{value}>. "

@@ -3,6 +3,8 @@
 """
 Reads an object from `Cloud Storage API`_ and `examples`_.
 
+**NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
+
 .. _Cloud Storage API: https://cloud.google.com/python/docs/reference/storage/latest
 .. _examples: https://cloud.google.com/appengine/docs/standard/python/googlecloudstorageclient/read-write-to-cloud-storage
 """

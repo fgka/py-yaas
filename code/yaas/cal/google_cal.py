@@ -1,6 +1,8 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=line-too-long
 """
+**NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
+
 Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """

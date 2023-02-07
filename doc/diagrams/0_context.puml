@@ -1,0 +1,28 @@
+@startuml System Context
+!include <C4/C4_Container>
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!include DEVICONS/googlecloud.puml
+!include DEVICONS/python.puml
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include FONTAWESOME/calendar_alt.puml
+!include FONTAWESOME/cloud.puml
+!include FONTAWESOME/code.puml
+!include FONTAWESOME/users.puml
+
+Person(devOps, "DevOps", "DevOps operator", $sprite="users")
+Container(yaasContainer, "YAAS", "Google Cloud, Serverless, Python", "YAAS\nGoogle Cloud deployment", $sprite="python")
+System_Ext(googleCal, "Google Calendar", "Google Calendar\nwith a shared calendar\nto be used by YAAS", $sprite="calendar_alt")
+System(googleResource, "Google Cloud Resource", "Google Cloud resource\nwhich scaling is managed by\nYAAS", $sprite="googlecloud")
+System_Boundary(extension, "Extension:\nsupported, but not implemented") {
+    System_Ext(nonGoogleResource, "External Resource", "External resource\nwhich scaling is managed by\nYAAS", $sprite="cloud")
+    System_Ext(nonGoogleScaler, "External Resource Scaler", "External resource scaler\nwhich receives scaling commands\nfrom YAAS", $sprite="code")
+}
+
+Rel(devOps, googleCal, "Scaling Requests", "Scaling requests as\ncalendar appointments")
+Rel(yaasContainer, googleCal, "Retrieve Requests", "Constantly refresh\nappointments' cache\nfor changes: pulling")
+Rel(yaasContainer, googleResource, "Scaling Command", "Apply scaling request,\naccording to Google Calendar appointment")
+Rel(yaasContainer, nonGoogleScaler, "Scaling Command: non-Google Cloud", "Send scaling request,\naccording to Google Calendar appointment")
+Rel(nonGoogleScaler, nonGoogleResource, "Scaling Command: non-Google Cloud", "Apply scaling request,\naccording to Google Calendar appointment")
+
+SHOW_LEGEND()
+@enduml

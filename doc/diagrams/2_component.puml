@@ -1,0 +1,76 @@
+@startuml Components
+!include <C4/C4_Container>
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2
+!include DEVICONS/python.puml
+!include DEVICONS/googlecloud.puml
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include FONTAWESOME/calendar_alt.puml
+!include FONTAWESOME/cloud.puml
+!include FONTAWESOME/code.puml
+!include FONTAWESOME/users.puml
+!define GCPPuml https://raw.githubusercontent.com/Crashedmind/PlantUML-icons-GCP/master/dist
+!include GCPPuml/GCPCommon.puml
+!include GCPPuml/Data_Analytics/Cloud_PubSub.puml
+!include GCPPuml/Developer_Tools/Cloud_Scheduler.puml
+!include GCPPuml/Storage/Cloud_Storage.puml
+!include GCPPuml/Security/Key_Management_Service.puml
+
+System_Ext(googleCal, "Google Calendar", "Google Calendar\nwith a shared calendar\nto be used by YAAS", $sprite="calendar_alt")
+System(googleResource, "Google Cloud Resource", "Google Cloud resource\nwhich scaling is managed by\nYAAS", $sprite="googlecloud")
+System_Boundary(yaasInfra, "YAAS Infrastructure") {
+    'Scheduler
+    System(schedCache, "Scheduler:\nRefresh Cache", "Sends regular requests to refresh Google Calendar events' cache,\ne.g.: once a day", $sprite="Cloud_Scheduler")
+    System(schedCreds, "Scheduler:\nRefresh Calendar Credentials", "Sends regular requests to refresh Google Calendar credentials secret,\ne.g.: once a day", $sprite="Cloud_Scheduler")
+    System(schedRequests, "Scheduler:\nUpcoming Scaling Requests", "Sends regular requests to apply upcoming scaling requests,\ne.g.: every 30min.", $sprite="Cloud_Scheduler")
+    'Storage
+    ContainerDb(storageCache, "Calendar Events' Cache", "Cloud Storage: SQLite file", "SQLite cache of Calendar Events, using event UTC timestamp as key", $sprite="Cloud_Storage")
+    'Secrets
+    ContainerDb(secretCache, "Calendar Credentials' Cache", "Cloud Secret Manager: Secret", "Secret regularly updated to have a fresh access token and refresh token", $sprite="Key_Management_Service")
+    'Queues
+    Container(cacheQueue, "Calendar Cache Refresh", "PubSub: topic", "Used to trigger YAAS API", $sprite="Cloud_PubSub")
+    Container(credsQueue, "Calendar Credentials Refresh", "PubSub: topic", "Used to trigger YAAS API", $sprite="Cloud_PubSub")
+    Container(requestQueue, "Send Upcoming Scaling Requests", "PubSub: topic", "Used to trigger YAAS API", $sprite="Cloud_PubSub")
+    Container(enactQueue, "Standard Request Queue", "PubSub: topic", "Where all scaling commands for Google Cloud resources are sent to", $sprite="Cloud_PubSub")
+    Container_Ext(nonGoogleEnactQueue, "Custom Request Queue", "PubSub: topic", "Not Implemented:\nUsed to trigger Custom Scaler API", $sprite="Cloud_PubSub")
+    'Calendar cache
+    Container(eventCache, "Calendar Events' Cache", "API: Python", "Regularly pulls from Google Calendar and refreshes the cache", $sprite="python")
+    'Credentials cache
+    Container(credentialsCache, "Calendar Credentials' Cache", "API: Python", "Regularly refreshes the Google Calendar credentials", $sprite="python")
+    'Enacter
+    Container(requestSender, "Scaling Request Sender", "API: Python", "Regularly reads cached events and sends the upcoming scaling requests", $sprite="python")
+    Container(requestEnacter, "Scaling Request Applier", "API: Python", "Receives a Google Cloud resource scaling requests and immediately apply it", $sprite="python")
+    'PubSub
+}
+'Non-Google Cloud resources
+System_Boundary(extension, "Extension:\nsupported, but not implemented") {
+    'PubSub
+    'Enacter
+    Container_Ext(nonGoogleRequestEnacter, "Scaling Request Applier for custom resource", "API: any language", "Receives a custom resource scaling requests and immediately apply it", $sprite="code")
+    System_Ext(nonGoogleResource, "External Resource", "External resource\nwhich scaling is managed by\nYAAS", $sprite="cloud")
+}
+'Scheduler
+Rel(schedCache, cacheQueue, "Publish: Refresh Calendar Cache Command")
+Rel(schedCreds, credsQueue, "Publish: Refresh Calendar Credentials Command")
+Rel(schedRequests, requestQueue, "Publish: Send Upcoming Scaling Requests Command")
+'PubSub
+Rel(cacheQueue, eventCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
+Rel(credsQueue, credentialsCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
+Rel(requestQueue, eventCache, "API Call: Refresh Calendar Cache", "Will call the corresponding API to request a calendar events' cache refresh")
+'Calendar caching
+Rel(eventCache, secretCache, "Get Credentials")
+Rel(eventCache, googleCal, "Get Requests", "Constantly refresh\nappointments' cache\nfor changes: pulling")
+Rel(eventCache, storageCache, "Store SQLite file", "It has all upcoming events, old events are archived")
+'Credentials caching
+Rel(credentialsCache, secretCache, "Google Calendar Credentials as JSON", "On a regular basis, refreshes the Google Calendar access credentials")
+'Requests: Google Cloud
+Rel(requestSender, enactQueue, "Publish Upcoming Scaling Requests", "All upcoming scaling requests that need to be immediately enacted")
+Rel(requestSender, eventCache, "Get Upcoming Requests", "Reads all upcoming events to be applied, usually with a short window like 30min.")
+Rel(enactQueue, requestEnacter, "PUSH: request", "Calls the scaler to immediately apply scaling request")
+Rel(requestEnacter, googleResource, "Apply scaling request", "Applies the specific scaling request to the specific resource")
+'Requests: Custom
+Rel(requestSender, nonGoogleEnactQueue, "Publish Upcoming Scaling Requests", "All upcoming scaling requests that need to be immediately enacted")
+Rel(nonGoogleEnactQueue, nonGoogleRequestEnacter, "PUSH: request", "Calls the scaler to immediately apply scaling request")
+Rel(nonGoogleRequestEnacter, nonGoogleResource, "Apply scaling request", "Applies the specific scaling request to the specific resource")
+
+SHOW_LEGEND()
+@enduml

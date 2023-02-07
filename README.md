@@ -6,6 +6,8 @@ YAAS stands for Yet Another Auto Scaler.
 
 Inside `code` you have all pointer to the code and how to navigate all the branches. 
 
+## [High Level Design](./doc/DESIGN.md)
+
 ## [Design](./code/DESIGN.md)
 
 To understand the code and how it works, check out the [design documentation](./code/DESIGN.md).

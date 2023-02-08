@@ -10,6 +10,7 @@ import types
 import pytest
 
 from yaas.gcp import cloud_run, cloud_run_const
+from yaas import xpath
 
 _TEST_SERVICE_NAME: str = (
     "projects/my-project-123/locations/my-location-123/services/my-service-123"
@@ -28,8 +29,8 @@ class _StubCloudRunService:
 
     def _set_path_value(self, path: str, value: Any) -> None:
         parent = self
-        if cloud_run_const.REQUEST_PATH_SEP in path:
-            path_lst = path.split(cloud_run_const.REQUEST_PATH_SEP)
+        if xpath.REQUEST_PATH_SEP in path:
+            path_lst = path.split(xpath.REQUEST_PATH_SEP)
         else:
             path_lst = [path]
         for attr in path_lst[:-1]:

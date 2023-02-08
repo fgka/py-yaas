@@ -22,7 +22,7 @@ _CLOUD_RUN_REVISION_TMPL: str = "{}-scaler-{}"
 
 class CloudRunServiceError(Exception):
     """
-    To encapsulate all exceptions operating on CloudRun.
+    To encapsulate all exceptions operating on Cloud Run.
     """
 
 

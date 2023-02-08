@@ -1,19 +1,24 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=line-too-long
 """
-GCP `Cloud Run`_ entry point focused on control plane APIs.
+GCP `Cloud SQL`_ entry point focused on control plane APIs.
+The client is a generic client based on `discovery`_.
+The full `REST API`_ documentation indicates how to use the generic client.
 
-.. _Cloud Run: https://cloud.google.com/python/docs/reference/run/latest
+.. _Cloud SQL: https://github.com/googleapis/google-api-python-client
+.. _discovery: https://googleapis.github.io/google-api-python-client/docs/start.html
+.. _REST API: https://cloud.google.com/sql/docs/postgres/admin-api/rest
 """
 # pylint: enable=line-too-long
 import asyncio
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from google.cloud import run_v2
+from googleapiclient import discovery
 
 from yaas import logger
-from yaas.gcp import cloud_run_const, resource_name
+from yaas.gcp import cloud_sql_const
+from yaas.scaler import resource_name_const
 from yaas import xpath
 
 _LOGGER = logger.get(__name__)
@@ -21,103 +26,132 @@ _LOGGER = logger.get(__name__)
 _CLOUD_RUN_REVISION_TMPL: str = "{}-scaler-{}"
 
 
-class CloudRunServiceError(Exception):
+class CloudSqlServiceError(Exception):
     """
-    To encapsulate all exceptions operating on Cloud Run.
+    To encapsulate all exceptions operating on Cloud SQL.
     """
 
 
-async def get_service(name: str) -> run_v2.Service:
+async def get_instance(value: str) -> Dict[str, Any]:
     # pylint: disable=line-too-long
     """
-    Wrapper for :py:meth:`run_v2.ServicesClient.get_service` (`documentation`_).
-
+    Returns a :py:class:`dict` for the `DatabaseInstance`_
     Args:
-        name: full service name, e.g.:
-            `projects/my-project-123/locations/my-location-123/services/my-service-123`.
+        value: full instance name, e.g.:
+            `my-project-123:my-location-123:my-instance-123`.
 
     Returns:
         Service
 
     Raises:
-        py:class:`CloudRunServiceError` any error accessing the CloudRun control plane.
+        py:class:`CloudSqlServiceError` any error accessing the Cloud SQL control plane.
 
-    .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_get_service
+    .. DatabaseInstance: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#DatabaseInstance
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Getting service <%s>", name)
+    _LOGGER.debug("Getting instance <%s>", value)
     # validate
-    validate_cloud_run_resource_name(name)
+    project, _, instance_name = _sql_fqn_components(value)
     # get service definition
     await asyncio.sleep(0)
     try:
-        result = _run_client().get_service(request={"name": name})
+        request = _sql_client().instances().get(project=project, instance=instance_name)
+        await asyncio.sleep(0)
+        result = request.execute()
         await asyncio.sleep(0)
     except Exception as err:  # pylint: disable=broad-except
-        raise CloudRunServiceError(
-            f"Could not retrieve service <{name}>. Error: {err}"
+        raise CloudSqlServiceError(
+            f"Could not retrieve service <{value}>. Error: {err}"
         ) from err
     return result
 
 
-async def can_be_deployed(name: str) -> Tuple[bool, str]:
-    # pylint: disable=line-too-long
+def _sql_fqn_components(value: str) -> Tuple[str, str, str]:
     """
-    A wrapper around :py:func:`get_service` and returning ``NOT reconciling`` field.
-    Check ``reconciling`` in `Service`_ definition.
+    Components in the following fashion::
+        project, location, instance_name = _sql_fqn_components(value)
 
     Args:
-        name:
+        value:
+
+    Returns:
+
+    """
+    match = resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX.match(value)
+    if match and len(match.groups()) == 3:
+        project, location, instance_name = match.groups()
+    else:
+        raise ValueError(f"Instance name <{value}> is not a valid Cloud SQL resource name. Needs to comply with <{resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX}>")
+    return project, location, instance_name
+
+
+async def can_be_deployed(value: str) -> Tuple[bool, str]:
+    # pylint: disable=line-too-long
+    """
+    A wrapper around :py:func:`get_instance` and returning :py:obj:`True`
+        if `DatabaseInstance`_ state is `RUNNABLE`_.
+
+    Args:
+        value:
 
     Returns:
         A tuple in the form ``(<can_enact: bool>, <reason for False: str>)``.
 
-    .. _Service: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
+    .. _DatabaseInstance: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#DatabaseInstance
+    .. _RUNNABLE: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#SqlInstanceState
     """
     # pylint: enable=line-too-long
     reason = None
-    _LOGGER.debug("Checking readiness of service <%s>", name)
+    _LOGGER.debug("Checking readiness of instance <%s>", value)
     try:
         # service
-        service = await get_service(name)
+        instance = await get_instance(value)
         # checking reconciling
-        if service.reconciling:
-            reason = f"Service <{name}> is reconciling, try again later."
+        if instance.get("status") != cloud_sql_const.CLOUD_SQL_STATE_OK:
+            reason = f"Instance state <{value}> is reconciling, try again later."
     except Exception as err:  # pylint: disable=broad-except
-        reason = f"Could not retrieve service with name <{name}>. Error: {err}"
+        reason = f"Could not retrieve service with name <{value}>. Error: {err}"
         _LOGGER.exception(reason)
     return reason is None, reason
 
 
-def validate_cloud_run_resource_name(
+def validate_cloud_sql_resource_name(
     value: str, *, raise_if_invalid: bool = True
 ) -> List[str]:
     """
     Validates the ``value`` against the pattern:
-        "projects/my-project-123/locations/my-location-123/services/my-service-123".
+        "my-project-123:my-location-123:my-instance-123".
 
     Args:
-        value: Could Run resource name to be validated.
+        value: Could SQL resource name to be validated.
         raise_if_invalid: if :py:obj:`True` will raise exception if ``value`` is not valid.
 
     Returns:
         If ``raise_if_invalid`` if :py:obj:`False` will contain all reasons
             why the validation failed.
     """
-    return resource_name.validate_resource_name(
-        value=value,
-        tokens=cloud_run_const.CLOUD_RUN_NAME_TOKENS,
-        raise_if_invalid=raise_if_invalid,
-    )
+    result = []
+    try:
+        _sql_fqn_components(value)
+    except Exception as err:
+        if raise_if_invalid:
+            raise err
+        else:
+            result.append(f"Could not parse instance name <{value}>. Error: {err}")
+    return result
 
 
-def _run_client() -> run_v2.ServicesClient:
-    return run_v2.ServicesClient()
+def _sql_client() -> discovery.Resource:
+    """
+    Based on: https://cloud.google.com/sql/docs/postgres/admin-api/libraries
+    *NOTE*: all engines are the same way.
+    """
+    return discovery.build('sqladmin', 'v1beta4')
 
 
-async def update_service(
+async def update_instance(
     *, name: str, path: str, value: Optional[Any]
-) -> run_v2.Service:
+) -> Dict[str, Any]:
     # pylint: disable=line-too-long
     """
     Wrapper for :py:meth:`run_v2.ServicesClient.update_service` (`documentation`_).
@@ -136,14 +170,14 @@ async def update_service(
     # pylint: enable=line-too-long
     _LOGGER.debug("Updating service <%s> param <%s> with <%s>", name, path, value)
     # validate
-    validate_cloud_run_resource_name(name)
+    validate_cloud_sql_resource_name(name)
     if not isinstance(path, str) or not path.strip():
         raise TypeError(
             f"Path argument must be a non-empty {str.__name__}. Got: <{path}>({type(path)}"
         )
     path = path.strip()
     # get service
-    service = await get_service(name)
+    service = await get_instance(name)
     # update service
     service = _update_service_revision(
         _clean_service_for_update_request(
@@ -153,11 +187,11 @@ async def update_service(
     request = _create_update_request(service)
     await asyncio.sleep(0)
     try:
-        operation = _run_client().update_service(request=request)
+        operation = _sql_client().update_service(request=request)
         await asyncio.sleep(0)
         result = operation.result()
     except Exception as err:
-        raise CloudRunServiceError(
+        raise CloudSqlServiceError(
             f"Could not update service <{name}> with <{path}> set to <{value}>. "
             f"Request: {request}. "
             f"Error: {err}"
@@ -173,7 +207,7 @@ async def update_service(
 
 def _create_update_request(
     service: run_v2.Service, **kwargs
-) -> run_v2.UpdateServiceRequest:
+) -> Dict[str, Any]:
     """For testing"""
     return run_v2.UpdateServiceRequest(service=service, **kwargs)
 
@@ -185,25 +219,22 @@ def _set_service_value_by_path(service: Any, path: str, value: Any) -> Any:
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     setattr(node, attr_name, value)
     return service
 
 
-def _get_parent_node_attribute_based_on_path(value: Any, path: str) -> Tuple[Any, str]:
-    return xpath.get_parent_node_based_on_path(value, path)
-
 
 def _clean_service_for_update_request(value: Any) -> Any:
-    for path in cloud_run_const.CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE:
-        node, attr_name = _get_parent_node_attribute_based_on_path(value, path)
+    for path in cloud_sql_const.CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE:
+        node, attr_name = xpath.get_parent_node_based_on_path(value, path)
         setattr(node, attr_name, None)
     return value
 
 
 def _update_service_revision(service: Any) -> Any:
-    node, attr_name = _get_parent_node_attribute_based_on_path(
-        service, cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH
+    node, attr_name = xpath.get_parent_node_based_on_path(
+        service, cloud_sql_const.CLOUD_RUN_SERVICE_REVISION_PATH
     )
     revision = _create_revision(service.name)
     setattr(node, attr_name, revision)
@@ -226,7 +257,7 @@ def _validate_service(
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     current = getattr(node, attr_name)
     if current != value:
         msg = (

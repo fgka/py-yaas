@@ -11,6 +11,7 @@ import re
 from typing import Optional, Tuple
 
 from yaas import logger
+from yaas.scaler import resource_name_const
 
 _LOGGER = logger.get(__name__)
 
@@ -86,6 +87,7 @@ def _parse_resource_name_by_regex(
     if match:
         project, location, name = match.groups()
     else:
+        # Simple match
         match = simple_regex.match(value)
         if match:
             name, project, location = match.groups()
@@ -104,89 +106,19 @@ def _parse_resource_name_by_regex(
     return result
 
 
-######################
-# Cloud Run Resource #
-######################
-
-_FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
-    pattern=r"^projects/([^/\s]+)/locations/([^/\s]+)/services/([^/\s]+)$",
-    flags=re.IGNORECASE,
-)
-"""
-Input example::
-    projects/my_project/locations/europe-west3/services/my_service
-Groups on matching are::
-    project, location, service = _FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX.match(line).groups()
-"""
-# pylint: disable=anomalous-backslash-in-string
-_SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
-    pattern=r"^CloudRun\.?\s*\.?\s*"
-    + r"\s+"  # separator <space>
-    + r"([^@\s]+)"  # service
-    + r"\s*\.?\s*@\.?\s*"  # separator @
-    + r"([^\s]+)"  # project
-    + r"\s*\.?\s+\.?\s*"  # separator <space>
-    + r"([^\s]+)$",  # region
-    flags=re.IGNORECASE,
-)
-# pylint: enable=anomalous-backslash-in-string
-"""
-Input example::
-    CloudRun my_service @ my_project europe-west3
-Groups on matching are::
-    service, project, location = _SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX.match(line).groups()
-"""
-_CLOUD_RUN_RESOURCE_NAME_TMPL: str = "projects/{}/locations/{}/services/{}"
-
-
 def _parse_cloud_run_name(value: str) -> Optional[str]:
     return _parse_resource_name_by_regex(
         value,
-        _FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX,
-        _SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX,
-        _CLOUD_RUN_RESOURCE_NAME_TMPL,
+        resource_name_const.FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX,
+        resource_name_const.SIMPLE_CLOUD_RUN_TARGET_RESOURCE_REGEX,
+        resource_name_const.CLOUD_RUN_RESOURCE_NAME_TMPL,
     )
-
-
-######################
-# Cloud SQL Resource #
-######################
-
-_FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
-    pattern=r"^([^/\s]+):([^/\s]+):([^/\s]+)$",
-    flags=re.IGNORECASE,
-)
-"""
-Input example::
-    my_project:europe-west3:my_instance
-Groups on matching are::
-    project, location, instance = _FQN_CLOUD_RUN_TARGET_RESOURCE_REGEX.match(line).groups()
-"""
-# pylint: disable=anomalous-backslash-in-string
-_SIMPLE_CLOUD_SQL_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
-    pattern=r"^CloudSQL\.?\s*\.?\s*"
-    + r"\s+"  # separator <space>
-    + r"([^@\s]+)"  # instance
-    + r"\s*\.?\s*@\.?\s*"  # separator @
-    + r"([^\s]+)"  # project
-    + r"\s*\.?\s+\.?\s*"  # separator <space>
-    + r"([^\s]+)$",  # region
-    flags=re.IGNORECASE,
-)
-# pylint: enable=anomalous-backslash-in-string
-"""
-Input example::
-    CloudSql my_instance @ my_project europe-west3
-Groups on matching are::
-    instance, project, location = _SIMPLE_CLOUD_SQL_TARGET_RESOURCE_REGEX.match(line).groups()
-"""
-_CLOUD_SQL_RESOURCE_NAME_TMPL: str = "{}:{}:{}"
 
 
 def _parse_cloud_sql_name(value: str) -> Optional[str]:
     return _parse_resource_name_by_regex(
         value,
-        _FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX,
-        _SIMPLE_CLOUD_SQL_TARGET_RESOURCE_REGEX,
-        _CLOUD_SQL_RESOURCE_NAME_TMPL,
+        resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX,
+        resource_name_const.SIMPLE_CLOUD_SQL_TARGET_RESOURCE_REGEX,
+        resource_name_const.CLOUD_SQL_RESOURCE_NAME_TMPL,
     )

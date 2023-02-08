@@ -202,6 +202,9 @@ class MyScalingDefinition(scaling.ScalingDefinition):
 
 
 class MyScaler(scaler_base.Scaler):
+
+    cls_called: Dict[str, Any] = {}
+
     def __init__(
         self,
         definition: scaling.ScalingDefinition,
@@ -213,8 +216,14 @@ class MyScaler(scaler_base.Scaler):
         self._reason = reason
         self.called = {}
 
+    def _is_resource_valid(self, value: str) -> bool:
+        # pylint: disable=no-member
+        self.called[scaler_base.Scaler._is_resource_valid.__name__] = value
+        return True
+
     @classmethod
     def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+        cls.cls_called[scaler_base.Scaler.from_request.__name__] = value
         definition = MyScalingDefinition.from_request(value)
         return MyScaler(definition=definition)
 
@@ -224,6 +233,45 @@ class MyScaler(scaler_base.Scaler):
     async def can_enact(self) -> Tuple[bool, str]:
         self.called[scaler_base.Scaler.can_enact.__name__] = True
         return self._can_enact, self._reason
+
+
+class MyScalerPathBased(scaler_base.ScalerPathBased):
+
+    cls_called: Dict[str, Any] = {}
+    cls_path: str = ""
+
+    def __init__(
+        self,
+        *,
+        definition: scaling.ScalingDefinition,
+        can_enact: bool = True,
+        reason: str = None,
+    ) -> None:
+        super().__init__(definition=definition)
+        self._can_enact = can_enact
+        self._reason = reason
+        self.called = {}
+
+    async def can_enact(self) -> Tuple[bool, str]:
+        self.called[scaler_base.ScalerPathBased.can_enact.__name__] = True
+        return self._can_enact, self._reason
+
+    @classmethod
+    def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+        cls.cls_called[scaler_base.ScalerPathBased.from_request.__name__] = value
+        definition = MyScalingDefinition.from_request(value)
+        return MyScalerPathBased(definition=definition)
+
+    @classmethod
+    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+        cls.cls_called[scaler_base.ScalerPathBased._path_for_enact.__name__] = locals()
+        return cls.cls_path
+
+    @classmethod
+    async def _enact_by_path(
+        cls, *, resource: str, field: str, target: Any, path: str
+    ) -> None:
+        cls.cls_called[scaler_base.ScalerPathBased._enact_by_path.__name__] = locals()
 
 
 class MyCategoryType(scaling.CategoryType):

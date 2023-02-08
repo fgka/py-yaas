@@ -4,6 +4,7 @@
 Basic definitions for supporting scalers.
 """
 import abc
+import re
 from typing import Any
 
 import attrs
@@ -27,16 +28,66 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
 
     @parameter.validator
     def _validate_attribute(self, attribute: attrs.Attribute, value: Any) -> None:
-        self._is_parameter_valid(attribute.name, value)
+        if not self._is_parameter_value_valid(value):
+            raise TypeError(
+                f"Attribute {attribute.name} cannot accept value <{value}>({type(value)})"
+            )
 
     @target.validator
     def _validate_target(self, attribute: attrs.Attribute, value: Any) -> None:
         self._is_target_valid(attribute.name, value)
 
-    def _is_parameter_valid(self, name: str, value: Any) -> None:
-        pass
+    def _is_parameter_value_valid(self, value: Any) -> bool:
+        """
+        To be overwritten by child class
+        """
+        return value is not None
 
     def _is_target_valid(self, name: str, value: Any) -> None:
+        if not self._is_target_type_valid(value):
+            raise TypeError(
+                f"Attribute {name} must be an {int.__name__}. Got: <{value}>({type(value)})"
+            )
+        if not self._is_target_value_valid(value):
+            raise ValueError(
+                f"Attribute {name} must be an {int.__name__} >= 0. Got <{value}>({type(value)})"
+            )
+
+    def _is_target_type_valid(self, value: Any) -> bool:
+        """
+        To be overwritten by child class
+        """
+        return value is not None
+
+    def _is_target_value_valid(self, value: Any) -> bool:
+        """
+        To be overwritten by child class
+        """
+        return value is not None
+
+    @classmethod
+    def from_command_str(cls, value: str) -> "ScalingCommand":
+        """
+        Parse the command :py:cls:`str` into an instance of :py:cls:`ScalingCommand`.
+
+        Args:
+            value:
+        """
+        regex = cls._parameter_target_regex()
+        match = regex.match(value)
+        if match:
+            parameter, target = match.groups()
+            target = int(target)
+            result = cls(parameter=parameter, target=target)
+        else:
+            raise ValueError(
+                f"Command value must comply with {regex}. "
+                f"Got: <{value}>({type(value)})"
+            )
+        return result
+
+    @classmethod
+    def _parameter_target_regex(cls) -> re.Pattern:
         pass
 
 
@@ -63,10 +114,19 @@ class ScalingDefinition(  # pylint: disable=too-few-public-methods
 
     @resource.validator
     def _is_resource_valid_call(self, attribute: attrs.Attribute, value: str) -> None:
-        self._is_resource_valid(attribute.name, value)
+        err_msg = f"Attribute <{attribute.name}> is not a valid resource ID for <{self.__class__.__name__}>"
+        try:
+            result = self._is_resource_valid(value)
+        except Exception as err:  # pylint: disable=broad-except
+            raise ValueError(err_msg) from err
+        if not result:
+            raise ValueError(err_msg)
 
-    def _is_resource_valid(self, name: str, value: str) -> None:
-        pass
+    def _is_resource_valid(self, value: str) -> bool:
+        """
+        To be overwritten by child class
+        """
+        return value is not None
 
     @classmethod
     @abc.abstractmethod

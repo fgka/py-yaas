@@ -185,24 +185,20 @@ def _set_service_value_by_path(service: Any, path: str, value: Any) -> Any:
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     setattr(node, attr_name, value)
     return service
 
 
-def _get_parent_node_attribute_based_on_path(value: Any, path: str) -> Tuple[Any, str]:
-    return xpath.get_parent_node_based_on_path(value, path)
-
-
 def _clean_service_for_update_request(value: Any) -> Any:
     for path in cloud_run_const.CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE:
-        node, attr_name = _get_parent_node_attribute_based_on_path(value, path)
+        node, attr_name = xpath.get_parent_node_based_on_path(value, path)
         setattr(node, attr_name, None)
     return value
 
 
 def _update_service_revision(service: Any) -> Any:
-    node, attr_name = _get_parent_node_attribute_based_on_path(
+    node, attr_name = xpath.get_parent_node_based_on_path(
         service, cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH
     )
     revision = _create_revision(service.name)
@@ -226,7 +222,7 @@ def _validate_service(
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     current = getattr(node, attr_name)
     if current != value:
         msg = (

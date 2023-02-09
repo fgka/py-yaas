@@ -211,40 +211,6 @@ def test_validate_cloud_run_resource_name_ok(value: str, amount_errors: int):
     assert len(result) == amount_errors
 
 
-def _create_object_from_value(value: Any) -> Any:
-    result = value
-    if isinstance(value, dict):
-        result = types.SimpleNamespace()
-        for k, v in value.items():
-            setattr(result, k, _create_object_from_value(v))
-    return result
-
-
-@pytest.mark.parametrize(
-    "value,path,expected_attr_val",
-    [
-        (
-            _create_object_from_value(dict(root=dict(node=dict(value=123)))),
-            "root.node.value",
-            123,
-        ),
-        (
-            _create_object_from_value(
-                dict(root=dict(node_a=dict(value=123), node_b=dict(value=321)))
-            ),
-            "root.node_a.value",
-            123,
-        ),
-    ],
-)
-def test__get_parent_node_attribute_based_on_path_ok(
-    value: Any, path: str, expected_attr_val: Any
-):
-    res_node, res_attr = cloud_run._get_parent_node_attribute_based_on_path(value, path)
-    assert isinstance(res_node, object)
-    assert getattr(res_node, res_attr) == expected_attr_val
-
-
 def test__set_service_value_by_path_ok():
     # pylint: disable=no-member
     # Given
@@ -275,7 +241,7 @@ def test__update_service_revision_ok():
     # When
     cloud_run._update_service_revision(service)
     # Then
-    node, attr_name = cloud_run._get_parent_node_attribute_based_on_path(
+    node, attr_name = xpath.get_parent_node_based_on_path(
         service, cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH
     )
     assert getattr(node, attr_name) != curr_revision

@@ -7,7 +7,7 @@ from typing import Iterable, List, Optional, Tuple
 
 from yaas import logger
 from yaas.dto import request, scaling
-from yaas.scaler import base, run, resource_name_parser
+from yaas.scaler import base, run, resource_name_parser, sql
 
 _LOGGER = logger.get(__name__)
 
@@ -48,6 +48,8 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
             )
             if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
                 result.append(run.CloudRunScalingDefinition.from_request(val))
+            if res_type == resource_name_parser.ResourceType.CLOUD_SQL:
+                result.append(sql.CloudSqlScalingDefinition.from_request(val))
             else:
                 msg = (
                     f"Request <{val}>[{ndx}]) of type {res_type} is not supported. "

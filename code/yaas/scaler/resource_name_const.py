@@ -45,7 +45,7 @@ CLOUD_RUN_RESOURCE_NAME_TMPL: str = "projects/{}/locations/{}/services/{}"
 ######################
 
 FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX: re.Pattern = re.compile(
-    pattern=r"^([^/\s]+):([^/\s]+):([^/\s]+)$",
+    pattern=r"^([^:\s]+):([^:\s]+):([^:\s]+)$",
     flags=re.IGNORECASE,
 )
 """

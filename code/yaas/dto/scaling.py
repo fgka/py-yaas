@@ -44,20 +44,25 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
         return value is not None
 
     def _is_target_valid(self, name: str, value: Any) -> None:
-        if not self._is_target_type_valid(value):
+        expected_type = self._target_type()
+        if expected_type is not None and not isinstance(value, expected_type):
             raise TypeError(
-                f"Attribute {name} must be an {int.__name__}. Got: <{value}>({type(value)})"
+                f"Attribute {name} must be an {expected_type.__name__}. "
+                f"Got: <{value}>({type(value)})"
             )
         if not self._is_target_value_valid(value):
             raise ValueError(
-                f"Attribute {name} must be an {int.__name__} >= 0. Got <{value}>({type(value)})"
+                f"Attribute {name} value is not valid. Check implementation of "
+                f"{self.__class__.__name__}.{ScalingCommand._is_target_valid.__name__}. "
+                f"Got <{value}>({type(value)})"
             )
 
-    def _is_target_type_valid(self, value: Any) -> bool:
+    @staticmethod
+    def _target_type() -> type:
         """
-        To be overwritten by child class
+        To be overwritten by child class. The default, :py:obj:`None` means any type.
         """
-        return value is not None
+        return None
 
     def _is_target_value_valid(self, value: Any) -> bool:
         """
@@ -77,7 +82,14 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
         match = regex.match(value)
         if match:
             parameter, target = match.groups()
-            target = int(target)
+            try:
+                target = cls._convert_target_value_string(target)
+            except Exception as err:
+                raise ValueError(
+                    f"Could not convert target value string <{target}> to expected type using "
+                    f"{cls.__name__}.{cls._convert_target_value_string.__name__}(). "
+                    f"Error: {err}"
+                ) from err
             result = cls(parameter=parameter, target=target)
         else:
             raise ValueError(
@@ -85,6 +97,13 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
                 f"Got: <{value}>({type(value)})"
             )
         return result
+
+    @classmethod
+    def _convert_target_value_string(cls, value: str) -> Any:
+        """
+        To be overwritten by child classes to appropriate type
+        """
+        return value
 
     @classmethod
     def _parameter_target_regex(cls) -> re.Pattern:

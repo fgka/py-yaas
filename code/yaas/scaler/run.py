@@ -28,7 +28,7 @@ Parses strings in the format::
 """
 
 
-class CloudRunCommandTypes(dto_defaults.EnumWithFromStrIgnoreCase):
+class CloudRunCommandType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
     All supported scaling commands for Cloud Run.
     """
@@ -45,17 +45,22 @@ class CloudRunScalingCommand(scaling.ScalingCommand):
     """
 
     def _is_parameter_value_valid(self, value: Any) -> bool:
-        return CloudRunCommandTypes.from_str(value) is not None
-
-    def _is_target_type_valid(self, value: Any) -> bool:
-        return isinstance(value, int)
+        return CloudRunCommandType.from_str(value) is not None
 
     def _is_target_value_valid(self, value: Any) -> bool:
         return value >= 0
 
+    @staticmethod
+    def _target_type() -> type:
+        return int
+
     @classmethod
     def _parameter_target_regex(cls) -> re.Pattern:
         return _CLOUD_RUN_COMMAND_REGEX
+
+    @classmethod
+    def _convert_target_value_string(cls, value: str) -> Any:
+        return int(value)
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -103,11 +108,11 @@ class CloudRunScaler(base.ScalerPathBased):
     @classmethod
     def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
         result = None
-        if CloudRunCommandTypes.MIN_INSTANCES.value == field:
+        if CloudRunCommandType.MIN_INSTANCES.value == field:
             result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
-        elif CloudRunCommandTypes.MAX_INSTANCES.value == field:
+        elif CloudRunCommandType.MAX_INSTANCES.value == field:
             result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM
-        elif CloudRunCommandTypes.CONCURRENCY.value == field:
+        elif CloudRunCommandType.CONCURRENCY.value == field:
             result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
         return result
 

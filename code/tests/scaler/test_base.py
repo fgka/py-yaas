@@ -37,7 +37,6 @@ class TestScalingCommand:
         # Then
         assert obj is not None
         assert _CALLED.get(scaling.ScalingCommand._is_parameter_value_valid.__name__)
-        assert _CALLED.get(scaling.ScalingCommand._is_target_type_valid.__name__)
         assert _CALLED.get(scaling.ScalingCommand._is_target_value_valid.__name__)
 
 

@@ -19,7 +19,7 @@ _TEST_CLOUD_FUNCTION_RESOURCE_STR: str = (
     "projects/my-project-123/locations/my-location-123/functions/my-function-123"
 )
 _TEST_DEFAULT_CLOUD_RUN_COMMAND_STR: str = (
-    f"{run.CloudRunCommandTypes.CONCURRENCY.value} 123"
+    f"{run.CloudRunCommandType.CONCURRENCY.value} 123"
 )
 
 

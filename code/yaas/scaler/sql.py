@@ -28,7 +28,7 @@ Parses strings in the format::
 """
 
 
-class CloudSqlCommandTypes(dto_defaults.EnumWithFromStrIgnoreCase):
+class CloudSqlCommandType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
     All supported scaling commands for Cloud SQL.
     """
@@ -43,17 +43,22 @@ class CloudSqlScalingCommand(scaling.ScalingCommand):
     """
 
     def _is_parameter_value_valid(self, value: Any) -> bool:
-        return CloudSqlCommandTypes.from_str(value) is not None
-
-    def _is_target_type_valid(self, value: Any) -> bool:
-        return isinstance(value, str)
+        return CloudSqlCommandType.from_str(value) is not None
 
     def _is_target_value_valid(self, value: Any) -> bool:
         return bool(value)
 
+    @staticmethod
+    def _target_type() -> type:
+        return str
+
     @classmethod
     def _parameter_target_regex(cls) -> re.Pattern:
         return _CLOUD_SQL_COMMAND_REGEX
+
+    @classmethod
+    def _convert_target_value_string(cls, value: str) -> Any:
+        return value.strip()
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -101,7 +106,7 @@ class CloudSqlScaler(base.ScalerPathBased):
     @classmethod
     def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
         result = None
-        if CloudSqlCommandTypes.INSTANCE_TYPE.value == field:
+        if CloudSqlCommandType.INSTANCE_TYPE.value == field:
             result = cloud_sql_const.CLOUD_SQL_SERVICE_SCALING_INSTANCE_TYPE_PARAM
         return result
 
@@ -109,4 +114,4 @@ class CloudSqlScaler(base.ScalerPathBased):
     async def _enact_by_path(
         cls, *, resource: str, field: str, target: Any, path: str
     ) -> None:
-        cloud_sql.update_instance(name=resource, path=path, value=target)
+        await cloud_sql.update_instance(name=resource, path=path, value=target)

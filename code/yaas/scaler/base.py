@@ -69,9 +69,10 @@ class Scaler(abc.ABC):
             result = True
         else:
             _LOGGER.warning(
-                "Resource is not ready to enact scaling specified in <%s>. "
+                "[%s] Resource is not ready to enact scaling specified in <%s>. "
                 "Reason: <%s>. "
                 "Check logs for details.",
+                self.__class__.__name__,
                 self._definition,
                 reason,
             )

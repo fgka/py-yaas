@@ -5,7 +5,6 @@
 # pylint: disable=attribute-defined-outside-init,too-few-public-methods, redefined-builtin
 # type: ignore
 from typing import Any, Dict, Optional
-import types
 
 import pytest
 

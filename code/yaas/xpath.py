@@ -53,7 +53,7 @@ def _get_parent_node_attribute_based_on_path_object(
 
 
 def _get_parent_node_attribute_based_on_path_dict(
-    value: Any, path: str
+    value: Dict[str, Any], path: str
 ) -> Tuple[Any, str]:
     result = value
     split_path = path.split(REQUEST_PATH_SEP)

@@ -5,7 +5,6 @@
 # pylint: disable=attribute-defined-outside-init,too-few-public-methods, redefined-builtin
 # type: ignore
 from typing import Any, Dict, Optional
-import types
 
 import pytest
 
@@ -52,14 +51,16 @@ class _StubSqlInstancesResource:
         self._raise_on_patch_execute = raise_on_patch_execute
         self.called = {}
 
-    def get(self, project: str, instance: str) -> _StubCloudSqlRequest:
+    def get(  # pylint: disable=unused-argument
+        self, project: str, instance: str
+    ) -> _StubCloudSqlRequest:
         result = _StubCloudSqlRequest(
             value=self._instance, raise_on_execute=self._raise_on_get_execute
         )
         self.called[_StubSqlInstancesResource.get.__name__] = locals()
         return result
 
-    def patch(
+    def patch(  # pylint: disable=unused-argument
         self, project: str, instance: str, body: Dict[str, Any]
     ) -> _StubCloudSqlRequest:
         result = _StubCloudSqlRequest(

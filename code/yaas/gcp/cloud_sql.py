@@ -79,7 +79,8 @@ def _sql_fqn_components(value: str) -> Tuple[str, str, str]:
         project, location, instance_name = match.groups()
     else:
         raise ValueError(
-            f"Instance name <{value}> is not a valid Cloud SQL resource name. Needs to comply with <{resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX}>"
+            f"Instance name <{value}> is not a valid Cloud SQL resource name. "
+            f"Needs to comply with <{resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX}>"
         )
     return project, location, instance_name
 
@@ -132,15 +133,15 @@ def validate_cloud_sql_resource_name(
     result = []
     try:
         _sql_fqn_components(value)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         if raise_if_invalid:
             raise err
-        else:
-            result.append(f"Could not parse instance name <{value}>. Error: {err}")
+        result.append(f"Could not parse instance name <{value}>. Error: {err}")
     return result
 
 
 def _sql_instances() -> discovery.Resource:
+    # pylint: disable=no-member
     return _sql_client().instances()
 
 
@@ -192,7 +193,7 @@ async def update_instance(
         await asyncio.sleep(0)
     except Exception as err:
         raise CloudSqlServiceError(
-            f"Could not update service <{name}> with <{path}> set to <{value}>. "
+            f"Could not update instance <{name}> with <{path}> set to <{value}>. "
             f"Request: {request}. "
             f"Error: {err}"
         ) from err

@@ -21,10 +21,6 @@ class _MyScalingCommand(scaling.ScalingCommand):
         _CALLED[_MyScalingCommand._is_parameter_value_valid.__name__] = True
         return True
 
-    def _is_target_type_valid(self, value: Any) -> None:
-        _CALLED[_MyScalingCommand._is_target_type_valid.__name__] = True
-        return True
-
     def _is_target_value_valid(self, value: Any) -> None:
         _CALLED[_MyScalingCommand._is_target_value_valid.__name__] = True
         return True

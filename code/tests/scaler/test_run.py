@@ -3,6 +3,7 @@
 # pylint: disable=missing-function-docstring,assignment-from-no-return,c-extension-no-member
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
+# pylint: disable=duplicate-code
 # type: ignore
 from typing import Any, Dict, Optional, Tuple
 import pytest

@@ -45,6 +45,7 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
 
     def _is_target_valid(self, name: str, value: Any) -> None:
         expected_type = self._target_type()
+        # pylint: disable=isinstance-second-argument-not-valid-type
         if expected_type is not None and not isinstance(value, expected_type):
             raise TypeError(
                 f"Attribute {name} must be an {expected_type.__name__}. "

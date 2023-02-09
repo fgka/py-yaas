@@ -227,13 +227,15 @@ class CategoryScaleRequestParser(abc.ABC):
                     f"Values: {scaling_def_lst}"
                 ) from err
             if item is None:
-                raise ValueError(
+                msg = (
                     f"Resulting scaler for request: {val}[{ndx}] is None. "
                     f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}. "
                     f"Values: {scaling_def_lst}"
                 )
+                if raise_if_invalid_request:
+                    raise ValueError(msg)
+                continue
             result.append(item)
-
         return result[0] if len(result) == 1 and singulate_if_only_one else result
 
     def _validate_request(self, *value: request.ScaleRequest) -> None:

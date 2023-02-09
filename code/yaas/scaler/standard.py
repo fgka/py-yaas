@@ -98,8 +98,11 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
         value: scaling.ScalingDefinition,
         raise_if_invalid_request: Optional[bool] = True,
     ) -> base.Scaler:
+        result = None
         if isinstance(value, run.CloudRunScalingDefinition):
             result = run.CloudRunScaler(value)
+        elif isinstance(value, sql.CloudSqlScalingDefinition):
+            result = sql.CloudSqlScaler(value)
         else:
             msg = (
                 f"Scaler for definition <{value}> "

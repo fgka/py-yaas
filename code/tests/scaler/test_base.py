@@ -17,11 +17,13 @@ _CALLED: Dict[str, bool] = {}
 
 
 class _MyScalingCommand(scaling.ScalingCommand):
-    def _is_parameter_valid(self, name: str, value: Any) -> None:
-        _CALLED[_MyScalingCommand._is_parameter_valid.__name__] = True
+    def _is_parameter_value_valid(self, value: Any) -> bool:
+        _CALLED[_MyScalingCommand._is_parameter_value_valid.__name__] = True
+        return True
 
-    def _is_target_valid(self, name: str, value: Any) -> None:
-        _CALLED[_MyScalingCommand._is_target_valid.__name__] = True
+    def _is_target_value_valid(self, value: Any) -> None:
+        _CALLED[_MyScalingCommand._is_target_value_valid.__name__] = True
+        return True
 
 
 class TestScalingCommand:
@@ -30,13 +32,14 @@ class TestScalingCommand:
         obj = _MyScalingCommand(parameter="TEST_PARAMETER", target="TEST_TARGET")
         # Then
         assert obj is not None
-        assert _CALLED.get(scaling.ScalingCommand._is_parameter_valid.__name__)
-        assert _CALLED.get(scaling.ScalingCommand._is_target_valid.__name__)
+        assert _CALLED.get(scaling.ScalingCommand._is_parameter_value_valid.__name__)
+        assert _CALLED.get(scaling.ScalingCommand._is_target_value_valid.__name__)
 
 
 class _MyScalingDefinition(common.MyScalingDefinition):
-    def _is_resource_valid(self, name: str, value: str) -> None:
+    def _is_resource_valid(self, value: str) -> bool:
         _CALLED[_MyScalingDefinition._is_resource_valid.__name__] = True
+        return True
 
 
 class TestScalingDefinition:
@@ -77,43 +80,119 @@ def _create_request_and_definition(
 
 
 class TestScaler:
+    def setup(self):
+        self.request, self.definition = _create_request_and_definition()
+        self.obj = common.MyScaler.from_request(self.request)
+        self.obj.__class__.cls_called = {}
+
+    def teardown(self):
+        self.obj.__class__.cls_path = ""
+        self.obj.__class__.cls_called = {}
+
     def test_from_request_ok(self):
-        # Given
-        req, definition = _create_request_and_definition()
-        # When
-        result = common.MyScaler.from_request(req)
+        # Given/When
+        result = common.MyScaler.from_request(self.request)
         # Then
         assert result is not None
-        assert result.definition == definition
+        assert result.definition == self.definition
         assert not result.called.get(base.Scaler.can_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
+        assert (
+            common.MyScaler.cls_called[base.ScalerPathBased.from_request.__name__]
+            == self.request
+        )
 
     @pytest.mark.asyncio
     async def test_enact_ok(self):
         # Given
-        req, _ = _create_request_and_definition()
-        obj = common.MyScaler.from_request(req)
-        obj._can_enact = True
+        self.obj._can_enact = True
         # When
-        result = await obj.enact()
+        result = await self.obj.enact()
         # Then
         assert result
-        assert obj.called.get(base.Scaler.can_enact.__name__)
-        assert obj.called.get(base.Scaler._safe_enact.__name__)
+        assert self.obj.called.get(base.Scaler.can_enact.__name__)
+        assert self.obj.called.get(base.Scaler._safe_enact.__name__)
 
     @pytest.mark.asyncio
     async def test_enact_nok(self):
         # Given
-        req, _ = _create_request_and_definition()
-        obj = common.MyScaler.from_request(req)
-        obj._can_enact = False
-        obj._reason = "TEST_REASON"
+        self.obj._can_enact = False
+        self.obj._reason = "TEST_REASON"
         # When
-        result = await obj.enact()
+        result = await self.obj.enact()
         # Then
         assert not result
-        assert obj.called.get(base.Scaler.can_enact.__name__)
-        assert not obj.called.get(base.Scaler._safe_enact.__name__)
+        assert self.obj.called.get(base.Scaler.can_enact.__name__)
+        assert not self.obj.called.get(base.Scaler._safe_enact.__name__)
+
+
+_TEST_SCALER_PATH: str = "TEST_PATH"
+
+
+class TestScalerPathBased:
+    def setup(self):
+        self.request, self.definition = _create_request_and_definition()
+        self.obj = common.MyScalerPathBased.from_request(self.request)
+        self.obj.__class__.cls_path = _TEST_SCALER_PATH
+        self.obj.__class__.cls_called = {}
+
+    def teardown(self):
+        self.obj.__class__.cls_path = ""
+        self.obj.__class__.cls_called = {}
+
+    def test_from_request_ok(self):
+        # Given/When
+        result = common.MyScalerPathBased.from_request(self.request)
+        # Then
+        assert result is not None
+        assert result.definition == self.definition
+        assert not result.called.get(base.Scaler.can_enact.__name__)
+        assert not result.called.get(base.Scaler._safe_enact.__name__)
+        assert (
+            common.MyScalerPathBased.cls_called.get(
+                base.ScalerPathBased.from_request.__name__
+            )
+            == self.request
+        )
+
+    @pytest.mark.asyncio
+    async def test_enact_ok(self):
+        # Given
+        self.obj._can_enact = True
+        # When
+        result = await self.obj.enact()
+        # Then
+        assert result
+        assert self.obj.called.get(base.Scaler.can_enact.__name__)
+        # Then: _path_for_enact
+        args_path_for_enact = common.MyScalerPathBased.cls_called.get(
+            base.ScalerPathBased._path_for_enact.__name__
+        )
+        assert args_path_for_enact
+        assert args_path_for_enact["resource"] == self.request.resource
+        assert args_path_for_enact["field"] in self.request.command
+        assert args_path_for_enact["target"] in self.request.command
+        # Then: _enact_by_path
+        args_enact_by_path = common.MyScalerPathBased.cls_called.get(
+            base.ScalerPathBased._enact_by_path.__name__
+        )
+        assert args_enact_by_path
+        assert args_enact_by_path["resource"] == self.request.resource
+        assert args_enact_by_path["field"] in self.request.command
+        assert args_enact_by_path["target"] in self.request.command
+        assert args_enact_by_path["path"] == self.obj.__class__.cls_path
+
+    @pytest.mark.asyncio
+    async def test_enact_nok(self):
+        # Given
+        self.obj._can_enact = False
+        self.obj._reason = "TEST_REASON"
+        # When
+        result = await self.obj.enact()
+        # Then
+        assert not result
+        assert self.obj.called.get(base.Scaler.can_enact.__name__)
+        assert not self.obj.called.get(base.Scaler._safe_enact.__name__)
 
 
 class TestCategoryScaleRequestParser:

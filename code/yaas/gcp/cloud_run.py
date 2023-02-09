@@ -14,6 +14,7 @@ from google.cloud import run_v2
 
 from yaas import logger
 from yaas.gcp import cloud_run_const, resource_name
+from yaas import xpath
 
 _LOGGER = logger.get(__name__)
 
@@ -22,7 +23,7 @@ _CLOUD_RUN_REVISION_TMPL: str = "{}-scaler-{}"
 
 class CloudRunServiceError(Exception):
     """
-    To encapsulate all exceptions operating on CloudRun.
+    To encapsulate all exceptions operating on Cloud Run.
     """
 
 
@@ -42,7 +43,6 @@ async def get_service(name: str) -> run_v2.Service:
         py:class:`CloudRunServiceError` any error accessing the CloudRun control plane.
 
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_get_service
-    .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long
     _LOGGER.debug("Getting service <%s>", name)
@@ -185,28 +185,20 @@ def _set_service_value_by_path(service: Any, path: str, value: Any) -> Any:
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     setattr(node, attr_name, value)
     return service
 
 
-def _get_parent_node_attribute_based_on_path(value: Any, path: str) -> Tuple[Any, str]:
-    result = value
-    split_path = path.split(cloud_run_const.REQUEST_PATH_SEP)
-    for entry in split_path[:-1]:
-        result = getattr(result, entry)
-    return result, split_path[-1]
-
-
 def _clean_service_for_update_request(value: Any) -> Any:
     for path in cloud_run_const.CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE:
-        node, attr_name = _get_parent_node_attribute_based_on_path(value, path)
+        node, attr_name = xpath.get_parent_node_based_on_path(value, path)
         setattr(node, attr_name, None)
     return value
 
 
 def _update_service_revision(service: Any) -> Any:
-    node, attr_name = _get_parent_node_attribute_based_on_path(
+    node, attr_name = xpath.get_parent_node_based_on_path(
         service, cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH
     )
     revision = _create_revision(service.name)
@@ -230,7 +222,7 @@ def _validate_service(
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     # pylint: enable=line-too-long
-    node, attr_name = _get_parent_node_attribute_based_on_path(service, path)
+    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     current = getattr(node, attr_name)
     if current != value:
         msg = (

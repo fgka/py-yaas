@@ -6,6 +6,7 @@
 # type: ignore
 import pytest
 
+from yaas.dto import resource_regex
 from yaas.scaler import resource_name_parser
 
 _TEST_RESOURCE_CLOUD_RUN_PROJECT: str = "my_project"
@@ -22,18 +23,18 @@ _TEST_RESOURCE_CLOUD_RUN_SIMPLIFIED: str = f"CloudRun {_TEST_RESOURCE_CLOUD_RUN_
     [
         (
             _TEST_RESOURCE_CLOUD_RUN_CANONICAL,
-            resource_name_parser.ResourceType.CLOUD_RUN,
+            resource_regex.ResourceType.CLOUD_RUN,
             _TEST_RESOURCE_CLOUD_RUN_CANONICAL,
         ),
         (
             _TEST_RESOURCE_CLOUD_RUN_SIMPLIFIED,
-            resource_name_parser.ResourceType.CLOUD_RUN,
+            resource_regex.ResourceType.CLOUD_RUN,
             _TEST_RESOURCE_CLOUD_RUN_CANONICAL,
         ),
     ],
 )
 def test_canonical_resource_type_and_name_ok_cloud_run(
-    resource: str, expected_type: resource_name_parser.ResourceType, expected_canonical
+    resource: str, expected_type: resource_regex.ResourceType, expected_canonical
 ):
     (
         resource_type,

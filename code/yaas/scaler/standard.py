@@ -6,8 +6,8 @@ Produce Google Cloud supported resources' scalers.
 from typing import Iterable, List, Optional, Tuple
 
 from yaas import logger
-from yaas.dto import request, scaling
-from yaas.scaler import base, run, resource_name_parser
+from yaas.dto import request, resource_regex, scaling
+from yaas.scaler import base, resource_name_parser, run, sql
 
 _LOGGER = logger.get(__name__)
 
@@ -46,8 +46,10 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
             res_type, _ = resource_name_parser.canonical_resource_type_and_name(
                 val.resource
             )
-            if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
+            if res_type == resource_regex.ResourceType.CLOUD_RUN:
                 result.append(run.CloudRunScalingDefinition.from_request(val))
+            elif res_type == resource_regex.ResourceType.CLOUD_SQL:
+                result.append(sql.CloudSqlScalingDefinition.from_request(val))
             else:
                 msg = (
                     f"Request <{val}>[{ndx}]) of type {res_type} is not supported. "
@@ -96,8 +98,11 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
         value: scaling.ScalingDefinition,
         raise_if_invalid_request: Optional[bool] = True,
     ) -> base.Scaler:
+        result = None
         if isinstance(value, run.CloudRunScalingDefinition):
             result = run.CloudRunScaler(value)
+        elif isinstance(value, sql.CloudSqlScalingDefinition):
+            result = sql.CloudSqlScaler(value)
         else:
             msg = (
                 f"Scaler for definition <{value}> "
@@ -112,7 +117,7 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
     @staticmethod
     def _create_canonical_request(
         value: request.ScaleRequest,
-    ) -> Tuple[resource_name_parser.ResourceType, request.ScaleRequest]:
+    ) -> Tuple[resource_regex.ResourceType, request.ScaleRequest]:
         (
             resource_type,
             canonical_resource,

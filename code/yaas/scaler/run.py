@@ -28,7 +28,7 @@ Parses strings in the format::
 """
 
 
-class CloudRunCommandTypes(dto_defaults.EnumWithFromStrIgnoreCase):
+class CloudRunCommandType(dto_defaults.EnumWithFromStrIgnoreCase):
     """
     All supported scaling commands for Cloud Run.
     """
@@ -44,41 +44,23 @@ class CloudRunScalingCommand(scaling.ScalingCommand):
     Cloud Run scaling command definition.
     """
 
-    def _is_parameter_valid(self, name: str, value: Any) -> None:
-        if not CloudRunCommandTypes.from_str(value):
-            raise TypeError(
-                f"Attribute {name} cannot accept value <{value}>({type(value)})"
-            )
+    def _is_parameter_value_valid(self, value: Any) -> bool:
+        return CloudRunCommandType.from_str(value) is not None
 
-    def _is_target_valid(self, name: str, value: Any) -> None:
-        if not isinstance(value, int):
-            raise TypeError(
-                f"Attribute {name} must be an {int.__name__}. Got: <{value}>({type(value)})"
-            )
-        if value < 0:
-            raise ValueError(
-                f"Attribute {name} must be an {int.__name__} >= 0. Got <{value}>({type(value)})"
-            )
+    def _is_target_value_valid(self, value: Any) -> bool:
+        return value >= 0
 
     @staticmethod
-    def from_command_str(value: str) -> scaling.ScalingCommand:
-        """
-        Parse the command :py:cls:`str` into an instance of :py:cls:`CloudRunScalingCommand`.
+    def _target_type() -> type:
+        return int
 
-        Args:
-            value:
-        """
-        match = _CLOUD_RUN_COMMAND_REGEX.match(value)
-        if match:
-            parameter, target = match.groups()
-            target = int(target)
-            result = CloudRunScalingCommand(parameter=parameter, target=target)
-        else:
-            raise ValueError(
-                f"Command value must comply with {_CLOUD_RUN_COMMAND_REGEX}. "
-                f"Got: <{value}>({type(value)})"
-            )
-        return result
+    @classmethod
+    def _parameter_target_regex(cls) -> re.Pattern:
+        return _CLOUD_RUN_COMMAND_REGEX
+
+    @classmethod
+    def _convert_target_value_string(cls, value: str) -> Any:
+        return int(value)
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)
@@ -89,11 +71,11 @@ class CloudRunScalingDefinition(  # pylint: disable=too-few-public-methods
     DTO to Hold a Cloud Run scaling definition.
     """
 
-    def _is_resource_valid(self, name: str, value: str) -> None:
-        try:
-            cloud_run.validate_cloud_run_resource_name(value, raise_if_invalid=True)
-        except Exception as err:  # pylint: disable=broad-except
-            raise ValueError(f"Attribute {name} is not a valid Cloud Run ID.") from err
+    def _is_resource_valid(self, value: str) -> bool:
+        lst_errors = cloud_run.validate_cloud_run_resource_name(
+            value, raise_if_invalid=True
+        )
+        return not lst_errors
 
     @classmethod
     def from_request(cls, value: request.ScaleRequest) -> "CloudRunScalingDefinition":
@@ -107,43 +89,35 @@ class CloudRunScalingDefinition(  # pylint: disable=too-few-public-methods
         )
 
 
-class CloudRunScaler(base.Scaler):
+class CloudRunScaler(base.ScalerPathBased):
     """
     Apply the given scaling definition to Cloud Run.
     """
-
-    def __init__(self, definition: CloudRunScalingDefinition) -> None:
-        if not isinstance(definition, CloudRunScalingDefinition):
-            raise TypeError(
-                f"Definition must be an instance of {CloudRunScalingDefinition.__name__}. "
-                f"Got <{definition}>({type(definition)})"
-            )
-        super().__init__(definition)
-
-    @classmethod
-    def from_request(cls, value: request.ScaleRequest) -> "CloudRunScaler":
-        return CloudRunScaler(definition=CloudRunScalingDefinition.from_request(value))
-
-    async def _safe_enact(self) -> None:
-        await CloudRunScaler._enact(
-            resource=self.definition.resource,
-            field=self.definition.command.parameter,
-            target=self.definition.command.target,
-        )
 
     async def can_enact(self) -> Tuple[bool, str]:
         return await cloud_run.can_be_deployed(self.definition.resource)
 
     @classmethod
-    async def _enact(cls, *, resource: str, field: str, target: int) -> None:
-        _LOGGER.info("Scaling <%s> to <%d> for instance <%s>", field, target, resource)
-        if CloudRunCommandTypes.MIN_INSTANCES.value == field:
-            path = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
-        elif CloudRunCommandTypes.MAX_INSTANCES.value == field:
-            path = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM
-        elif CloudRunCommandTypes.CONCURRENCY.value == field:
-            path = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
-        else:
-            raise ValueError(f"Scaling {field} is not supported in {cls.__name__}")
+    def _valid_definition_type(cls) -> type:
+        return CloudRunScalingDefinition
+
+    @classmethod
+    def from_request(cls, value: request.ScaleRequest) -> "CloudRunScaler":
+        return CloudRunScaler(definition=CloudRunScalingDefinition.from_request(value))
+
+    @classmethod
+    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+        result = None
+        if CloudRunCommandType.MIN_INSTANCES.value == field:
+            result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
+        elif CloudRunCommandType.MAX_INSTANCES.value == field:
+            result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM
+        elif CloudRunCommandType.CONCURRENCY.value == field:
+            result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
+        return result
+
+    @classmethod
+    async def _enact_by_path(
+        cls, *, resource: str, field: str, target: Any, path: str
+    ) -> None:
         await cloud_run.update_service(name=resource, path=path, value=target)
-        _LOGGER.info("Scaled %s to %d for instance %s", field, target, resource)

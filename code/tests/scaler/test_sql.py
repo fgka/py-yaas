@@ -8,116 +8,121 @@
 from typing import Any, Dict, Optional, Tuple
 import pytest
 
-from yaas.gcp import cloud_run_const
-from yaas.scaler import run
+from yaas.gcp import cloud_sql_const
+from yaas.scaler import sql
 
 from tests import common
 
 _CALLED: Dict[str, bool] = {}
 
 
-class TestCloudRunScalingCommand:
+class TestCloudSqlScalingCommand:
     def test_ctor_ok(self):
         # Given
-        for param in run.CloudRunCommandType:
+        for param in sql.CloudSqlCommandType:
             # When
-            obj = run.CloudRunScalingCommand(parameter=param.value, target=123)
+            obj = sql.CloudSqlScalingCommand(parameter=param.value, target="value")
             # Then
             assert obj is not None
 
     @pytest.mark.parametrize(
         "parameter,target,exception",
         [
-            (run.CloudRunCommandType.MIN_INSTANCES.value + "_NOT", 123, TypeError),
-            (run.CloudRunCommandType.MIN_INSTANCES.value, "123", TypeError),
-            (run.CloudRunCommandType.MIN_INSTANCES.value, -1, ValueError),
+            (sql.CloudSqlCommandType.INSTANCE_TYPE.value + "_NOT", "value", TypeError),
+            (sql.CloudSqlCommandType.INSTANCE_TYPE.value, 123, TypeError),
+            (sql.CloudSqlCommandType.INSTANCE_TYPE.value, "", ValueError),
         ],
     )
     def test_ctor_nok(self, parameter: str, target: int, exception: Any):
         # Given/When/Then
         with pytest.raises(exception):
-            run.CloudRunScalingCommand(parameter=parameter, target=target)
+            sql.CloudSqlScalingCommand(parameter=parameter, target=target)
 
     def test_from_command_str_ok(self):
         # Given
-        for param in run.CloudRunCommandType:
-            cmd_str = f"{param.value} 123"
+        for param in sql.CloudSqlCommandType:
+            cmd_str = f"{param.value} value"
             # When
-            obj = run.CloudRunScalingCommand.from_command_str(cmd_str)
+            obj = sql.CloudSqlScalingCommand.from_command_str(cmd_str)
             # Then
             assert obj is not None
 
 
-_TEST_CLOUD_RUN_RESOURCE_STR: str = (
-    "projects/my-project-123/locations/my-location-123/services/my-service-123"
-)
+_TEST_CLOUD_SQL_RESOURCE_STR: str = "my-project-123:my-location-123:my-instance-123"
+_TEST_CLOUD_SQL_INSTANCE_TYPE: str = "db-custom-1-10"
 
 
-def _create_cloud_run_scaling_definition(
+def _create_cloud_sql_scaling_definition(
     *,
-    resource: str = _TEST_CLOUD_RUN_RESOURCE_STR,
-    parameter: run.CloudRunCommandType = run.CloudRunCommandType.MAX_INSTANCES,
-    target: int = 123,
+    resource: str = _TEST_CLOUD_SQL_RESOURCE_STR,
+    parameter: sql.CloudSqlCommandType = sql.CloudSqlCommandType.INSTANCE_TYPE,
+    target: str = _TEST_CLOUD_SQL_INSTANCE_TYPE,
     timestamp_utc: int = 321,
-) -> run.CloudRunScalingDefinition:
-    command = run.CloudRunScalingCommand(parameter=parameter.value, target=target)
-    return run.CloudRunScalingDefinition(
+) -> sql.CloudSqlScalingDefinition:
+    command = sql.CloudSqlScalingCommand(parameter=parameter.value, target=target)
+    return sql.CloudSqlScalingDefinition(
         resource=resource, command=command, timestamp_utc=timestamp_utc
     )
+
+
+_TEST_CLOUD_SQL_COMMAND_STR: str = (
+    f"{sql.CloudSqlCommandType.INSTANCE_TYPE.value} {_TEST_CLOUD_SQL_INSTANCE_TYPE}"
+)
 
 
 class TestCloudRunScalingDefinition:
     def test_ctor_ok(self):
         # Given
-        resource = _TEST_CLOUD_RUN_RESOURCE_STR
+        resource = _TEST_CLOUD_SQL_RESOURCE_STR
         # When
-        obj = _create_cloud_run_scaling_definition(resource=resource)
+        obj = _create_cloud_sql_scaling_definition(resource=resource)
         # Then
         assert obj is not None
-        assert obj.resource == _TEST_CLOUD_RUN_RESOURCE_STR
+        assert obj.resource == _TEST_CLOUD_SQL_RESOURCE_STR
 
     def test_ctor_nok_wrong_resource(self):
         # Given
-        resource = "NOT_" + _TEST_CLOUD_RUN_RESOURCE_STR
-        command = run.CloudRunScalingCommand(
-            parameter=run.CloudRunCommandType.MIN_INSTANCES.value, target=123
+        resource = "NOT:" + _TEST_CLOUD_SQL_RESOURCE_STR
+        command = sql.CloudSqlScalingCommand(
+            parameter=sql.CloudSqlCommandType.INSTANCE_TYPE.value,
+            target=_TEST_CLOUD_SQL_INSTANCE_TYPE,
         )
         # When/Then
         with pytest.raises(ValueError):
-            run.CloudRunScalingDefinition(
+            sql.CloudSqlScalingDefinition(
                 resource=resource, command=command, timestamp_utc=321
             )
 
     def test_from_request_ok(self):
         # Given
         req = common.create_scale_request(
-            resource=_TEST_CLOUD_RUN_RESOURCE_STR,
-            command=f"{run.CloudRunCommandType.CONCURRENCY.value} 123",
+            resource=_TEST_CLOUD_SQL_RESOURCE_STR,
+            command=_TEST_CLOUD_SQL_COMMAND_STR,
         )
         # When
-        obj = run.CloudRunScalingDefinition.from_request(req)
+        obj = sql.CloudSqlScalingDefinition.from_request(req)
         # Then
         assert obj is not None
-        assert obj.resource == _TEST_CLOUD_RUN_RESOURCE_STR
+        assert obj.resource == _TEST_CLOUD_SQL_RESOURCE_STR
 
 
 class TestCloudRunScaler:
     def test_ctor_ok(self):
         # Given
-        definition = _create_cloud_run_scaling_definition()
+        definition = _create_cloud_sql_scaling_definition()
         # When
-        obj = run.CloudRunScaler(definition=definition)
+        obj = sql.CloudSqlScaler(definition=definition)
         # Then
         assert obj is not None
 
     def test_from_request_ok(self):
         # Given
         req = common.create_scale_request(
-            resource=_TEST_CLOUD_RUN_RESOURCE_STR,
-            command=f"{run.CloudRunCommandType.CONCURRENCY.value} 123",
+            resource=_TEST_CLOUD_SQL_RESOURCE_STR,
+            command=_TEST_CLOUD_SQL_COMMAND_STR,
         )
         # When
-        obj = run.CloudRunScaler.from_request(req)
+        obj = sql.CloudSqlScaler.from_request(req)
         # Then
         assert obj is not None
 
@@ -129,7 +134,7 @@ class TestCloudRunScaler:
         update_value = None
         can_be_value = None
 
-        async def mocked_update_service(
+        async def mocked_update_instance(
             *, name: str, path: str, value: Optional[Any]
         ) -> Any:
             nonlocal update_name, update_path, update_value
@@ -143,22 +148,22 @@ class TestCloudRunScaler:
             return True, None
 
         monkeypatch.setattr(
-            run.cloud_run,
-            run.cloud_run.update_service.__name__,
-            mocked_update_service,
+            sql.cloud_sql,
+            sql.cloud_sql.update_instance.__name__,
+            mocked_update_instance,
         )
         monkeypatch.setattr(
-            run.cloud_run,
-            run.cloud_run.can_be_deployed.__name__,
+            sql.cloud_sql,
+            sql.cloud_sql.can_be_deployed.__name__,
             mocked_can_be_deployed,
         )
-        target = 13
-        for param in run.CloudRunCommandType:
+        target = _TEST_CLOUD_SQL_INSTANCE_TYPE
+        for param in sql.CloudSqlCommandType:
             exp_path = _expected_cloud_run_update_path(param)
-            definition = _create_cloud_run_scaling_definition(
+            definition = _create_cloud_sql_scaling_definition(
                 parameter=param, target=target
             )
-            obj = run.CloudRunScaler(definition)
+            obj = sql.CloudSqlScaler(definition)
             # When
             result = await obj.enact()
             # Then
@@ -169,11 +174,7 @@ class TestCloudRunScaler:
             assert update_value == target
 
 
-def _expected_cloud_run_update_path(param: run.CloudRunCommandType) -> str:
-    if param == run.CloudRunCommandType.MIN_INSTANCES:
-        return cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
-    if param == run.CloudRunCommandType.MAX_INSTANCES:
-        return cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM
-    if param == run.CloudRunCommandType.CONCURRENCY:
-        return cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM
+def _expected_cloud_run_update_path(param: sql.CloudSqlCommandType) -> str:
+    if param == sql.CloudSqlCommandType.INSTANCE_TYPE:
+        return cloud_sql_const.CLOUD_SQL_SERVICE_SCALING_INSTANCE_TYPE_PARAM
     return None

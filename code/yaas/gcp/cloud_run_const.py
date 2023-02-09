@@ -4,6 +4,8 @@ Default values related to Cloud Run.
 """
 from typing import List
 
+from yaas import xpath
+
 
 ###################
 #  Resource name  #
@@ -15,10 +17,9 @@ CLOUD_RUN_NAME_TOKENS: List[str] = ["projects", "locations", "services"]
 #  Update Request: paths  #
 ###########################
 
-REQUEST_PATH_SEP: str = "."
 
 # min_instance_count
-CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM: str = REQUEST_PATH_SEP.join(
+CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM: str = xpath.REQUEST_PATH_SEP.join(
     ["template", "scaling", "min_instance_count"]
 )
 # pylint: disable=line-too-long
@@ -33,7 +34,7 @@ It corresponds to the _path_ in the API:
 # pylint: enable=line-too-long
 
 # max_instance_count
-CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM: str = REQUEST_PATH_SEP.join(
+CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM: str = xpath.REQUEST_PATH_SEP.join(
     ["template", "scaling", "max_instance_count"]
 )
 # pylint: disable=line-too-long
@@ -48,7 +49,7 @@ It corresponds to the _path_ in the API:
 # pylint: enable=line-too-long
 
 # max_instance_request_concurrency
-CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM: str = REQUEST_PATH_SEP.join(
+CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM: str = xpath.REQUEST_PATH_SEP.join(
     ["template", "max_instance_request_concurrency"]
 )
 # pylint: disable=line-too-long
@@ -86,4 +87,6 @@ CLOUD_RUN_UPDATE_REQUEST_SERVICE_PATHS_TO_REMOVE: List[str] = [
 #  Update Request: revision  #
 ##############################
 
-CLOUD_RUN_SERVICE_REVISION_PATH: str = REQUEST_PATH_SEP.join(["template", "revision"])
+CLOUD_RUN_SERVICE_REVISION_PATH: str = xpath.REQUEST_PATH_SEP.join(
+    ["template", "revision"]
+)

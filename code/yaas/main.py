@@ -286,7 +286,7 @@ async def _enact_request(
 @click.option(
     "--param",
     required=True,
-    type=click.Choice([param.value for param in run.CloudRunCommandTypes]),
+    type=click.Choice([param.value for param in run.CloudRunCommandType]),
     help="Which scaling parameter to set",
 )
 @click.option(

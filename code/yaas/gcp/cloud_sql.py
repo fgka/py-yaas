@@ -106,9 +106,14 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
     try:
         # service
         instance = await get_instance(value)
-        # checking reconciling
-        if instance.get("status") != cloud_sql_const.CLOUD_SQL_STATUS_OK:
-            reason = f"Instance state <{value}> is reconciling, try again later."
+        status = instance.get("status")
+        # checking status
+        if status != cloud_sql_const.CLOUD_SQL_STATUS_OK:
+            reason = (
+                f"Instance <{value}> status <{status}>({type(status)}) is not "
+                f"{cloud_sql_const.CLOUD_SQL_STATUS_OK}, try again later."
+                f"Instance object: <{instance}>"
+            )
     except Exception as err:  # pylint: disable=broad-except
         reason = f"Could not retrieve service with name <{value}>. Error: {err}"
         _LOGGER.exception(reason)

@@ -6,8 +6,8 @@ Produce Google Cloud supported resources' scalers.
 from typing import Iterable, List, Optional, Tuple
 
 from yaas import logger
-from yaas.dto import request, scaling
-from yaas.scaler import base, run, resource_name_parser, sql
+from yaas.dto import request, resource_regex, scaling
+from yaas.scaler import base, resource_name_parser, run, sql
 
 _LOGGER = logger.get(__name__)
 
@@ -46,9 +46,9 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
             res_type, _ = resource_name_parser.canonical_resource_type_and_name(
                 val.resource
             )
-            if res_type == resource_name_parser.ResourceType.CLOUD_RUN:
+            if res_type == resource_regex.ResourceType.CLOUD_RUN:
                 result.append(run.CloudRunScalingDefinition.from_request(val))
-            if res_type == resource_name_parser.ResourceType.CLOUD_SQL:
+            elif res_type == resource_regex.ResourceType.CLOUD_SQL:
                 result.append(sql.CloudSqlScalingDefinition.from_request(val))
             else:
                 msg = (
@@ -114,7 +114,7 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
     @staticmethod
     def _create_canonical_request(
         value: request.ScaleRequest,
-    ) -> Tuple[resource_name_parser.ResourceType, request.ScaleRequest]:
+    ) -> Tuple[resource_regex.ResourceType, request.ScaleRequest]:
         (
             resource_type,
             canonical_resource,

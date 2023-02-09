@@ -17,7 +17,7 @@ from googleapiclient import discovery
 
 from yaas import logger
 from yaas.gcp import cloud_sql_const
-from yaas.scaler import resource_name_const
+from yaas.dto import resource_regex
 from yaas import xpath
 
 _LOGGER = logger.get(__name__)
@@ -74,13 +74,13 @@ def _sql_fqn_components(value: str) -> Tuple[str, str, str]:
     Returns:
 
     """
-    match = resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX.match(value)
-    if match and len(match.groups()) == 3:
-        project, location, instance_name = match.groups()
+    parsed = resource_regex.CLOUD_SQL_CANONICAL_REGEX.prj_loc_name(value)
+    if parsed:
+        project, location, instance_name = parsed
     else:
         raise ValueError(
             f"Instance name <{value}> is not a valid Cloud SQL resource name. "
-            f"Needs to comply with <{resource_name_const.FQN_CLOUD_SQL_TARGET_RESOURCE_REGEX}>"
+            f"Needs to comply with <{resource_regex.CLOUD_SQL_CANONICAL_REGEX}>"
         )
     return project, location, instance_name
 

@@ -7,7 +7,7 @@
 import pytest
 
 from yaas.dto import request
-from yaas.scaler import run, standard
+from yaas.scaler import resource_name_parser, run, standard
 
 from tests import common
 
@@ -63,3 +63,33 @@ class TestStandardScalingCommandParser:
         # When/Then
         with pytest.raises(TypeError):
             self.obj.scaler(req)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            request.ScaleRequest(
+                topic="standard",
+                resource="locations/europe-west3/namespaces/yaas-test/services/integ-test",
+                command="min_instances 10",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+            request.ScaleRequest(
+                topic="standard",
+                resource="yaas-test:europe-west3:integ-test",
+                command="instance_type db-custom-2-3840",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+        ],
+    )
+    def test__to_scaling_definition_ok(self, value: request.ScaleRequest):
+        # Given/When
+        result = self.obj._to_scaling_definition([value])
+        # Then
+        assert result and len(result) == 1
+        cmd = result[0]
+        _, canonical_resource = resource_name_parser.canonical_resource_type_and_name(
+            value.resource
+        )
+        assert cmd.resource == canonical_resource

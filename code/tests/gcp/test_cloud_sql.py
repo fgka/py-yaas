@@ -109,7 +109,9 @@ async def test_can_be_deployed_ok(
     monkeypatch, status: str, raise_on_get_execute: bool, expected: bool
 ):
     # Given
-    instance = xpath.create_dict_based_on_path("status", status)
+    instance = xpath.create_dict_based_on_path(
+        cloud_sql_const.CLOUD_SQL_STATE_KEY, status
+    )
     client = _StubSqlInstancesResource(
         instance=instance, raise_on_get_execute=raise_on_get_execute
     )

@@ -106,12 +106,13 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
     try:
         # service
         instance = await get_instance(value)
-        status = instance.get("status")
+        status = instance.get(cloud_sql_const.CLOUD_SQL_STATE_KEY)
         # checking status
         if status != cloud_sql_const.CLOUD_SQL_STATUS_OK:
             reason = (
-                f"Instance <{value}> status <{status}>({type(status)}) is not "
-                f"{cloud_sql_const.CLOUD_SQL_STATUS_OK}, try again later."
+                f"Instance <{value}> {cloud_sql_const.CLOUD_SQL_STATE_KEY} "
+                f"<{status}>({type(status)}) is not {cloud_sql_const.CLOUD_SQL_STATUS_OK}, "
+                f"try again later. "
                 f"Instance object: <{instance}>"
             )
     except Exception as err:  # pylint: disable=broad-except

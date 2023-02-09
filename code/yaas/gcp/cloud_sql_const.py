@@ -10,7 +10,7 @@ from yaas import xpath
 ###########################
 
 CLOUD_SQL_STATE_KEY: str = "state"
-CLOUD_SQL_STATE_OK: str = "RUNNABLE"
+CLOUD_SQL_STATUS_OK: str = "RUNNABLE"
 
 # min_instance_count
 CLOUD_SQL_SERVICE_SCALING_INSTANCE_TYPE_PARAM: str = xpath.REQUEST_PATH_SEP.join(

@@ -52,7 +52,7 @@ async def get_instance(value: str) -> Dict[str, Any]:
     # get service definition
     await asyncio.sleep(0)
     try:
-        request = _sql_client().instances().get(project=project, instance=instance_name)
+        request = _sql_instances().get(project=project, instance=instance_name)
         await asyncio.sleep(0)
         result = request.execute()
         await asyncio.sleep(0)
@@ -106,7 +106,7 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
         # service
         instance = await get_instance(value)
         # checking reconciling
-        if instance.get("status") != cloud_sql_const.CLOUD_SQL_STATE_OK:
+        if instance.get("status") != cloud_sql_const.CLOUD_SQL_STATUS_OK:
             reason = f"Instance state <{value}> is reconciling, try again later."
     except Exception as err:  # pylint: disable=broad-except
         reason = f"Could not retrieve service with name <{value}>. Error: {err}"
@@ -138,6 +138,10 @@ def validate_cloud_sql_resource_name(
         else:
             result.append(f"Could not parse instance name <{value}>. Error: {err}")
     return result
+
+
+def _sql_instances() -> discovery.Resource:
+    return _sql_client().instances()
 
 
 def _sql_client() -> discovery.Resource:
@@ -176,14 +180,12 @@ async def update_instance(
     path = path.strip()
     # logic
     await asyncio.sleep(0)
-    project, _, instance_name = _sql_fqn_components(value)
+    project, _, instance_name = _sql_fqn_components(name)
     await asyncio.sleep(0)
     update_request = xpath.create_dict_based_on_path(path, value)
     try:
-        request = (
-            _sql_client()
-            .instances()
-            .patch(project=project, instance=instance_name, body=update_request)
+        request = _sql_instances().patch(
+            project=project, instance=instance_name, body=update_request
         )
         await asyncio.sleep(0)
         result = request.execute()
@@ -201,15 +203,3 @@ async def update_instance(
         value,
     )
     return result
-
-
-def _set_service_value_by_path(service: Any, path: str, value: Any) -> Any:
-    # pylint: disable=line-too-long
-    """
-    Set `value` on :py:class:`run_v2.Service` (`documentation`_) based on `path`.
-    .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
-    """
-    # pylint: enable=line-too-long
-    node, attr_name = xpath.get_parent_node_based_on_path(service, path)
-    setattr(node, attr_name, value)
-    return service

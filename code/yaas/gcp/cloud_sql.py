@@ -112,8 +112,7 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
             reason = (
                 f"Instance <{value}> {cloud_sql_const.CLOUD_SQL_STATE_KEY} "
                 f"<{status}>({type(status)}) is not {cloud_sql_const.CLOUD_SQL_STATUS_OK}, "
-                f"try again later. "
-                f"Instance object: <{instance}>"
+                "try again later."
             )
     except Exception as err:  # pylint: disable=broad-except
         reason = f"Could not retrieve service with name <{value}>. Error: {err}"

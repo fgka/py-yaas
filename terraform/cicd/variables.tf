@@ -45,6 +45,12 @@ variable "build_bucket_name_prefix" {
   default     = "yaas-build-artefacts"
 }
 
+variable "object_age_in_days" {
+  description = "How long to keep objects, in days, before automatically remove them."
+  type        = number
+  default     = 7
+}
+
 ///////////////////////
 // Artifact Registry //
 ///////////////////////

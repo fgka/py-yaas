@@ -94,6 +94,16 @@ module "build_bucket" {
       module.build_service_account.iam_email,
     ]
   }
+  lifecycle_rules = {
+    clean_up = {
+      action = {
+        type = "Delete"
+      }
+      condition = {
+        age = var.object_age_in_days
+      }
+    }
+  }
 }
 
 ///////////////////////

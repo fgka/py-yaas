@@ -167,8 +167,7 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     _validate_secret_name(secret_name)
     if not isinstance(amount_to_keep, int):
         amount_to_keep = DEFAULT_AMOUNT_TO_KEEP
-    if amount_to_keep < MIN_AMOUNT_TO_KEEP:
-        amount_to_keep = MIN_AMOUNT_TO_KEEP
+    amount_to_keep = max(MIN_AMOUNT_TO_KEEP, amount_to_keep)
     # logic
     # name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
     await asyncio.sleep(0)
@@ -240,7 +239,7 @@ async def _apply_operation_on_versions(
         await asyncio.sleep(0)
         try:
             operation(fqn_secret_name)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             errors.append(
                 f"Could not execute operation on secret <{fqn_secret_name}>. "
                 f"Operation: <{operation}>. "

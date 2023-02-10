@@ -80,7 +80,7 @@ class _StubResponse:
         self.name = name
 
 
-class _StubSecretClient:
+class _StubSecretClient:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         *,
@@ -282,7 +282,6 @@ async def test_clean_up_ok(monkeypatch):
 async def test_clean_up_nok(monkeypatch):
     # Given
     secret_name = "TEST_SECRET"
-    version_numbers = [1, 2, 3, 4, 5, 6]
     amount_to_keep = 3
     client = _StubSecretClient(raise_on_list=True)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)

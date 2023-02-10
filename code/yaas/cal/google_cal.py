@@ -576,6 +576,13 @@ async def _put_secret_credentials(
                 raise RuntimeError(
                     f"Could not put secret {secret_name}. Error: {err}"
                 ) from err
+            try:
+                await secrets.clean_up(secret_name=actual_secret_name)
+                _LOGGER.info("Cleaned up secret: %s", actual_secret_name)
+            except Exception as err:
+                raise RuntimeError(
+                    f"Could not clean up secret {secret_name}. Error: {err}"
+                ) from err
         else:
             _LOGGER.warning(
                 "Credentials JSON file does not exist. Got: <%s>",

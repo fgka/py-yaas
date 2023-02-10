@@ -354,12 +354,17 @@ def _mock_credentials(
         called[google_cal.secrets.put.__name__] = locals()
         return secret_name
 
+    async def mocked_clean_up(  # pylint: disable=unused-argument
+        *, secret_name: str, amount_to_keep: Optional[int] = None
+    ) -> None:
+        nonlocal called
+        called[google_cal.secrets.clean_up.__name__] = locals()
+
     monkeypatch.setattr(
         google_cal.flow.InstalledAppFlow,
         google_cal.flow.InstalledAppFlow.from_client_secrets_file.__name__,
         mocked_from_client_secrets_file,
     )
-
     monkeypatch.setattr(
         google_cal.credentials.Credentials,
         google_cal.credentials.Credentials.from_authorized_user_file.__name__,
@@ -367,6 +372,9 @@ def _mock_credentials(
     )
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.get.__name__, mocked_get)
     monkeypatch.setattr(google_cal.secrets, google_cal.secrets.put.__name__, mocked_put)
+    monkeypatch.setattr(
+        google_cal.secrets, google_cal.secrets.clean_up.__name__, mocked_clean_up
+    )
 
     return called
 
@@ -472,12 +480,17 @@ async def test__put_secret_credentials_ok(monkeypatch):
     await google_cal._put_secret_credentials(
         secret_name + "/versions/latest", credentials_json
     )
-    # Then
+    # Then: put
     assert (
         called.get(google_cal.secrets.put.__name__, {}).get("secret_name")
         == secret_name
     )
     assert called.get(google_cal.secrets.put.__name__, {}).get("content") == content
+    # Then: clean_up
+    assert (
+        called.get(google_cal.secrets.clean_up.__name__, {}).get("secret_name")
+        == secret_name
+    )
 
 
 @pytest.mark.asyncio

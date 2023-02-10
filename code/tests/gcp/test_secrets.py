@@ -4,7 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,invalid-name
 # pylint: disable=attribute-defined-outside-init,too-few-public-methods, redefined-builtin
 # type: ignore
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -80,21 +80,30 @@ class _StubResponse:
         self.name = name
 
 
-class _StubSecretClient:
+class _StubSecretClient:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         *,
         data: Optional[str] = "TEST_DATA",
         name: Optional[str] = "TEST_SECRET",
+        list_response: Optional[List[str]] = None,
         raise_on_access: Optional[bool] = False,
         raise_on_add: Optional[bool] = False,
+        raise_on_list: Optional[bool] = False,
+        raise_on_disable: Optional[bool] = False,
+        raise_on_destroy: Optional[bool] = False,
     ):
         self._response = _StubResponse(
             data=bytes(data.encode(const.ENCODING_UTF8)), name=name
         )
+        self._list_response = list_response
         self._raise_on_access = raise_on_access
         self._raise_on_add = raise_on_add
+        self._raise_on_list = raise_on_list
+        self._raise_on_disable = raise_on_disable
+        self._raise_on_destroy = raise_on_destroy
         self._request = None
+        self._requests = []
 
     def access_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
@@ -105,6 +114,34 @@ class _StubSecretClient:
     def add_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
         self._request = request
         if self._raise_on_add:
+            raise RuntimeError
+        return self._response
+
+    def list_secret_versions(self, *, request: Dict[str, Any]) -> List[str]:
+        self._request = request
+        if self._raise_on_list:
+            raise RuntimeError
+        return self._list_response
+
+    def disable_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+        self._requests.append(
+            (
+                "disable",
+                request,
+            )
+        )
+        if self._raise_on_disable:
+            raise RuntimeError
+        return self._response
+
+    def destroy_secret_version(self, *, request: Dict[str, Any]) -> _StubResponse:
+        self._requests.append(
+            (
+                "destroy",
+                request,
+            )
+        )
+        if self._raise_on_destroy:
             raise RuntimeError
         return self._response
 
@@ -190,3 +227,130 @@ async def test_put_nok(monkeypatch):
     # When/Then
     with pytest.raises(secrets.SecretManagerAccessError):
         await secrets.put(secret_name=secret_name, content=content)
+
+
+@pytest.mark.asyncio
+async def test_clean_up_ok(monkeypatch):
+    # Given
+    called = {}
+    secret_name = "TEST_SECRET"
+    version_numbers = sorted([1, 2, 3, 4, 5, 6], reverse=True)
+    amount_to_keep = 3
+    client = _StubSecretClient(
+        list_response=[
+            _StubResponse(name=f"{secret_name}/versions/{v_num}")
+            for v_num in version_numbers
+        ]
+    )
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+
+    async def mocked_disable_versions(
+        secret_name: str, version_numbers: List[int]
+    ) -> None:
+        nonlocal called
+        called[secrets._disable_versions.__name__] = (secret_name, version_numbers)
+
+    monkeypatch.setattr(
+        secrets, secrets._disable_versions.__name__, mocked_disable_versions
+    )
+
+    async def mocked_remove_versions(
+        secret_name: str, version_numbers: List[int]
+    ) -> None:
+        nonlocal called
+        called[secrets._remove_versions.__name__] = (secret_name, version_numbers)
+
+    monkeypatch.setattr(
+        secrets, secrets._remove_versions.__name__, mocked_remove_versions
+    )
+
+    # When
+    await secrets.clean_up(secret_name=secret_name, amount_to_keep=amount_to_keep)
+    # Then
+    assert client._request.get("parent") == secret_name
+    # Then: disabled
+    dis_name, dis_numbers = called.get(secrets._disable_versions.__name__, (None, None))
+    assert dis_name == secret_name
+    assert set(dis_numbers) == set(version_numbers[1 : amount_to_keep + 1])
+    # Then: disabled
+    rem_name, rem_numbers = called.get(secrets._remove_versions.__name__, (None, None))
+    assert rem_name == secret_name
+    assert set(rem_numbers) == set(version_numbers[amount_to_keep + 1 :])
+
+
+@pytest.mark.asyncio
+async def test_clean_up_nok(monkeypatch):
+    # Given
+    secret_name = "TEST_SECRET"
+    amount_to_keep = 3
+    client = _StubSecretClient(raise_on_list=True)
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    # When/Then
+    with pytest.raises(secrets.SecretManagerAccessError):
+        await secrets.clean_up(secret_name=secret_name, amount_to_keep=amount_to_keep)
+    # Then
+    assert client._request.get("parent") == secret_name
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("to_raise", [True, False])
+async def test__disable_versions_ok(monkeypatch, to_raise: bool):
+    # Given
+    secret_name = "TEST_SECRET"
+    version_numbers = [1, 2, 3, 4, 5]
+    client = _StubSecretClient(raise_on_disable=to_raise)
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    exception = None
+    # When
+    try:
+        await secrets._disable_versions(
+            secret_name=secret_name, version_numbers=version_numbers
+        )
+    except secrets.SecretManagerAccessError as err:
+        exception = err
+    # Then: error?
+    assert to_raise == bool(exception)
+    # Then
+    assert client._request is None
+    # Then: requests
+    await _assert_requests(client, secret_name, "disable", version_numbers)
+
+
+async def _assert_requests(
+    client: _StubSecretClient, secret_name: str, what: str, version_numbers: List[int]
+) -> None:
+    # Then requests
+    assert len(client._requests) == len(version_numbers)
+    req_numbers = []
+    for r_what, req in client._requests:
+        assert r_what == what
+        req_name = req.get("name")
+        assert req_name.startswith(secret_name)
+        v_number = int(req_name.split("/versions/")[-1])
+        req_numbers.append(v_number)
+    # Then: versions
+    assert set(version_numbers) == set(req_numbers)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("to_raise", [True, False])
+async def test__remove_versions_ok(monkeypatch, to_raise: bool):
+    # Given
+    secret_name = "TEST_SECRET"
+    version_numbers = [1, 2, 3, 4, 5]
+    client = _StubSecretClient(raise_on_destroy=to_raise)
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    exception = None
+    # When
+    try:
+        await secrets._remove_versions(
+            secret_name=secret_name, version_numbers=version_numbers
+        )
+    except secrets.SecretManagerAccessError as err:
+        exception = err
+    # Then: error?
+    assert to_raise == bool(exception)
+    # Then
+    assert client._request is None
+    # Then: requests
+    await _assert_requests(client, secret_name, "destroy", version_numbers)

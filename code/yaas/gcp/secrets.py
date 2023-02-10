@@ -9,7 +9,7 @@ GCP `Secret Manager`_ entry point
 """
 # pylint: enable=line-too-long
 import asyncio
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from google.cloud import secretmanager
 
@@ -63,10 +63,7 @@ async def get(secret_name: str) -> str:
     Returns:
         Secret content
     """
-    if not isinstance(secret_name, str) or not secret_name:
-        raise SecretManagerAccessError(
-            f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
-        )
+    _validate_secret_name(secret_name)
     _LOGGER.info("Retrieving secret <%s>", secret_name)
     await asyncio.sleep(0)
     try:
@@ -77,6 +74,13 @@ async def get(secret_name: str) -> str:
         _LOGGER.critical(msg)
         raise SecretManagerAccessError(msg) from err
     return response.payload.data.decode(const.ENCODING_UTF8)
+
+
+def _validate_secret_name(value: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise SecretManagerAccessError(
+            f"Secret name must be a non-empty string. Got: <{value}>({type(value)})"
+        )
 
 
 def _secret_client() -> secretmanager.SecretManagerServiceClient:
@@ -116,10 +120,7 @@ async def put(*, secret_name: str, content: str) -> str:
     Returns:
         The secret full name, with version.
     """
-    if not isinstance(secret_name, str) or not secret_name:
-        raise SecretManagerAccessError(
-            f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
-        )
+    _validate_secret_name(secret_name)
     if not isinstance(content, str):
         raise SecretManagerAccessError(
             f"Content must be a string. Got: <{content}>({type(content)})"
@@ -138,3 +139,141 @@ async def put(*, secret_name: str, content: str) -> str:
         _LOGGER.critical(msg)
         raise SecretManagerAccessError(msg) from err
     return response.name
+
+
+DEFAULT_AMOUNT_TO_KEEP: int = 2
+MIN_AMOUNT_TO_KEEP: int = 1
+
+
+async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) -> None:
+    """
+    Will remove all versions, except the latest and the newest in `amount_to_keep`. Example:
+     - There are 50 versions, including latest;
+     - `amount_to_keep = 2`.
+
+    This means that after this there will be 3 versions:
+     - `latest` = enabled;
+     - `latest - 1` = disabled;
+     - `latest - 2` = dsiabled;
+
+    Args:
+        secret_name: a secret name in the format:
+            `projects/<<project id>>/secrets/<<secret id>>`
+        amount_to_keep: how many old versions (besides `latest`) to keep
+
+    Source: https://cloud.google.com/secret-manager/docs/view-secret-version
+    """
+    # validate input
+    _validate_secret_name(secret_name)
+    if not isinstance(amount_to_keep, int):
+        amount_to_keep = DEFAULT_AMOUNT_TO_KEEP
+    amount_to_keep = max(MIN_AMOUNT_TO_KEEP, amount_to_keep)
+    # logic
+    # name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
+    await asyncio.sleep(0)
+    try:
+        version_names = [
+            version.name
+            for version in _secret_client().list_secret_versions(
+                request={"parent": secret_name}
+            )
+        ]
+    except Exception as err:
+        raise SecretManagerAccessError(
+            f"Could not list secret versions for <{secret_name}>. Error: {err}"
+        ) from err
+    await asyncio.sleep(0)
+    # version_numbers: <<version number>>
+    version_numbers = sorted(
+        [int(version_name.split("/")[-1]) for version_name in version_names],
+        reverse=True,
+    )
+    # assuming 63 versions, amount_to_keep = 3
+    # latest = 63
+    # to_keep = [62, 61, 59]
+    to_keep = version_numbers[1 : (amount_to_keep + 1)]
+    await _disable_versions(secret_name, to_keep)
+    # to_remove = [58, ..., 1]
+    to_remove = version_numbers[(amount_to_keep + 1) :]
+    await _remove_versions(secret_name, to_remove)
+
+
+async def _disable_versions(secret_name: str, version_numbers: List[int]) -> None:
+    """
+    Source: https://cloud.google.com/secret-manager/docs/disable-secret-version
+    """
+
+    def disable_version(value: str) -> None:
+        _LOGGER.debug("Disabling secret version: <%s>", value)
+        response = _secret_client().disable_secret_version(request={"name": value})
+        _LOGGER.debug("Disabled secret version: <%s>", response.name)
+
+    _LOGGER.debug(
+        "Disabling secret versions from <%s>. Versions to disable: <%s>",
+        secret_name,
+        version_numbers,
+    )
+    errors = await _apply_operation_on_versions(
+        secret_name, version_numbers, disable_version
+    )
+    if errors:
+        raise SecretManagerAccessError(
+            f"Could not disable versions of secret <{secret_name}>. "
+            f"Argument: <{version_numbers}>. "
+            f"Error: {errors}"
+        )
+    _LOGGER.info(
+        "Disabled secret versions from <%s>. Versions to disable: <%s>",
+        secret_name,
+        version_numbers,
+    )
+
+
+async def _apply_operation_on_versions(
+    secret_name: str, version_numbers: List[int], operation: Callable[[str], None]
+) -> List[str]:
+    errors = []
+    fqn_secret_name_prefix = f"{secret_name}/versions"
+    for v_number in version_numbers:
+        fqn_secret_name = f"{fqn_secret_name_prefix}/{v_number}"
+        await asyncio.sleep(0)
+        try:
+            operation(fqn_secret_name)
+        except Exception as err:  # pylint: disable=broad-except
+            errors.append(
+                f"Could not execute operation on secret <{fqn_secret_name}>. "
+                f"Operation: <{operation}>. "
+                f"Error: {err}",
+            )
+    return errors
+
+
+async def _remove_versions(secret_name: str, version_numbers: List[int]) -> None:
+    """
+    Source: https://cloud.google.com/secret-manager/docs/destroy-secret-version
+    """
+
+    def remove_version(value: str) -> None:
+        _LOGGER.debug("Removing secret version: <%s>", value)
+        response = _secret_client().destroy_secret_version(request={"name": value})
+        _LOGGER.debug("Removed secret version: <%s>", response.name)
+
+    _LOGGER.debug(
+        "Removing secret versions from <%s>. Versions to disable: <%s>",
+        secret_name,
+        version_numbers,
+    )
+    errors = await _apply_operation_on_versions(
+        secret_name, version_numbers, remove_version
+    )
+    if errors:
+        raise SecretManagerAccessError(
+            f"Could not remove versions of secret <{secret_name}>. "
+            f"Argument: <{version_numbers}>. "
+            f"Error: {errors}"
+        )
+    _LOGGER.info(
+        "Removed secret versions from <%s>. Versions to disable: <%s>",
+        secret_name,
+        version_numbers,
+    )

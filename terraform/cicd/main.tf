@@ -38,6 +38,7 @@ module "cicd_infra" {
   build_service_account_name    = var.build_service_account_name
   // resources
   build_bucket_name_prefix      = var.build_bucket_name_prefix
+  object_age_in_days            = var.object_age_in_days
   docker_artifact_registry_name = var.docker_artifact_registry_name
   python_artifact_registry_name = var.python_artifact_registry_name
   // monitoring

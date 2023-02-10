@@ -6,7 +6,7 @@
 .. _Cloud SQL: https://cloud.google.com/sql
 """
 import re
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 import attrs
 
@@ -93,25 +93,27 @@ class CloudSqlScaler(base.ScalerPathBased):
     """
 
     async def can_enact(self) -> Tuple[bool, str]:
-        return await cloud_sql.can_be_deployed(self.definition.resource)
+        return await cloud_sql.can_be_deployed(self.resource)
 
     @classmethod
     def _valid_definition_type(cls) -> type:
         return CloudSqlScalingDefinition
 
     @classmethod
-    def from_request(cls, value: request.ScaleRequest) -> "CloudSqlScaler":
-        return CloudSqlScaler(definition=CloudSqlScalingDefinition.from_request(value))
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "CloudSqlScaler":
+        return CloudSqlScaler(
+            *[CloudSqlScalingDefinition.from_request(val) for val in value]
+        )
 
     @classmethod
-    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+    def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
         result = None
         if CloudSqlCommandType.INSTANCE_TYPE.value == field:
             result = cloud_sql_const.CLOUD_SQL_SERVICE_SCALING_INSTANCE_TYPE_PARAM
         return result
 
     @classmethod
-    async def _enact_by_path(
-        cls, *, resource: str, field: str, target: Any, path: str
+    async def _enact_by_path_value_lst(
+        cls, *, resource: str, path_value_lst: List[Tuple[str, Any]]
     ) -> None:
-        await cloud_sql.update_instance(name=resource, path=path, value=target)
+        await cloud_sql.update_instance(name=resource, path_value_lst=path_value_lst)

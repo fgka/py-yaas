@@ -245,4 +245,6 @@ async def enact_requests(
     for success_scaler in result:
         success, scaler = success_scaler
         if not success:
-            _LOGGER.error("Could not enact request <%s>. Check logs", scaler.definition)
+            _LOGGER.error(
+                "Could not enact request <%s>. Check logs", scaler.definitions
+            )

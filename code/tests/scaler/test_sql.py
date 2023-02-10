@@ -5,7 +5,7 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # pylint: disable=duplicate-code
 # type: ignore
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import pytest
 
 from yaas.gcp import cloud_sql_const
@@ -107,11 +107,17 @@ class TestCloudRunScalingDefinition:
 
 
 class TestCloudRunScaler:
+    def setup(self):
+        self.definition = [
+            _create_cloud_sql_scaling_definition(
+                parameter=param, target=f"db-custom-1-1{ndx}"
+            )
+            for ndx, param in enumerate(sql.CloudSqlCommandType)
+        ]
+
     def test_ctor_ok(self):
-        # Given
-        definition = _create_cloud_sql_scaling_definition()
-        # When
-        obj = sql.CloudSqlScaler(definition=definition)
+        # Given/When
+        obj = sql.CloudSqlScaler(*self.definition)
         # Then
         assert obj is not None
 
@@ -126,21 +132,58 @@ class TestCloudRunScaler:
         # Then
         assert obj is not None
 
+    @pytest.mark.parametrize(
+        "field,expected",
+        [
+            (
+                sql.CloudSqlCommandType.INSTANCE_TYPE.value,
+                cloud_sql_const.CLOUD_SQL_SERVICE_SCALING_INSTANCE_TYPE_PARAM,
+            ),
+            (
+                None,
+                None,
+            ),
+            (
+                123,
+                None,
+            ),
+            (
+                sql.CloudSqlCommandType.INSTANCE_TYPE.value + "_NOT",
+                None,
+            ),
+        ],
+    )
+    def test__get_enact_path_value_ok(self, field: str, expected: str):
+        # Given/When
+        result = sql.CloudSqlScaler._get_enact_path_value(
+            resource="resource", field=field, target="target"
+        )
+        # Then
+        assert result == expected
+
+    def test__get_enact_path_value_ok_all(self):
+        # Given
+        for cmd_type in sql.CloudSqlCommandType:
+            # When
+            result = sql.CloudSqlScaler._get_enact_path_value(
+                resource="resource", field=cmd_type.value, target="target"
+            )
+            # Then
+            assert isinstance(result, str)
+
     @pytest.mark.asyncio
     async def test_enact_ok(self, monkeypatch):
         # Given
         update_name = None
-        update_path = None
-        update_value = None
+        update_path_value_lst = None
         can_be_value = None
 
         async def mocked_update_instance(
-            *, name: str, path: str, value: Optional[Any]
+            *, name: str, path_value_lst: List[Tuple[str, Optional[Any]]]
         ) -> Any:
-            nonlocal update_name, update_path, update_value
+            nonlocal update_name, update_path_value_lst
             update_name = name
-            update_path = path
-            update_value = value
+            update_path_value_lst = path_value_lst
 
         async def mocked_can_be_deployed(value: str) -> Tuple[bool, str]:
             nonlocal can_be_value
@@ -157,21 +200,14 @@ class TestCloudRunScaler:
             sql.cloud_sql.can_be_deployed.__name__,
             mocked_can_be_deployed,
         )
-        target = _TEST_CLOUD_SQL_INSTANCE_TYPE
-        for param in sql.CloudSqlCommandType:
-            exp_path = _expected_cloud_run_update_path(param)
-            definition = _create_cloud_sql_scaling_definition(
-                parameter=param, target=target
-            )
-            obj = sql.CloudSqlScaler(definition)
-            # When
-            result = await obj.enact()
-            # Then
-            assert result
-            assert can_be_value == obj.definition.resource
-            assert update_name == obj.definition.resource
-            assert update_path == exp_path
-            assert update_value == target
+        obj = sql.CloudSqlScaler(*self.definition)
+        # When
+        result = await obj.enact()
+        # Then
+        assert result
+        assert can_be_value == obj.resource
+        assert update_name == obj.resource
+        assert len(update_path_value_lst) == len(self.definition)
 
 
 def _expected_cloud_run_update_path(param: sql.CloudSqlCommandType) -> str:

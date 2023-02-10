@@ -18,14 +18,26 @@ class Scaler(abc.ABC):
     Generic class to define a scaler.
     """
 
-    def __init__(self, definition: scaling.ScalingDefinition) -> None:
+    def __init__(self, *definition: Tuple[scaling.ScalingDefinition]) -> None:
         expected_type = self.__class__._valid_definition_type()
-        if not isinstance(definition, expected_type):
-            raise TypeError(
-                f"Definition must be an instance of {expected_type.__name__}. "
-                f"Got <{definition}>({type(definition)})"
-            )
+        resource = None
+        for ndx, item in enumerate(list(definition)):
+            if not isinstance(item, expected_type):
+                raise TypeError(
+                    f"Definition must be an instance of {expected_type.__name__}. "
+                    f"Got<{item}>[{ndx}]({type(item)}). "
+                    f"All definitions: <{definition}>"
+                )
+            if resource is None:
+                resource = item.resource
+            elif item.resource != resource:
+                raise ValueError(
+                    f"All definitions must have the same resource <{resource}>."
+                    f"Got<{item}>[{ndx}]({type(item)}). "
+                    f"All definitions: <{definition}>"
+                )
         self._definition = definition
+        self._resource = resource
         super().__init__()
 
     @classmethod
@@ -33,23 +45,30 @@ class Scaler(abc.ABC):
         return scaling.ScalingDefinition
 
     @property
-    def definition(self) -> scaling.ScalingDefinition:
+    def definitions(self) -> List[scaling.ScalingDefinition]:
         """
         Scaling definition.
 
         Returns:
             Scaling definition.
         """
-        return self._definition
+        return list(self._definition)
+
+    @property
+    def resource(self) -> str:
+        """
+        Which resource will be scaled.
+        """
+        return self._resource
 
     @classmethod
     @abc.abstractmethod
-    def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
         """
         Return an instance corresponding to the :py:cls:`scale_request.ScaleRequest`.
 
         Args:
-            value: scaling request.
+            value: scaling requests.
 
         Returns:
             ``value`` converted to a py:cls:`Scaler`.
@@ -103,40 +122,49 @@ class ScalerPathBased(Scaler, abc.ABC):
     """
 
     async def _safe_enact(self) -> None:
-        await self.__class__._enact(  # pylint: disable=protected-access
-            resource=self.definition.resource,
-            field=self.definition.command.parameter,
-            target=self.definition.command.target,
-        )
-
-    @classmethod
-    async def _enact(cls, *, resource: str, field: str, target: Any) -> None:
-        _LOGGER.info("Scaling <%s> to <%s> for resource <%s>", field, target, resource)
+        # Build path_value_lst
+        path_value_lst = []
+        for ndx, scale_def in enumerate(self._definition):
+            field = scale_def.command.parameter
+            target = scale_def.command.target
+            try:
+                path = self._get_enact_path_value(
+                    resource=scale_def.resource, field=field, target=target
+                )
+                path_value_lst.append(
+                    (
+                        path,
+                        target,
+                    )
+                )
+            except Exception as err:
+                raise RuntimeError(
+                    f"Could not parse path for resource={scale_def.resource}, "
+                    f"field={field}, and target={target}. "
+                    f"Item {ndx} in {self._definition}"
+                    f"Error: {err}"
+                ) from err
+        # Scale path_value_lst
+        _LOGGER.debug("Scaling resource <%s> with <%s>", self.resource, path_value_lst)
         try:
-            path = cls._path_for_enact(resource, field, target)
-        except Exception as err:
-            raise RuntimeError(
-                f"Could not parse path for resource={resource}, field={field}, and target={target}. Error: {err}"
-            ) from err
-        if not path:
-            raise ValueError(f"Scaling {field} is not supported in {cls.__name__}")
-        try:
-            await cls._enact_by_path(
-                resource=resource, field=field, target=target, path=path
+            await self._enact_by_path_value_lst(
+                resource=self.resource, path_value_lst=path_value_lst
             )
         except Exception as err:
             raise RuntimeError(
-                f"Could not enact scaling for resource={resource}, field={field}, target={target}, and path={path}. Error: {err}"
+                f"Could not enact scaling for resource={self.resource}, "
+                f"path_value_lst={path_value_lst}. "
+                f"Error: {err}"
             ) from err
-        _LOGGER.info("Scaled <%s> to <%s> for resource <%s>", field, target, resource)
+        _LOGGER.info("Scaled resource <%s> with <%s>", self.resource, path_value_lst)
 
     @classmethod
-    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+    def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
         pass
 
     @classmethod
-    async def _enact_by_path(
-        cls, *, resource: str, field: str, target: Any, path: str
+    async def _enact_by_path_value_lst(
+        cls, *, resource: str, path_value_lst: List[Tuple[str, Any]]
     ) -> None:
         pass
 
@@ -217,6 +245,7 @@ class CategoryScaleRequestParser(abc.ABC):
             raise_if_invalid_request=raise_if_invalid_request,
         )
         for ndx, val in enumerate(scaling_def_lst):
+            # TODO by resource and type
             try:
                 item = self._scaler(
                     val, raise_if_invalid_request=raise_if_invalid_request
@@ -230,7 +259,7 @@ class CategoryScaleRequestParser(abc.ABC):
             if item is None:
                 msg = (
                     f"Resulting scaler for request: {val}[{ndx}] is None. "
-                    f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}. "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaler.__name__} "
                     f"Values: {scaling_def_lst}"
                 )
                 if raise_if_invalid_request:

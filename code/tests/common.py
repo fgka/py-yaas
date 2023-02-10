@@ -211,7 +211,7 @@ class MyScaler(scaler_base.Scaler):
         can_enact: bool = True,
         reason: str = None,
     ) -> None:
-        super().__init__(definition=definition)
+        super().__init__(definition)
         self._can_enact = can_enact
         self._reason = reason
         self.called = {}
@@ -222,10 +222,9 @@ class MyScaler(scaler_base.Scaler):
         return True
 
     @classmethod
-    def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
         cls.cls_called[scaler_base.Scaler.from_request.__name__] = value
-        definition = MyScalingDefinition.from_request(value)
-        return MyScaler(definition=definition)
+        return MyScaler(*[MyScalingDefinition.from_request(val) for val in value])
 
     async def _safe_enact(self) -> None:
         self.called[scaler_base.Scaler._safe_enact.__name__] = True
@@ -242,12 +241,11 @@ class MyScalerPathBased(scaler_base.ScalerPathBased):
 
     def __init__(
         self,
-        *,
-        definition: scaling.ScalingDefinition,
+        *definition: List[scaling.ScalingDefinition],
         can_enact: bool = True,
         reason: str = None,
     ) -> None:
-        super().__init__(definition=definition)
+        super().__init__(*definition)
         self._can_enact = can_enact
         self._reason = reason
         self.called = {}
@@ -257,21 +255,26 @@ class MyScalerPathBased(scaler_base.ScalerPathBased):
         return self._can_enact, self._reason
 
     @classmethod
-    def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
         cls.cls_called[scaler_base.ScalerPathBased.from_request.__name__] = value
-        definition = MyScalingDefinition.from_request(value)
-        return MyScalerPathBased(definition=definition)
+        return MyScalerPathBased(
+            *[MyScalingDefinition.from_request(val) for val in value]
+        )
 
     @classmethod
-    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
-        cls.cls_called[scaler_base.ScalerPathBased._path_for_enact.__name__] = locals()
+    def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
+        cls.cls_called[
+            scaler_base.ScalerPathBased._get_enact_path_value.__name__
+        ] = locals()
         return cls.cls_path
 
     @classmethod
-    async def _enact_by_path(
-        cls, *, resource: str, field: str, target: Any, path: str
+    async def _enact_by_path_value_lst(
+        cls, *, resource: str, path_value_lst: List[Tuple[str, Any]]
     ) -> None:
-        cls.cls_called[scaler_base.ScalerPathBased._enact_by_path.__name__] = locals()
+        cls.cls_called[
+            scaler_base.ScalerPathBased._enact_by_path_value_lst.__name__
+        ] = locals()
 
 
 class MyCategoryType(scaling.CategoryType):

@@ -94,11 +94,11 @@ class TestScaler:
         result = common.MyScaler.from_request(self.request)
         # Then
         assert result is not None
-        assert result.definition == self.definition
+        assert result.definitions[0] == self.definition
         assert not result.called.get(base.Scaler.can_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
         assert (
-            common.MyScaler.cls_called[base.ScalerPathBased.from_request.__name__]
+            common.MyScaler.cls_called[base.ScalerPathBased.from_request.__name__][0]
             == self.request
         )
 
@@ -145,13 +145,13 @@ class TestScalerPathBased:
         result = common.MyScalerPathBased.from_request(self.request)
         # Then
         assert result is not None
-        assert result.definition == self.definition
+        assert result.definitions[0] == self.definition
         assert not result.called.get(base.Scaler.can_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
         assert (
             common.MyScalerPathBased.cls_called.get(
                 base.ScalerPathBased.from_request.__name__
-            )
+            )[0]
             == self.request
         )
 
@@ -166,7 +166,7 @@ class TestScalerPathBased:
         assert self.obj.called.get(base.Scaler.can_enact.__name__)
         # Then: _path_for_enact
         args_path_for_enact = common.MyScalerPathBased.cls_called.get(
-            base.ScalerPathBased._path_for_enact.__name__
+            base.ScalerPathBased._get_enact_path_value.__name__
         )
         assert args_path_for_enact
         assert args_path_for_enact["resource"] == self.request.resource
@@ -174,13 +174,14 @@ class TestScalerPathBased:
         assert args_path_for_enact["target"] in self.request.command
         # Then: _enact_by_path
         args_enact_by_path = common.MyScalerPathBased.cls_called.get(
-            base.ScalerPathBased._enact_by_path.__name__
+            base.ScalerPathBased._enact_by_path_value_lst.__name__
         )
         assert args_enact_by_path
         assert args_enact_by_path["resource"] == self.request.resource
-        assert args_enact_by_path["field"] in self.request.command
-        assert args_enact_by_path["target"] in self.request.command
-        assert args_enact_by_path["path"] == self.obj.__class__.cls_path
+        path_value_lst = args_enact_by_path["path_value_lst"]
+        for path, value in path_value_lst:
+            assert path == self.obj.__class__.cls_path
+            assert value in self.request.command
 
     @pytest.mark.asyncio
     async def test_enact_nok(self):

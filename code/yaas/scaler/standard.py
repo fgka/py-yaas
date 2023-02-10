@@ -95,10 +95,11 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
 
     def _scaler(
         self,
-        value: scaling.ScalingDefinition,
+        *value: Tuple[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
     ) -> base.Scaler:
         result = None
+        # TODO by resource and type
         if isinstance(value, run.CloudRunScalingDefinition):
             result = run.CloudRunScaler(value)
         elif isinstance(value, sql.CloudSqlScalingDefinition):

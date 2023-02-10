@@ -5,7 +5,7 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # pylint: disable=duplicate-code
 # type: ignore
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import pytest
 
 from yaas.gcp import cloud_run_const
@@ -102,11 +102,15 @@ class TestCloudRunScalingDefinition:
 
 
 class TestCloudRunScaler:
+    def setup(self):
+        self.definition = [
+            _create_cloud_run_scaling_definition(parameter=param, target=ndx)
+            for ndx, param in enumerate(run.CloudRunCommandType)
+        ]
+
     def test_ctor_ok(self):
-        # Given
-        definition = _create_cloud_run_scaling_definition()
-        # When
-        obj = run.CloudRunScaler(definition=definition)
+        # Given/When
+        obj = run.CloudRunScaler(*self.definition)
         # Then
         assert obj is not None
 
@@ -121,21 +125,66 @@ class TestCloudRunScaler:
         # Then
         assert obj is not None
 
+    @pytest.mark.parametrize(
+        "field,expected",
+        [
+            (
+                run.CloudRunCommandType.MIN_INSTANCES.value,
+                cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM,
+            ),
+            (
+                run.CloudRunCommandType.MAX_INSTANCES.value,
+                cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MAX_INSTANCES_PARAM,
+            ),
+            (
+                run.CloudRunCommandType.CONCURRENCY.value,
+                cloud_run_const.CLOUD_RUN_SERVICE_SCALING_CONCURRENCY_PARAM,
+            ),
+            (
+                None,
+                None,
+            ),
+            (
+                123,
+                None,
+            ),
+            (
+                run.CloudRunCommandType.CONCURRENCY.value + "_NOT",
+                None,
+            ),
+        ],
+    )
+    def test__get_enact_path_value_ok(self, field: str, expected: str):
+        # Given/When
+        result = run.CloudRunScaler._get_enact_path_value(
+            resource="resource", field=field, target="target"
+        )
+        # Then
+        assert result == expected
+
+    def test__get_enact_path_value_ok_all(self):
+        # Given
+        for cmd_type in run.CloudRunCommandType:
+            # When
+            result = run.CloudRunScaler._get_enact_path_value(
+                resource="resource", field=cmd_type.value, target="target"
+            )
+            # Then
+            assert isinstance(result, str)
+
     @pytest.mark.asyncio
     async def test_enact_ok(self, monkeypatch):
         # Given
         update_name = None
-        update_path = None
-        update_value = None
+        update_path_value_lst = None
         can_be_value = None
 
         async def mocked_update_service(
-            *, name: str, path: str, value: Optional[Any]
+            *, name: str, path_value_lst: List[Tuple[str, Optional[Any]]]
         ) -> Any:
-            nonlocal update_name, update_path, update_value
+            nonlocal update_name, update_path_value_lst
             update_name = name
-            update_path = path
-            update_value = value
+            update_path_value_lst = path_value_lst
 
         async def mocked_can_be_deployed(value: str) -> Tuple[bool, str]:
             nonlocal can_be_value
@@ -152,21 +201,14 @@ class TestCloudRunScaler:
             run.cloud_run.can_be_deployed.__name__,
             mocked_can_be_deployed,
         )
-        target = 13
-        for param in run.CloudRunCommandType:
-            exp_path = _expected_cloud_run_update_path(param)
-            definition = _create_cloud_run_scaling_definition(
-                parameter=param, target=target
-            )
-            obj = run.CloudRunScaler(definition)
-            # When
-            result = await obj.enact()
-            # Then
-            assert result
-            assert can_be_value == obj.definition.resource
-            assert update_name == obj.definition.resource
-            assert update_path == exp_path
-            assert update_value == target
+        obj = run.CloudRunScaler(*self.definition)
+        # When
+        result = await obj.enact()
+        # Then
+        assert result
+        assert can_be_value == obj.resource
+        assert update_name == obj.resource
+        assert len(update_path_value_lst) == len(self.definition)
 
 
 def _expected_cloud_run_update_path(param: run.CloudRunCommandType) -> str:

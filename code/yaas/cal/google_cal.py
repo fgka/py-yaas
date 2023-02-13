@@ -22,7 +22,7 @@ from google.oauth2 import credentials
 from googleapiclient import discovery
 from google_auth_oauthlib import flow
 
-from yaas.gcp import secrets
+from yaas.gcp import secrets, secrets_const
 from yaas import const, logger
 
 _LOGGER = logger.get(__name__)
@@ -132,6 +132,7 @@ async def list_upcoming_events(
     .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
     """
     # pylint: enable=line-too-long
+    _LOGGER.debug("Listing upcoming events using: <%s>", locals())
     # Normalize input
     try:
         service = await _calendar_service(
@@ -510,6 +511,14 @@ async def update_secret_credentials(
 
     Returns:
     """
+    _LOGGER.debug(
+        "Updating calendar secret credentials in <%s> "
+        "for calendar ID <%s> "
+        "and initial JSON credentials <%s>",
+        secret_name,
+        calendar_id,
+        initial_credentials_json,
+    )
     # validate input
     if not isinstance(calendar_id, str) or not calendar_id:
         raise ValueError(
@@ -519,9 +528,21 @@ async def update_secret_credentials(
         raise ValueError(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
+    # secret name
     # push initial credentials
-    if initial_credentials_json is not None:
+    if initial_credentials_json is not None and initial_credentials_json.exists():
         await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
+    else:
+        fqn_secret_name = secret_name
+        if secrets_const.VERSION_SUB_STR not in secret_name:
+            fqn_secret_name = secret_name + secrets_const.LATEST_VERSION_SUFFIX
+        secret_exists = await _secret_exists(fqn_secret_name)
+        if not secret_exists:
+            raise RuntimeError(
+                f"Secret <{secret_name}> does not exist. "
+                "In this case give an initial credentials JSON with content. "
+                f"Got: <{initial_credentials_json}>"
+            )
     # to by-pass caching
     # pylint: disable=consider-using-with
     credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)
@@ -551,6 +572,14 @@ async def update_secret_credentials(
     )
     # push credentials with authorization.
     await _put_secret_credentials(secret_name, credentials_json.absolute())
+    _LOGGER.info(
+        "Updated calendar secret credentials in <%s> "
+        "for calendar ID <%s> "
+        "and initial JSON credentials <%s>",
+        secret_name,
+        calendar_id,
+        initial_credentials_json,
+    )
 
 
 async def _put_secret_credentials(
@@ -566,19 +595,16 @@ async def _put_secret_credentials(
         if credentials_json.exists():
             with open(credentials_json, "r", encoding=const.ENCODING_UTF8) as in_json:
                 content = in_json.read()
-            actual_secret_name = secret_name.split("/versions")[0]
             try:
-                version = await secrets.put(
-                    secret_name=actual_secret_name, content=content
-                )
+                version = await secrets.put(secret_name=secret_name, content=content)
                 _LOGGER.info("Secret content put into: %s", version)
             except Exception as err:
                 raise RuntimeError(
                     f"Could not put secret {secret_name}. Error: {err}"
                 ) from err
             try:
-                await secrets.clean_up(secret_name=actual_secret_name)
-                _LOGGER.info("Cleaned up secret: %s", actual_secret_name)
+                await secrets.clean_up(secret_name=secret_name)
+                _LOGGER.info("Cleaned up secret: %s", secret_name)
             except Exception as err:
                 raise RuntimeError(
                     f"Could not clean up secret {secret_name}. Error: {err}"
@@ -595,3 +621,8 @@ async def _put_secret_credentials(
             credentials_json,
             type(credentials_json),
         )
+
+
+async def _secret_exists(secret_name: str) -> bool:
+    """For testing"""
+    return await secrets.exists(secret_name)

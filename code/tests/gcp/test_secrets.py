@@ -147,6 +147,55 @@ class _StubSecretClient:  # pylint: disable=too-many-instance-attributes
 
 
 @pytest.mark.asyncio
+async def test_list_versions_ok(monkeypatch):
+    # Given
+    secret_name = "TEST_SECRET"
+    versions = range(1, 6)
+    version_numbers = sorted(versions, reverse=True)
+    client = _mock_list(monkeypatch, secret_name, version_numbers)
+    # When
+    result = await secrets.list_versions(secret_name=secret_name + "/versions/123")
+    # Then
+    assert isinstance(result, list)
+    assert len(result) == len(versions)
+    assert client._request.get("parent") == secret_name
+
+
+def _mock_list(monkeypatch, secret_name: str, version_numbers: List[int]):
+    client = _StubSecretClient(
+        list_response=[
+            _StubResponse(name=f"{secret_name}/versions/{v_num}")
+            for v_num in version_numbers
+        ]
+    )
+    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    return client
+
+
+@pytest.mark.asyncio
+async def test_exists_ok(monkeypatch):
+    # Given
+    secret_name = "TEST_SECRET"
+    versions = range(1, 6)
+    version_numbers = sorted(versions, reverse=True)
+    _mock_list(monkeypatch, secret_name, version_numbers)
+    # When/Then
+    for num in versions:
+        assert await secrets.exists(secret_name=f"{secret_name}/versions/{num}")
+    # Then: latest
+    assert await secrets.exists(secret_name=f"{secret_name}/versions/latest")
+
+
+@pytest.mark.asyncio
+async def test_exists_ok_empty(monkeypatch):
+    # Given
+    secret_name = "TEST_SECRET"
+    _mock_list(monkeypatch, secret_name, [])
+    # When/Then
+    assert not await secrets.exists(secret_name=f"{secret_name}/versions/latest")
+
+
+@pytest.mark.asyncio
 async def test_get_ok(monkeypatch):
     # Given
     expected = "EXPECTED"
@@ -234,15 +283,10 @@ async def test_clean_up_ok(monkeypatch):
     # Given
     called = {}
     secret_name = "TEST_SECRET"
-    version_numbers = sorted([1, 2, 3, 4, 5, 6], reverse=True)
     amount_to_keep = 3
-    client = _StubSecretClient(
-        list_response=[
-            _StubResponse(name=f"{secret_name}/versions/{v_num}")
-            for v_num in version_numbers
-        ]
-    )
-    monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
+    versions = range(1, 6)
+    version_numbers = sorted(versions, reverse=True)
+    client = _mock_list(monkeypatch, secret_name, version_numbers)
 
     async def mocked_disable_versions(
         secret_name: str, version_numbers: List[int]

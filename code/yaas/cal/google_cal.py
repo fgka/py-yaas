@@ -529,17 +529,17 @@ async def update_secret_credentials(
             f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})"
         )
     # secret name
+    fqn_secret_name = secret_name
+    if secrets_const.VERSION_SUB_STR not in secret_name:
+        fqn_secret_name = secret_name + secrets_const.LATEST_VERSION_SUFFIX
     # push initial credentials
     if initial_credentials_json is not None and initial_credentials_json.exists():
         await _put_secret_credentials(secret_name, initial_credentials_json.absolute())
     else:
-        fqn_secret_name = secret_name
-        if secrets_const.VERSION_SUB_STR not in secret_name:
-            fqn_secret_name = secret_name + secrets_const.LATEST_VERSION_SUFFIX
         secret_exists = await _secret_exists(fqn_secret_name)
         if not secret_exists:
             raise RuntimeError(
-                f"Secret <{secret_name}> does not exist. "
+                f"Secret <{fqn_secret_name}> does not exist. "
                 "In this case give an initial credentials JSON with content. "
                 f"Got: <{initial_credentials_json}>"
             )
@@ -552,14 +552,14 @@ async def update_secret_credentials(
     try:
         await list_upcoming_events(
             calendar_id=calendar_id,
-            secret_name=secret_name,
+            secret_name=fqn_secret_name,
             credentials_pickle=credentials_pickle,
             credentials_json=credentials_json,
             amount=1,
         )
     except Exception as err:
         raise RuntimeError(
-            f"Could not list events for calendar {calendar_id} using secret {secret_name}. "
+            f"Could not list events for calendar {calendar_id} using secret {fqn_secret_name}. "
             f"Error: {err}"
         ) from err
     # create JSON content
@@ -576,7 +576,7 @@ async def update_secret_credentials(
         "Updated calendar secret credentials in <%s> "
         "for calendar ID <%s> "
         "and initial JSON credentials <%s>",
-        secret_name,
+        fqn_secret_name,
         calendar_id,
         initial_credentials_json,
     )

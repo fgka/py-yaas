@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 """
 Logger definition, get all loggers from this module::
-    from todo_module_name_todo import logger
+    from yaas import logger
     _LOGGER = logger.get(__name__)
 """
 # pylint: enable=line-too-long

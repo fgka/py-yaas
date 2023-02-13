@@ -5,7 +5,7 @@ Basic definition of types and expected functionality for resource scaler.
 """
 import abc
 import asyncio
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from yaas.dto import request, scaling
 from yaas import logger
@@ -244,29 +244,66 @@ class CategoryScaleRequestParser(abc.ABC):
             self._to_scaling_definition(value, raise_if_error=self._strict_mode),
             raise_if_invalid_request=raise_if_invalid_request,
         )
-        for ndx, val in enumerate(scaling_def_lst):
-            # TODO by resource and type
+        resource_to_requests = self._request_by_resource(scaling_def_lst)
+        for resource, scale_def_lst in resource_to_requests.items():
             try:
-                item = self._scaler(
-                    val, raise_if_invalid_request=raise_if_invalid_request
+                items = self._scaler(
+                    scale_def_lst, raise_if_invalid_request=raise_if_invalid_request
                 )
             except Exception as err:
                 raise CategoryScaleRequestParserError(
-                    f"Could not create {Scaler.__name__} for request: {val}[{ndx}]. "
+                    f"Could not create {Scaler.__name__} "
+                    f"for resource: {resource}[{scale_def_lst}]. "
                     f"Error: {err}. "
                     f"Values: {scaling_def_lst}"
                 ) from err
-            if item is None:
+            if not items:
                 msg = (
-                    f"Resulting scaler for request: {val}[{ndx}] is None. "
+                    f"Resulting scaler for resource: {resource}[{scale_def_lst}] is None. "
                     f"Check implementation of {self.__class__.__name__}.{self._scaler.__name__} "
                     f"Values: {scaling_def_lst}"
                 )
                 if raise_if_invalid_request:
                     raise ValueError(msg)
                 continue
-            result.append(item)
+            result.extend(items)
         return result[0] if len(result) == 1 and singulate_if_only_one else result
+
+    @staticmethod
+    def _request_by_resource(
+        values: Iterable[scaling.ScalingDefinition],
+    ) -> Dict[str, List[scaling.ScalingDefinition]]:
+        # pylint: disable=line-too-long
+        """
+        It will go through all requests in the batch and put them into "buckets"
+        by resource ID. E.g.:
+
+        Input:
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | min_instances 0``
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | max_instances 100``
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | concurrency 80``
+            - ``standard | my-project:my-location:my-instance | instance_type db-f1-micro``
+
+        Output::
+
+            {
+                "locations/my-location/namespaces/my-project/services/my-service": [
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | min_instances 0",
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | max_instances 100",
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | concurrency 80"
+                ],
+                "my-project:my-location:my-instance" : [
+                    "standard | my-project:my-location:my-instance | instance_type db-f1-micro"
+                ]
+            }
+        """
+        # pylint: enable=line-too-long
+        result = {}
+        for val in values:
+            if val.resource not in result:
+                result[val.resource] = []
+            result[val.resource].append(val)
+        return result
 
     def _validate_request(self, *value: request.ScaleRequest) -> None:
         for ndx, val in enumerate(value):
@@ -313,9 +350,9 @@ class CategoryScaleRequestParser(abc.ABC):
     @abc.abstractmethod
     def _scaler(
         self,
-        value: scaling.ScalingDefinition,
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> Scaler:
+    ) -> Iterable[Scaler]:
         """
         Only called with a pre-validated request.
         It should raise an exception if any specific is invalid.

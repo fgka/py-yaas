@@ -238,7 +238,7 @@ class TestCategoryScaleRequestParser:
         assert len(scaler) == 1
         assert isinstance(scaler[0], base.Scaler)
 
-    def test_scaler_ok_multiple(self):
+    def test_scaler_ok_multiple_same_resource(self):
         # Given
         req, _ = _create_request_and_definition(
             topic=common.MyCategoryType.CATEGORY_A.name
@@ -246,10 +246,10 @@ class TestCategoryScaleRequestParser:
         amount = 3
         value = [req] * amount
         # When
-        scaler_lst = self.obj.scaler(*value)
+        scaler_lst = self.obj.scaler(*value, singulate_if_only_one=False)
         # Then
         assert isinstance(scaler_lst, list)
-        assert len(scaler_lst) == amount
+        assert len(scaler_lst) == 1
         for val in scaler_lst:
             assert isinstance(val, base.Scaler)
         assert self.obj.obj_called.get(base.CategoryScaleRequestParser._scaler.__name__)
@@ -263,6 +263,10 @@ class TestCategoryScaleRequestParser:
         assert len(filter_req) == amount
         for f_req in filter_req:
             assert f_req == common.MyScalingDefinition.from_request(req)
+        # Then: scaler
+        scaler = scaler_lst[0]
+        assert isinstance(scaler, base.Scaler)
+        assert len(scaler.definitions) == amount
 
     @pytest.mark.asyncio
     async def test_enact_ok(self):
@@ -294,17 +298,19 @@ class TestCategoryScaleRequestParser:
             assert isinstance(scaler, base.Scaler)
 
     @pytest.mark.asyncio
-    async def test_enact_ok_multiple(self):
+    async def test_enact_ok_multiple_same_resource(self):
         # Given
         req, _ = _create_request_and_definition(
             topic=common.MyCategoryType.CATEGORY_A.name
         )
         amount = 3
         # When
-        result = await self.obj.enact(*[req] * amount)
+        result = await self.obj.enact(*[req] * amount, singulate_if_only_one=False)
         # Then
         assert isinstance(result, list)
-        assert len(result) == amount
-        for res, scaler in result:
-            assert isinstance(res, bool)
-            assert isinstance(scaler, base.Scaler)
+        assert len(result) == 1
+        res, scaler = result[0]
+        assert isinstance(res, bool)
+        # Then: scaler
+        assert isinstance(scaler, base.Scaler)
+        assert len(scaler.definitions) == amount

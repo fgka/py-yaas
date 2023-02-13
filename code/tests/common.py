@@ -207,11 +207,11 @@ class MyScaler(scaler_base.Scaler):
 
     def __init__(
         self,
-        definition: scaling.ScalingDefinition,
+        *definition: scaling.ScalingDefinition,
         can_enact: bool = True,
         reason: str = None,
     ) -> None:
-        super().__init__(definition)
+        super().__init__(*definition)
         self._can_enact = can_enact
         self._reason = reason
         self.called = {}
@@ -292,14 +292,14 @@ class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
 
     def _scaler(
         self,
-        value: scaling.ScalingDefinition,
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> scaler_base.Scaler:
-        result = MyScaler(value)
+    ) -> Iterable[scaler_base.Scaler]:
+        result = MyScaler(*value)
         self.obj_called[
             scaler_base.CategoryScaleRequestParser._scaler.__name__
         ] = locals()
-        return result
+        return [result]
 
     def _to_scaling_definition(
         self,

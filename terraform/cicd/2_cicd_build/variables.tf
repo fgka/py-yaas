@@ -108,6 +108,12 @@ variable "run_name" {
   default     = "yaas-run"
 }
 
+variable "run_container_concurrency" {
+  description = "YAAS Cloud Run container concurrency."
+  type        = number
+  default     = 80
+}
+
 /////////////////
 // Cloud Build //
 /////////////////

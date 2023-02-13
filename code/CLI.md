@@ -20,7 +20,7 @@ export INITIAL_CREDENTIALS_JSON="YOUR_GOOGLE_CALENDAR_CREDENTIALS_JSON"
 Secret full name:
 
 ```bash
-export SECRET_FULL_NAME="projects/${PROJECT_NUMBER}/secrets/${SECRET_NAME}/versions/latest"
+export SECRET_FULL_NAME="projects/${PROJECT_NUMBER}/secrets/${SECRET_NAME}"
 ```
 
 Check:

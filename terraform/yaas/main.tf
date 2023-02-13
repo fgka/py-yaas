@@ -86,6 +86,7 @@ module "yaas_app" {
   service_path_request_emission            = var.service_path_request_emission
   // cloud run
   run_name = var.run_name
+  run_container_concurrency = var.run_container_concurrency
   // monitoring
   monitoring_email_channel_name  = module.yaas_infra.monitoring_channel_email.id
   monitoring_pubsub_channel_name = module.yaas_infra.monitoring_channel_pubsub.id

@@ -43,9 +43,15 @@ RUN ls -1 ./*.whl \
 ## Clean-up pip cache
 RUN python3 -m pip cache purge
 
+## Copy gunicorn starter script
+ARG CR_CONCURRENCY
+ENV ENV_CR_CONCURRENCY ${CR_CONCURRENCY}
+
+ADD docker/scripts/start_gunicorn.sh ./
+RUN chmod 755 ./start_gunicorn.sh
+
 ## Runtime definitions
-ENV PORT=8080
 ENV FLASK_APP=yaas.entry_point.flask_gunicorn:APPLICATION
 
 ## Start daemon
-CMD gunicorn --bind ":${PORT}" --workers 1 --threads 8 --timeout 0 ${FLASK_APP}
+CMD ./start_gunicorn.sh ${FLASK_APP}

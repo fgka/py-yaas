@@ -8,14 +8,21 @@ steps:
   - name: "python"
     id: PY_PIP_DOWNLOAD
     entrypoint: "python3"
-    args: ["-m", "pip", "download", "--no-deps", "--dest", "${_DIST_DIR}", "--extra-index-url",
-      "${_AR_PIP_REPO}/simple/", "${_PIP_PKG_ARG}"]
+    args: ["-m", "pip", "download", "--no-deps",
+      "--dest", "${_DIST_DIR}",
+      "--extra-index-url", "${_AR_PIP_REPO}/simple/",
+      "${_PIP_PKG_ARG}"]
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
-    args: ["build", "--pull", "--no-cache", "--progress", "plain", "--build-arg",
-      "BASE_IMAGE=${_BASE_IMAGE}", "--build-arg", "DIST_DIR=${_DIST_DIR}", "--tag",
-      "${_IMAGE_NAME}", "--tag", "${_REMOTE_IMAGE_LATEST}", "--tag", "${_REMOTE_IMAGE_SHA}",
-      "--file", "${_DOCKERFILE}", "."]
+    args: ["build", "--pull", "--no-cache", "--progress", "plain",
+      "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
+      "--build-arg", "DIST_DIR=${_DIST_DIR}",
+      "--build-arg", "CR_CONCURRENCY=${_CR_CONCURRENCY}",
+      "--tag", "${_IMAGE_NAME}",
+      "--tag", "${_REMOTE_IMAGE_LATEST}",
+      "--tag", "${_REMOTE_IMAGE_SHA}",
+      "--file", "${_DOCKERFILE}",
+      "."]
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_PUSH_SHA
     args: ["push", "${_REMOTE_IMAGE_SHA}"]
@@ -29,7 +36,8 @@ steps:
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: IMAGE_DEPLOY
     entrypoint: "gcloud"
-    args: ["run", "deploy", "${_SERVICE_NAME}", "--image", "${_REMOTE_IMAGE_SHA}",
+    args: ["run", "deploy", "${_SERVICE_NAME}",
+      "--image", "${_REMOTE_IMAGE_SHA}",
       "--region", "${LOCATION}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
@@ -53,6 +61,7 @@ substitutions:
   _REMOTE_IMAGE_SHA: "${_AR_DOCKER_REPO}/${_IMAGE_NAME}:${SHORT_SHA}"
   _SERVICE_NAME: ""
   _WAIT_SCRIPT: ""
+  _CR_CONCURRENCY: ""
 images:
   - "${_REMOTE_IMAGE_LATEST}"
   - "${_REMOTE_IMAGE_SHA}"

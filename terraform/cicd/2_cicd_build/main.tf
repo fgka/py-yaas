@@ -139,6 +139,7 @@ resource "google_cloudbuild_trigger" "application" {
     _AR_PIP_REPO    = var.python_artifact_registry_url
     _SERVICE_NAME   = var.run_name
     _WAIT_SCRIPT    = local.wait_for_run_ready_script_filename
+    _CR_CONCURRENCY = var.run_container_concurrency
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

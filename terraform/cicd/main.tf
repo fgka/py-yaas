@@ -19,6 +19,7 @@ locals {
   var.tf_cicd_plan_args)
   tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({
     run_name                          = var.run_name
+    run_container_concurrency = var.run_container_concurrency
     secrets_calendar_credentials_file = var.secrets_calendar_credentials_file
     monitoring_email_address          = var.monitoring_email_address,
     }),
@@ -71,6 +72,7 @@ module "cicd_build" {
   image_name_uri    = var.image_name_uri
   // cloud run
   run_name = var.run_name
+  run_container_concurrency = var.run_container_concurrency
   // build triggers
   tf_build_trigger_name     = var.tf_build_trigger_name
   tf_yaas_trigger_name      = var.tf_yaas_trigger_name

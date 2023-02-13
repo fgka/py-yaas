@@ -469,6 +469,7 @@ _TEST_SECRET_NAME: str = "projects/test-project/secrets/test-secret"
 async def test__put_secret_credentials_ok(monkeypatch):
     # Given
     secret_name = _TEST_SECRET_NAME
+    full_secret_name = secret_name + "/versions/latest"
     content = "CONTENT"
     # pylint: disable=consider-using-with
     credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)
@@ -477,19 +478,17 @@ async def test__put_secret_credentials_ok(monkeypatch):
         out_json.write(content)
     called = _mock_credentials(monkeypatch)
     # When
-    await google_cal._put_secret_credentials(
-        secret_name + "/versions/latest", credentials_json
-    )
+    await google_cal._put_secret_credentials(full_secret_name, credentials_json)
     # Then: put
     assert (
         called.get(google_cal.secrets.put.__name__, {}).get("secret_name")
-        == secret_name
+        == full_secret_name
     )
     assert called.get(google_cal.secrets.put.__name__, {}).get("content") == content
     # Then: clean_up
     assert (
         called.get(google_cal.secrets.clean_up.__name__, {}).get("secret_name")
-        == secret_name
+        == full_secret_name
     )
 
 
@@ -499,9 +498,20 @@ async def test_update_secret_credentials_ok(monkeypatch):
     arg_calendar_id = _TEST_CALENDAR_ID
     arg_secret_name = _TEST_SECRET_NAME
     # pylint: disable=consider-using-with
-    arg_initial_credentials_json = pathlib.Path(tempfile.NamedTemporaryFile().name)
+    arg_initial_credentials_json = pathlib.Path(
+        tempfile.NamedTemporaryFile(delete=False).name
+    )
     # pylint: enable=consider-using-with
     called = {}
+
+    async def mocked_secret_exists(  # pylint: disable=unused-argument
+        secret_name: str,
+    ) -> bool:
+        nonlocal called
+        if google_cal._put_secret_credentials.__name__ not in called:
+            called[google_cal._secret_exists.__name__] = []
+        called[google_cal._secret_exists.__name__].append(locals())
+        return True
 
     async def mocked_put_secret_credentials(  # pylint: disable=unused-argument
         secret_name: str,
@@ -539,6 +549,11 @@ async def test_update_secret_credentials_ok(monkeypatch):
         nonlocal called
         called[google_cal._persist_json_credentials.__name__] = locals()
 
+    monkeypatch.setattr(
+        google_cal,
+        google_cal._secret_exists.__name__,
+        mocked_secret_exists,
+    )
     monkeypatch.setattr(
         google_cal,
         google_cal._put_secret_credentials.__name__,

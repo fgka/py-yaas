@@ -366,7 +366,7 @@ async def update_calendar_credentials(  # pylint: disable=too-many-arguments
     """
     actual_credentials_json = None
     if credentials_json:
-        actual_credentials_json = pathlib.Path(credentials_json)
+        actual_credentials_json = pathlib.Path(credentials_json).absolute()
     try:
         await google_cal.update_secret_credentials(
             calendar_id=calendar_id,

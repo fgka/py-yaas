@@ -11,6 +11,9 @@ from typing import List
 
 SECRET_NAME_TOKENS: List[str] = ["projects", "secrets", "versions"]
 
+VERSION_SUB_STR: str = "/versions/"
+LATEST_VERSION_SUFFIX: str = f"{VERSION_SUB_STR}latest"
+
 ###########################
 #  Update Request: paths  #
 ###########################

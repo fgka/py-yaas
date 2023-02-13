@@ -50,6 +50,7 @@ module "yaas_infra" {
   scheduler_request_rate_in_minutes = var.scheduler_request_rate_in_minutes
   // secrets
   secrets_calendar_credentials_name = var.secrets_calendar_credentials_name
+  secrets_calendar_credentials_file = var.secrets_calendar_credentials_file
   // monitoring
   monitoring_email_channel_name  = var.monitoring_email_channel_name
   monitoring_pubsub_channel_name = var.monitoring_pubsub_channel_name

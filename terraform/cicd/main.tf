@@ -18,8 +18,9 @@ locals {
     }),
   var.tf_cicd_plan_args)
   tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({
-    run_name                 = var.run_name
-    monitoring_email_address = var.monitoring_email_address,
+    run_name                          = var.run_name
+    secrets_calendar_credentials_file = var.secrets_calendar_credentials_file
+    monitoring_email_address          = var.monitoring_email_address,
     }),
   var.tf_infra_plan_args)
 }

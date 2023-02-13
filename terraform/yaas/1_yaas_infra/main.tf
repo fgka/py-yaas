@@ -16,6 +16,15 @@ locals {
   scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}"
   scheduler_request_now_diff     = -1
   scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}}"
+  // secret
+  secrets_calendar_credentials_content = var.secrets_calendar_credentials_file == null || var.secrets_calendar_credentials_file == "" ? {} : {
+    "${var.secrets_calendar_credentials_name}" = {
+      v1 = {
+        enabled = true,
+        data    = file(var.secrets_calendar_credentials_file)
+      }
+    }
+  }
 }
 
 data "google_project" "project" {
@@ -176,11 +185,7 @@ module "secrets_calendar_credentials" {
   secrets = {
     "${var.secrets_calendar_credentials_name}" = [var.region]
   }
-  versions = {
-    "${var.secrets_calendar_credentials_name}" = {
-      v1 = { enabled = true, data = "ADD YOUR SECRET CONTENT MANUALLY AND NOT HERE" }
-    }
-  }
+  versions = local.secrets_calendar_credentials_content
   iam = {
     "${var.secrets_calendar_credentials_name}" = {
       "roles/secretmanager.secretVersionManager" = [google_service_account.run_sa.member],

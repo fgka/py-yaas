@@ -53,18 +53,88 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
     )
 
 
+async def list_versions(secret_name: str) -> List[str]:
+    """
+    Will list all versions for the secret. Using following `API`_.
+
+    Args:
+        secret_name: a secret name in the format:
+            `projects/<<project id>>/secrets/<<secret id>>`
+
+    .. _API: https://cloud.google.com/secret-manager/docs/view-secret-version
+    """
+    _LOGGER.debug("Listing secret versions for <%s>", secret_name)
+    # validate input
+    _validate_secret_name(secret_name)
+    # logic
+    # secret_name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
+    if secrets_const.VERSION_SUB_STR in secret_name:
+        secret_name = secret_name.split(secrets_const.VERSION_SUB_STR)[0]
+    # secret_name: projects/<<project id>>/secrets/<<secret id>>
+    await asyncio.sleep(0)
+    try:
+        result = [
+            version.name
+            for version in _secret_client().list_secret_versions(
+                request={"parent": secret_name}
+            )
+        ]
+    except Exception as err:
+        raise SecretManagerAccessError(
+            f"Could not list secret versions for <{secret_name}>. Error: {err}"
+        ) from err
+    _LOGGER.info(
+        "Listed secret versions for <%s>. There are <%d> versions.",
+        secret_name,
+        len(result),
+    )
+    return result
+
+
+async def exists(secret_name: str) -> bool:
+    """
+    Checks if a particular secret version exists.
+    If the secret does not exist at all it will raise and exception,
+    but will return :py:bool:`False` if the version does not exist or the secret is empty.
+    Using following `API`_.
+
+    Args:
+        secret_name: a secret name in the format:
+            `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
+    Returns:
+        If the specific version exists.
+    """
+    _LOGGER.debug("Checking existence of secret <%s>", secret_name)
+    # input validation
+    _validate_secret_name(secret_name)
+    if secrets_const.VERSION_SUB_STR not in secret_name:
+        raise ValueError(
+            "Secret name must include versions "
+            f"as in the pattern <{secrets_const.GCP_SECRET_NAME_TMPL}>. "
+            f"Got: <{secret_name}>"
+        )
+    # logic
+    version_names = await list_versions(secret_name)
+    result = secret_name.endswith(secrets_const.LATEST_VERSION_SUFFIX) and version_names
+    if not result:
+        result = secret_name in version_names
+    return result
+
+
 async def get(secret_name: str) -> str:
     """
-    Retrieves a secret, by name.
+    Retrieves a secret, by name. Using following `API`_.
 
     Args:
         secret_name: a secret name in the format:
             `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
     Returns:
         Secret content
+
+    .. _API: https://cloud.google.com/secret-manager/docs/access-secret-version
     """
     _validate_secret_name(secret_name)
-    _LOGGER.info("Retrieving secret <%s>", secret_name)
+    _LOGGER.debug("Retrieving secret <%s>", secret_name)
     await asyncio.sleep(0)
     try:
         response = _secret_client().access_secret_version(request={"name": secret_name})
@@ -73,7 +143,9 @@ async def get(secret_name: str) -> str:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
         _LOGGER.critical(msg)
         raise SecretManagerAccessError(msg) from err
-    return response.payload.data.decode(const.ENCODING_UTF8)
+    result = response.payload.data.decode(const.ENCODING_UTF8)
+    _LOGGER.info("Retrieved secret <%s>", response.name)
+    return result
 
 
 def _validate_secret_name(value: str) -> None:
@@ -111,7 +183,7 @@ def validate_secret_resource_name(
 
 async def put(*, secret_name: str, content: str) -> str:
     """
-    Puts a secret, by name.
+    Puts a secret, by name. Using following `API`_.
 
     Args:
         secret_name: a secret name in the format:
@@ -119,13 +191,17 @@ async def put(*, secret_name: str, content: str) -> str:
         content: secret content.
     Returns:
         The secret full name, with version.
+
+    .. _API: https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets
     """
+    _LOGGER.debug("Adding a version to secret <%s>", secret_name)
     _validate_secret_name(secret_name)
     if not isinstance(content, str):
         raise SecretManagerAccessError(
             f"Content must be a string. Got: <{content}>({type(content)})"
         )
-    _LOGGER.info("Adding a version to secret <%s>", secret_name)
+    if secrets_const.VERSION_SUB_STR in secret_name:
+        secret_name = secret_name.split(secrets_const.VERSION_SUB_STR)[0]
     await asyncio.sleep(0)
     try:
         request = {
@@ -138,7 +214,9 @@ async def put(*, secret_name: str, content: str) -> str:
         msg = f"Could not retrieve secret <{secret_name}>. Error: {err}"
         _LOGGER.critical(msg)
         raise SecretManagerAccessError(msg) from err
-    return response.name
+    result = response.name
+    _LOGGER.info("Added version <%s>", result)
+    return result
 
 
 DEFAULT_AMOUNT_TO_KEEP: int = 2
@@ -163,26 +241,18 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
 
     Source: https://cloud.google.com/secret-manager/docs/view-secret-version
     """
+    _LOGGER.debug(
+        "Cleaning up secret <%s> and keeping <%d> older versions",
+        secret_name,
+        amount_to_keep,
+    )
     # validate input
     _validate_secret_name(secret_name)
     if not isinstance(amount_to_keep, int):
         amount_to_keep = DEFAULT_AMOUNT_TO_KEEP
     amount_to_keep = max(MIN_AMOUNT_TO_KEEP, amount_to_keep)
     # logic
-    # name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
-    await asyncio.sleep(0)
-    try:
-        version_names = [
-            version.name
-            for version in _secret_client().list_secret_versions(
-                request={"parent": secret_name}
-            )
-        ]
-    except Exception as err:
-        raise SecretManagerAccessError(
-            f"Could not list secret versions for <{secret_name}>. Error: {err}"
-        ) from err
-    await asyncio.sleep(0)
+    version_names = await list_versions(secret_name)
     # version_numbers: <<version number>>
     version_numbers = sorted(
         [int(version_name.split("/")[-1]) for version_name in version_names],
@@ -196,6 +266,12 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     # to_remove = [58, ..., 1]
     to_remove = version_numbers[(amount_to_keep + 1) :]
     await _remove_versions(secret_name, to_remove)
+    _LOGGER.info(
+        "Cleaned up secret <%s>, removing <%d> versions and disabling <%d>",
+        secret_name,
+        len(to_remove),
+        len(to_keep),
+    )
 
 
 async def _disable_versions(secret_name: str, version_numbers: List[int]) -> None:
@@ -273,7 +349,7 @@ async def _remove_versions(secret_name: str, version_numbers: List[int]) -> None
             f"Error: {errors}"
         )
     _LOGGER.info(
-        "Removed secret versions from <%s>. Versions to disable: <%s>",
+        "Removed secret versions from <%s>. Versions disabled: <%s>",
         secret_name,
         version_numbers,
     )

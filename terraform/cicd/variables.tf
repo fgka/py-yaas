@@ -179,6 +179,16 @@ variable "calendar_id" {
   type        = string
 }
 
+////////////////////
+// Secret Manager //
+////////////////////
+
+variable "secrets_calendar_credentials_file" {
+  description = "File with the secret content for Google calendar credentials"
+  type        = string
+  default     = ""
+}
+
 ////////////
 // Github //
 ////////////

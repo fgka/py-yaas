@@ -497,6 +497,7 @@ async def test_update_secret_credentials_ok(monkeypatch):
     # Given
     arg_calendar_id = _TEST_CALENDAR_ID
     arg_secret_name = _TEST_SECRET_NAME
+    full_secret_name = arg_secret_name + "/versions/latest"
     # pylint: disable=consider-using-with
     arg_initial_credentials_json = pathlib.Path(
         tempfile.NamedTemporaryFile(delete=False).name
@@ -592,7 +593,7 @@ async def test_update_secret_credentials_ok(monkeypatch):
     )
     assert (
         called.get(google_cal.list_upcoming_events.__name__, {}).get("secret_name")
-        == arg_secret_name
+        == full_secret_name
     )
     # Then: _pickle_credentials
     assert called.get(google_cal._pickle_credentials.__name__, {}).get(

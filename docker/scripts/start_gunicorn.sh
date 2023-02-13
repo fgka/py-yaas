@@ -13,7 +13,7 @@ APPLICATION=${1:-$FLASK_APP}
 
 # Source https://docs.gunicorn.org/en/stable/design.html#how-many-workers
 CORES=$(nproc --all)
-(( WORKERS=${CORES} + 1 ))
+(( WORKERS=2 * ${CORES} + 1 ))
 (( THREADS=(${ENV_CR_CONCURRENCY} + ${WORKERS} - 1) / ${WORKERS} ))
 echo "CPU cores <${CORES}>. Concurrency <${ENV_CR_CONCURRENCY}>, workers <${WORKERS}>, and threads <${THREADS}>"
 

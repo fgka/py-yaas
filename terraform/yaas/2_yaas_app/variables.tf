@@ -188,7 +188,7 @@ variable "run_mem" {
 variable "run_container_concurrency" {
   description = "Cloud Run request concurrency per container, mind thread-safety."
   type        = number
-  default     = 0
+  default     = 80
 }
 
 variable "run_timeout" {

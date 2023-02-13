@@ -185,6 +185,12 @@ variable "scheduler_request_rate_in_minutes" {
 // Secret Manager //
 ////////////////////
 
+variable "secrets_calendar_credentials_file" {
+  description = "File with the secret content for Google calendar credentials"
+  type        = string
+  default     = null
+}
+
 variable "secrets_calendar_credentials_name" {
   description = "Secret name where the Google calendar credentials are stored"
   type        = string

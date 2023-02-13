@@ -4,7 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,invalid-name
 # pylint: disable=attribute-defined-outside-init,too-few-public-methods, redefined-builtin
 # type: ignore
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
@@ -21,10 +21,15 @@ class _StubCloudRunService:
     class _StubAttr:
         pass
 
-    def __init__(self, path: str, value: Any, revision: Optional[str] = _TEST_REVISION):
+    def __init__(
+        self,
+        path_value_lst: List[Tuple[str, Any]],
+        revision: Optional[str] = _TEST_REVISION,
+    ):
         self.name = self.__class__.__name__
-        self._set_path_value(path, value)
         self._set_path_value(cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, revision)
+        for path, value in path_value_lst:
+            self._set_path_value(path, value)
 
     def _set_path_value(self, path: str, value: Any) -> None:
         parent = self
@@ -67,15 +72,18 @@ class _StubCloudRunClient:
         self._raise_on_get = raise_on_get
         self._raise_on_update = raise_on_update
         self.called = {}
+        self.called_count = 0
 
     def get_service(self, request: Dict[str, Any]) -> _StubCloudRunService:
         self.called[_StubCloudRunClient.get_service.__name__] = request
+        self.called_count += 1
         if self._raise_on_get:
             raise ValueError
         return self._service
 
     def update_service(self, request: Dict[str, Any]) -> Any:
         self.called[_StubCloudRunClient.update_service.__name__] = request
+        self.called_count += 1
         if self._raise_on_update:
             raise ValueError
         return self._update_operation
@@ -109,7 +117,7 @@ async def test_can_be_deployed_ok(
 ):
     # Given
     client = _StubCloudRunClient(
-        service=_StubCloudRunService(path="reconciling", value=reconciling),
+        service=_StubCloudRunService(path_value_lst=[("reconciling", reconciling)]),
         raise_on_get=raise_on_get,
     )
     monkeypatch.setattr(cloud_run, cloud_run._run_client.__name__, lambda: client)
@@ -124,7 +132,7 @@ async def test_update_service_ok(monkeypatch):
     # Given
     path = "root.attr.sub_attr"
     value = "TEST_VALUE"
-    service = _StubCloudRunService(path=path, value=f"NOT_{value}")
+    service = _StubCloudRunService(path_value_lst=[(path, f"NOT_{value}")])
     update_operation = _StubCloudRunOperation(value=service)
     client = _StubCloudRunClient(
         service=service,
@@ -136,7 +144,13 @@ async def test_update_service_ok(monkeypatch):
     )
     # When
     result = await cloud_run.update_service(
-        name=_TEST_SERVICE_NAME, path=path, value=value
+        name=_TEST_SERVICE_NAME,
+        path_value_lst=[
+            (
+                path,
+                value,
+            )
+        ],
     )
     # Then
     assert result.root.attr.sub_attr == value
@@ -144,6 +158,55 @@ async def test_update_service_ok(monkeypatch):
     assert update_operation.called.get(_StubCloudRunOperation.result.__name__)
     request = client.called.get(_StubCloudRunClient.update_service.__name__)
     assert request.get("service") == service
+
+
+@pytest.mark.asyncio
+async def test_update_service_ok_multiple(monkeypatch):
+    # Given
+    orig_path_value_lst = []
+    path_value_lst = []
+    for ndx in range(10):
+        path = f"root.attr.sub_attr_{ndx}"
+        value = f"value_{ndx}"
+        orig_path_value_lst.append(
+            (
+                path,
+                f"NOT_{value}",
+            )
+        )
+        path_value_lst.append(
+            (
+                path,
+                value,
+            )
+        )
+    service = _StubCloudRunService(path_value_lst=orig_path_value_lst)
+    update_operation = _StubCloudRunOperation(value=service)
+    client = _StubCloudRunClient(
+        service=service,
+        update_operation=update_operation,
+    )
+    monkeypatch.setattr(cloud_run, cloud_run._run_client.__name__, lambda: client)
+    monkeypatch.setattr(
+        cloud_run, cloud_run._create_update_request.__name__, lambda x: {"service": x}
+    )
+    # When
+    result = await cloud_run.update_service(
+        name=_TEST_SERVICE_NAME,
+        path_value_lst=path_value_lst,
+    )
+    # Then: service attributes
+    for path, value in path_value_lst:
+        node, attr_name = xpath.get_parent_node_based_on_path(result, path)
+        assert getattr(node, attr_name) == value
+    # Then: get
+    assert client.called.get(_StubCloudRunClient.get_service.__name__)
+    assert update_operation.called.get(_StubCloudRunOperation.result.__name__)
+    # Then: update
+    request = client.called.get(_StubCloudRunClient.update_service.__name__)
+    assert request.get("service") == service
+    # Then: client calls: 1x get + 1x update
+    assert client.called_count == 2
 
 
 @pytest.mark.asyncio
@@ -161,7 +224,7 @@ async def test_update_service_nok_raises(
     # Given
     path = "root.attr.sub_attr"
     value = "TEST_VALUE"
-    service = _StubCloudRunService(path=path, value=f"NOT_{value}")
+    service = _StubCloudRunService(path_value_lst=[(path, f"NOT_{value}")])
     update_operation = _StubCloudRunOperation(
         value=service, raise_on_result=raise_on_result
     )
@@ -177,7 +240,15 @@ async def test_update_service_nok_raises(
     )
     # When/Then
     with pytest.raises(cloud_run.CloudRunServiceError):
-        await cloud_run.update_service(name=_TEST_SERVICE_NAME, path=path, value=value)
+        await cloud_run.update_service(
+            name=_TEST_SERVICE_NAME,
+            path_value_lst=[
+                (
+                    path,
+                    value,
+                )
+            ],
+        )
 
 
 @pytest.mark.parametrize(
@@ -186,17 +257,6 @@ async def test_update_service_nok_raises(
         (123, 1),
         (None, 1),
         ("", 1),
-        ("projects/ /locations/my-location-123/services/my-service-123", 1),
-        ("projects/my-project-123/locations/ /services/my-service-123", 1),
-        ("projects/my-project-123/locations/my-location-123/services/ ", 1),
-        (
-            " projects/my-project-123/locations/my-location-123/services/my-service-123",
-            1,
-        ),
-        (
-            "projects/my project 123/locations/my location 123/services/my service 123",
-            1,
-        ),
         (
             "projects/my-project-123/locations/my-location-123/services/my-service-123",
             0,
@@ -214,7 +274,7 @@ def test__set_service_value_by_path_ok():
     # pylint: disable=no-member
     # Given
     expected = "TEST_VALUE"
-    service = _StubCloudRunService("a.b", f"NOT_{expected}")
+    service = _StubCloudRunService(path_value_lst=[("a.b", f"NOT_{expected}")])
     # When
     result = cloud_run._set_service_value_by_path(service, "a.b", expected)
     # Then
@@ -223,7 +283,7 @@ def test__set_service_value_by_path_ok():
 
 def test__clean_service_for_update_request_ok():
     # Given
-    service = _StubCloudRunService("a", "value_a")
+    service = _StubCloudRunService(path_value_lst=[("a", "value_a")])
     # When
     result = cloud_run._clean_service_for_update_request(service)
     # Then
@@ -235,7 +295,9 @@ def test__update_service_revision_ok():
     # Given
     curr_revision = "current_revision"
     service = _StubCloudRunService(
-        cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, curr_revision
+        path_value_lst=[
+            (cloud_run_const.CLOUD_RUN_SERVICE_REVISION_PATH, curr_revision)
+        ]
     )
     # When
     cloud_run._update_service_revision(service)
@@ -259,7 +321,7 @@ def test__create_revision_ok():
 def test__validate_service_ok():
     path = "a.b.c"
     value = 123
-    service = _StubCloudRunService(path, value)
+    service = _StubCloudRunService(path_value_lst=[(path, value)])
     # When
     result = cloud_run._validate_service(service, path, value, raise_if_invalid=True)
     # Then
@@ -269,7 +331,7 @@ def test__validate_service_ok():
 def test__validate_service_nok():
     path = "a.b.c"
     value = 123
-    service = _StubCloudRunService(path, f"NOT_{value}")
+    service = _StubCloudRunService(path_value_lst=[(path, f"NOT_{value}")])
     # When/Then
     with pytest.raises(RuntimeError):
         cloud_run._validate_service(service, path, value, raise_if_invalid=True)

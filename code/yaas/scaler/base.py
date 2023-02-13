@@ -5,7 +5,7 @@ Basic definition of types and expected functionality for resource scaler.
 """
 import abc
 import asyncio
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from yaas.dto import request, scaling
 from yaas import logger
@@ -18,14 +18,26 @@ class Scaler(abc.ABC):
     Generic class to define a scaler.
     """
 
-    def __init__(self, definition: scaling.ScalingDefinition) -> None:
+    def __init__(self, *definition: Tuple[scaling.ScalingDefinition]) -> None:
         expected_type = self.__class__._valid_definition_type()
-        if not isinstance(definition, expected_type):
-            raise TypeError(
-                f"Definition must be an instance of {expected_type.__name__}. "
-                f"Got <{definition}>({type(definition)})"
-            )
+        resource = None
+        for ndx, item in enumerate(list(definition)):
+            if not isinstance(item, expected_type):
+                raise TypeError(
+                    f"Definition must be an instance of {expected_type.__name__}. "
+                    f"Got<{item}>[{ndx}]({type(item)}). "
+                    f"All definitions: <{definition}>"
+                )
+            if resource is None:
+                resource = item.resource
+            elif item.resource != resource:
+                raise ValueError(
+                    f"All definitions must have the same resource <{resource}>."
+                    f"Got<{item}>[{ndx}]({type(item)}). "
+                    f"All definitions: <{definition}>"
+                )
         self._definition = definition
+        self._resource = resource
         super().__init__()
 
     @classmethod
@@ -33,23 +45,30 @@ class Scaler(abc.ABC):
         return scaling.ScalingDefinition
 
     @property
-    def definition(self) -> scaling.ScalingDefinition:
+    def definitions(self) -> List[scaling.ScalingDefinition]:
         """
         Scaling definition.
 
         Returns:
             Scaling definition.
         """
-        return self._definition
+        return list(self._definition)
+
+    @property
+    def resource(self) -> str:
+        """
+        Which resource will be scaled.
+        """
+        return self._resource
 
     @classmethod
     @abc.abstractmethod
-    def from_request(cls, value: request.ScaleRequest) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
         """
         Return an instance corresponding to the :py:cls:`scale_request.ScaleRequest`.
 
         Args:
-            value: scaling request.
+            value: scaling requests.
 
         Returns:
             ``value`` converted to a py:cls:`Scaler`.
@@ -62,6 +81,11 @@ class Scaler(abc.ABC):
         Returns:
             :py:obj:`True` if successfully enacted.
         """
+        _LOGGER.debug(
+            "Enacting definitions for resource <%s>. Definitions: <%s>",
+            self.resource,
+            self.definitions,
+        )
         result = False
         can_enact, reason = await self.can_enact()
         if can_enact:
@@ -76,6 +100,11 @@ class Scaler(abc.ABC):
                 self._definition,
                 reason,
             )
+        _LOGGER.info(
+            "Enacted definitions for resource <%s>. Definitions: <%s>",
+            self.resource,
+            self.definitions,
+        )
         return result
 
     @abc.abstractmethod
@@ -103,40 +132,49 @@ class ScalerPathBased(Scaler, abc.ABC):
     """
 
     async def _safe_enact(self) -> None:
-        await self.__class__._enact(  # pylint: disable=protected-access
-            resource=self.definition.resource,
-            field=self.definition.command.parameter,
-            target=self.definition.command.target,
-        )
-
-    @classmethod
-    async def _enact(cls, *, resource: str, field: str, target: Any) -> None:
-        _LOGGER.info("Scaling <%s> to <%s> for resource <%s>", field, target, resource)
+        # Build path_value_lst
+        path_value_lst = []
+        for ndx, scale_def in enumerate(self._definition):
+            field = scale_def.command.parameter
+            target = scale_def.command.target
+            try:
+                path = self._get_enact_path_value(
+                    resource=scale_def.resource, field=field, target=target
+                )
+                path_value_lst.append(
+                    (
+                        path,
+                        target,
+                    )
+                )
+            except Exception as err:
+                raise RuntimeError(
+                    f"Could not parse path for resource={scale_def.resource}, "
+                    f"field={field}, and target={target}. "
+                    f"Item {ndx} in {self._definition}"
+                    f"Error: {err}"
+                ) from err
+        # Scale path_value_lst
+        _LOGGER.debug("Scaling resource <%s> with <%s>", self.resource, path_value_lst)
         try:
-            path = cls._path_for_enact(resource, field, target)
-        except Exception as err:
-            raise RuntimeError(
-                f"Could not parse path for resource={resource}, field={field}, and target={target}. Error: {err}"
-            ) from err
-        if not path:
-            raise ValueError(f"Scaling {field} is not supported in {cls.__name__}")
-        try:
-            await cls._enact_by_path(
-                resource=resource, field=field, target=target, path=path
+            await self._enact_by_path_value_lst(
+                resource=self.resource, path_value_lst=path_value_lst
             )
         except Exception as err:
             raise RuntimeError(
-                f"Could not enact scaling for resource={resource}, field={field}, target={target}, and path={path}. Error: {err}"
+                f"Could not enact scaling for resource={self.resource}, "
+                f"path_value_lst={path_value_lst}. "
+                f"Error: {err}"
             ) from err
-        _LOGGER.info("Scaled <%s> to <%s> for resource <%s>", field, target, resource)
+        _LOGGER.info("Scaled resource <%s> with <%s>", self.resource, path_value_lst)
 
     @classmethod
-    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+    def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
         pass
 
     @classmethod
-    async def _enact_by_path(
-        cls, *, resource: str, field: str, target: Any, path: str
+    async def _enact_by_path_value_lst(
+        cls, *, resource: str, path_value_lst: List[Tuple[str, Any]]
     ) -> None:
         pass
 
@@ -176,6 +214,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Used :py:class:`Scaler`
         """
+        _LOGGER.debug("Enacting requests: <%s>", list(value))
         # validate input
         if raise_if_invalid_request is None:
             raise_if_invalid_request = self._strict_mode
@@ -187,6 +226,7 @@ class CategoryScaleRequestParser(abc.ABC):
         )
         item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
         result = list(zip(item_res_lst, item_lst))
+        _LOGGER.info("Enacted requests: <%s>", list(value))
         return result[0] if len(result) == 1 and singulate_if_only_one else result
 
     def scaler(
@@ -206,6 +246,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Instance of :py:cls:`Scaler`.
         """
+        _LOGGER.debug("Creating scaler(s) for requests: <%s>", list(value))
         # validate input
         self._validate_request(*value)
         if raise_if_invalid_request is None:
@@ -216,28 +257,71 @@ class CategoryScaleRequestParser(abc.ABC):
             self._to_scaling_definition(value, raise_if_error=self._strict_mode),
             raise_if_invalid_request=raise_if_invalid_request,
         )
-        for ndx, val in enumerate(scaling_def_lst):
+        resource_to_requests = self._request_by_resource(scaling_def_lst)
+        for resource, scale_def_lst in resource_to_requests.items():
             try:
-                item = self._scaler(
-                    val, raise_if_invalid_request=raise_if_invalid_request
+                items = self._scaler(
+                    scale_def_lst, raise_if_invalid_request=raise_if_invalid_request
+                )
+                _LOGGER.info(
+                    "Created <%d> scaler(s) for definitions: <%s>",
+                    len(items),
+                    scale_def_lst,
                 )
             except Exception as err:
                 raise CategoryScaleRequestParserError(
-                    f"Could not create {Scaler.__name__} for request: {val}[{ndx}]. "
+                    f"Could not create {Scaler.__name__} "
+                    f"for resource: {resource}[{scale_def_lst}]. "
                     f"Error: {err}. "
                     f"Values: {scaling_def_lst}"
                 ) from err
-            if item is None:
+            if not items:
                 msg = (
-                    f"Resulting scaler for request: {val}[{ndx}] is None. "
-                    f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}. "
+                    f"Resulting scaler for resource: {resource}[{scale_def_lst}] is None. "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaler.__name__} "
                     f"Values: {scaling_def_lst}"
                 )
                 if raise_if_invalid_request:
                     raise ValueError(msg)
                 continue
-            result.append(item)
+            result.extend(items)
         return result[0] if len(result) == 1 and singulate_if_only_one else result
+
+    @staticmethod
+    def _request_by_resource(
+        values: Iterable[scaling.ScalingDefinition],
+    ) -> Dict[str, List[scaling.ScalingDefinition]]:
+        # pylint: disable=line-too-long
+        """
+        It will go through all requests in the batch and put them into "buckets"
+        by resource ID. E.g.:
+
+        Input:
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | min_instances 0``
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | max_instances 100``
+            - ``standard | locations/my-location/namespaces/my-project/services/my-service | concurrency 80``
+            - ``standard | my-project:my-location:my-instance | instance_type db-f1-micro``
+
+        Output::
+
+            {
+                "locations/my-location/namespaces/my-project/services/my-service": [
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | min_instances 0",
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | max_instances 100",
+                    "standard | locations/my-location/namespaces/my-project/services/my-service | concurrency 80"
+                ],
+                "my-project:my-location:my-instance" : [
+                    "standard | my-project:my-location:my-instance | instance_type db-f1-micro"
+                ]
+            }
+        """
+        # pylint: enable=line-too-long
+        result = {}
+        for val in values:
+            if val.resource not in result:
+                result[val.resource] = []
+            result[val.resource].append(val)
+        return result
 
     def _validate_request(self, *value: request.ScaleRequest) -> None:
         for ndx, val in enumerate(value):
@@ -284,9 +368,9 @@ class CategoryScaleRequestParser(abc.ABC):
     @abc.abstractmethod
     def _scaler(
         self,
-        value: scaling.ScalingDefinition,
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> Scaler:
+    ) -> Iterable[Scaler]:
         """
         Only called with a pre-validated request.
         It should raise an exception if any specific is invalid.

@@ -6,7 +6,7 @@
 .. _Cloud Run: https://cloud.google.com/run
 """
 import re
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 import attrs
 
@@ -95,18 +95,20 @@ class CloudRunScaler(base.ScalerPathBased):
     """
 
     async def can_enact(self) -> Tuple[bool, str]:
-        return await cloud_run.can_be_deployed(self.definition.resource)
+        return await cloud_run.can_be_deployed(self.resource)
 
     @classmethod
     def _valid_definition_type(cls) -> type:
         return CloudRunScalingDefinition
 
     @classmethod
-    def from_request(cls, value: request.ScaleRequest) -> "CloudRunScaler":
-        return CloudRunScaler(definition=CloudRunScalingDefinition.from_request(value))
+    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "CloudRunScaler":
+        return CloudRunScaler(
+            *[CloudRunScalingDefinition.from_request(val) for val in value]
+        )
 
     @classmethod
-    def _path_for_enact(cls, resource: str, field: str, target: Any) -> str:
+    def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
         result = None
         if CloudRunCommandType.MIN_INSTANCES.value == field:
             result = cloud_run_const.CLOUD_RUN_SERVICE_SCALING_MIN_INSTANCES_PARAM
@@ -117,7 +119,7 @@ class CloudRunScaler(base.ScalerPathBased):
         return result
 
     @classmethod
-    async def _enact_by_path(
-        cls, *, resource: str, field: str, target: Any, path: str
+    async def _enact_by_path_value_lst(
+        cls, *, resource: str, path_value_lst: List[Tuple[str, Any]]
     ) -> None:
-        await cloud_run.update_service(name=resource, path=path, value=target)
+        await cloud_run.update_service(name=resource, path_value_lst=path_value_lst)

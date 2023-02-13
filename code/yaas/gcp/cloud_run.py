@@ -14,7 +14,7 @@ from google.cloud import run_v2
 
 from yaas import logger
 from yaas.gcp import cloud_run_const, resource_name
-from yaas import xpath
+from yaas import validation, xpath
 
 _LOGGER = logger.get(__name__)
 
@@ -116,59 +116,65 @@ def _run_client() -> run_v2.ServicesClient:
 
 
 async def update_service(
-    *, name: str, path: str, value: Optional[Any]
+    *, name: str, path_value_lst: List[Tuple[str, Optional[Any]]]
 ) -> run_v2.Service:
     # pylint: disable=line-too-long
     """
     Wrapper for :py:meth:`run_v2.ServicesClient.update_service` (`documentation`_).
+    The `path_value_lst` is a list of :py:class:`tuple`
+    and has the following format: ``[(<path>,<value>,)]`` where:
+        - ``path`` follows a simple `x-path`_ like path to the value
+            to be updated in the Cloud Run service.
+        - ``value`` the, optional, value that the attribute should assume.
 
     Args:
         name: full service name, e.g.:
             `projects/my-project-123/locations/my-location-123/services/my-service-123`.
-        path: simple `x-path`_ like path to the value to be updated in the Cloud Run service.
-        value: what the end-node in `path` should contain.
+        path_value_lst: list of tuples ``[(<path>,<value>,)]``
 
     Returns:
+        Updated Cloud Run service.
 
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_update_service
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Updating service <%s> param <%s> with <%s>", name, path, value)
+    _LOGGER.debug("Updating service <%s> with <%s>", name, path_value_lst)
     # validate
     validate_cloud_run_resource_name(name)
-    if not isinstance(path, str) or not path.strip():
-        raise TypeError(
-            f"Path argument must be a non-empty {str.__name__}. Got: <{path}>({type(path)}"
-        )
-    path = path.strip()
+    validation.validate_path_value_lst(path_value_lst)
+    # logic
     # get service
     service = await get_service(name)
-    # update service
-    service = _update_service_revision(
-        _clean_service_for_update_request(
-            _set_service_value_by_path(service, path, value)
-        )
-    )
+    # apply all changes
+    for path, value in path_value_lst:
+        service = _set_service_value_by_path(service, path, value)
+    # create request
+    service = _update_service_revision(_clean_service_for_update_request(service))
     request = _create_update_request(service)
     await asyncio.sleep(0)
+    # apply update
     try:
         operation = _run_client().update_service(request=request)
         await asyncio.sleep(0)
         result = operation.result()
     except Exception as err:
         raise CloudRunServiceError(
-            f"Could not update service <{name}> with <{path}> set to <{value}>. "
+            f"Could not update service <{name}> with <{path_value_lst}>. "
             f"Request: {request}. "
             f"Error: {err}"
         ) from err
+    # done
     _LOGGER.info(
-        "Update request for service %s with param %s = %s sent.",
+        "Update request for service %s with <%s>.",
         name,
-        path,
-        value,
+        path_value_lst,
     )
-    return _validate_service(result, path, value)
+    # validate
+    for path, value in path_value_lst:
+        _validate_service(result, path, value)
+    #
+    return result
 
 
 def _create_update_request(

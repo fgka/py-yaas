@@ -50,6 +50,35 @@ def test_create_dict_based_on_path_ok(path: str, value: Any):
     assert node[path.split(xpath.REQUEST_PATH_SEP)[-1]] == value
 
 
+def test_create_dict_based_on_path_value_lst_ok():
+    # Given
+    path_value_lst = [
+        (
+            "root.node_a",
+            "value_a",
+        ),
+        (
+            "root.node_b",
+            "value_b",
+        ),
+    ]
+    for ndx in range(10):
+        path_value_lst.append(
+            (
+                f"root.node_c_{ndx}",
+                f"value_c_{ndx}",
+            )
+        )
+    # When
+    result = xpath.create_dict_based_on_path_value_lst(path_value_lst)
+    # Then: result
+    assert isinstance(result, dict)
+    # Then: path_value_lst
+    for path, value in path_value_lst:
+        node, key = xpath.get_parent_node_based_on_path(result, path)
+        assert node.get(key) == value
+
+
 @pytest.mark.parametrize(
     "value,path,expected_attr_val",
     [

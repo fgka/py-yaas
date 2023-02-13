@@ -94,11 +94,11 @@ class TestScaler:
         result = common.MyScaler.from_request(self.request)
         # Then
         assert result is not None
-        assert result.definition == self.definition
+        assert result.definitions[0] == self.definition
         assert not result.called.get(base.Scaler.can_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
         assert (
-            common.MyScaler.cls_called[base.ScalerPathBased.from_request.__name__]
+            common.MyScaler.cls_called[base.ScalerPathBased.from_request.__name__][0]
             == self.request
         )
 
@@ -145,13 +145,13 @@ class TestScalerPathBased:
         result = common.MyScalerPathBased.from_request(self.request)
         # Then
         assert result is not None
-        assert result.definition == self.definition
+        assert result.definitions[0] == self.definition
         assert not result.called.get(base.Scaler.can_enact.__name__)
         assert not result.called.get(base.Scaler._safe_enact.__name__)
         assert (
             common.MyScalerPathBased.cls_called.get(
                 base.ScalerPathBased.from_request.__name__
-            )
+            )[0]
             == self.request
         )
 
@@ -166,7 +166,7 @@ class TestScalerPathBased:
         assert self.obj.called.get(base.Scaler.can_enact.__name__)
         # Then: _path_for_enact
         args_path_for_enact = common.MyScalerPathBased.cls_called.get(
-            base.ScalerPathBased._path_for_enact.__name__
+            base.ScalerPathBased._get_enact_path_value.__name__
         )
         assert args_path_for_enact
         assert args_path_for_enact["resource"] == self.request.resource
@@ -174,13 +174,14 @@ class TestScalerPathBased:
         assert args_path_for_enact["target"] in self.request.command
         # Then: _enact_by_path
         args_enact_by_path = common.MyScalerPathBased.cls_called.get(
-            base.ScalerPathBased._enact_by_path.__name__
+            base.ScalerPathBased._enact_by_path_value_lst.__name__
         )
         assert args_enact_by_path
         assert args_enact_by_path["resource"] == self.request.resource
-        assert args_enact_by_path["field"] in self.request.command
-        assert args_enact_by_path["target"] in self.request.command
-        assert args_enact_by_path["path"] == self.obj.__class__.cls_path
+        path_value_lst = args_enact_by_path["path_value_lst"]
+        for path, value in path_value_lst:
+            assert path == self.obj.__class__.cls_path
+            assert value in self.request.command
 
     @pytest.mark.asyncio
     async def test_enact_nok(self):
@@ -237,7 +238,7 @@ class TestCategoryScaleRequestParser:
         assert len(scaler) == 1
         assert isinstance(scaler[0], base.Scaler)
 
-    def test_scaler_ok_multiple(self):
+    def test_scaler_ok_multiple_same_resource(self):
         # Given
         req, _ = _create_request_and_definition(
             topic=common.MyCategoryType.CATEGORY_A.name
@@ -245,10 +246,10 @@ class TestCategoryScaleRequestParser:
         amount = 3
         value = [req] * amount
         # When
-        scaler_lst = self.obj.scaler(*value)
+        scaler_lst = self.obj.scaler(*value, singulate_if_only_one=False)
         # Then
         assert isinstance(scaler_lst, list)
-        assert len(scaler_lst) == amount
+        assert len(scaler_lst) == 1
         for val in scaler_lst:
             assert isinstance(val, base.Scaler)
         assert self.obj.obj_called.get(base.CategoryScaleRequestParser._scaler.__name__)
@@ -262,6 +263,10 @@ class TestCategoryScaleRequestParser:
         assert len(filter_req) == amount
         for f_req in filter_req:
             assert f_req == common.MyScalingDefinition.from_request(req)
+        # Then: scaler
+        scaler = scaler_lst[0]
+        assert isinstance(scaler, base.Scaler)
+        assert len(scaler.definitions) == amount
 
     @pytest.mark.asyncio
     async def test_enact_ok(self):
@@ -293,17 +298,19 @@ class TestCategoryScaleRequestParser:
             assert isinstance(scaler, base.Scaler)
 
     @pytest.mark.asyncio
-    async def test_enact_ok_multiple(self):
+    async def test_enact_ok_multiple_same_resource(self):
         # Given
         req, _ = _create_request_and_definition(
             topic=common.MyCategoryType.CATEGORY_A.name
         )
         amount = 3
         # When
-        result = await self.obj.enact(*[req] * amount)
+        result = await self.obj.enact(*[req] * amount, singulate_if_only_one=False)
         # Then
         assert isinstance(result, list)
-        assert len(result) == amount
-        for res, scaler in result:
-            assert isinstance(res, bool)
-            assert isinstance(scaler, base.Scaler)
+        assert len(result) == 1
+        res, scaler = result[0]
+        assert isinstance(res, bool)
+        # Then: scaler
+        assert isinstance(scaler, base.Scaler)
+        assert len(scaler.definitions) == amount

@@ -125,8 +125,10 @@ async def test_can_be_deployed_ok(
 @pytest.mark.asyncio
 async def test_update_instance_ok(monkeypatch):
     # Given
-    path = "root.attr.sub_attr"
-    value = "TEST_VALUE"
+    path_value_lst = [
+        ("root.attr_a.sub_attr_a", "value_a"),
+        ("root.attr_b.sub_attr_b", "value_b"),
+    ]
     instance = xpath.create_dict_based_on_path(
         "status", cloud_sql_const.CLOUD_SQL_STATUS_OK
     )
@@ -134,7 +136,7 @@ async def test_update_instance_ok(monkeypatch):
     monkeypatch.setattr(cloud_sql, cloud_sql._sql_instances.__name__, lambda: client)
     # When
     result = await cloud_sql.update_instance(
-        name=_TEST_INSTANCE_RESOURCE_NAME, path=path, value=value
+        name=_TEST_INSTANCE_RESOURCE_NAME, path_value_lst=path_value_lst
     )
     # Then: result
     assert isinstance(result, dict)
@@ -145,8 +147,9 @@ async def test_update_instance_ok(monkeypatch):
     assert called_patch.get("instance") == _TEST_INSTANCE_NAME
     patch_body = called_patch.get("body")
     assert isinstance(patch_body, dict)
-    node, key = xpath.get_parent_node_based_on_path(patch_body, path)
-    assert node[key] == value
+    for path, value in path_value_lst:
+        node, key = xpath.get_parent_node_based_on_path(patch_body, path)
+        assert node[key] == value
 
 
 @pytest.mark.asyncio
@@ -159,7 +162,13 @@ async def test_update_service_nok_raises(monkeypatch):
     # When/Then
     with pytest.raises(cloud_sql.CloudSqlServiceError):
         await cloud_sql.update_instance(
-            name=_TEST_INSTANCE_RESOURCE_NAME, path=path, value=value
+            name=_TEST_INSTANCE_RESOURCE_NAME,
+            path_value_lst=[
+                (
+                    path,
+                    value,
+                )
+            ],
         )
 
 

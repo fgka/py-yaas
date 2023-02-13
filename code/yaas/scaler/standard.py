@@ -3,7 +3,7 @@
 """
 Produce Google Cloud supported resources' scalers.
 """
-from typing import Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from yaas import logger
 from yaas.dto import request, resource_regex, scaling
@@ -72,7 +72,10 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
             sorted(value, key=lambda val: val.timestamp_utc, reverse=True)
         ):
             if not isinstance(scaling_def, scaling.ScalingDefinition):
-                msg = f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
+                msg = (
+                    f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. "
+                    f"Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
+                )
                 if raise_if_invalid_request:
                     raise TypeError(msg)
                 _LOGGER.warning(msg)
@@ -95,24 +98,68 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
 
     def _scaler(
         self,
-        value: scaling.ScalingDefinition,
+        value: Iterable[scaling.ScalingDefinition],
         raise_if_invalid_request: Optional[bool] = True,
-    ) -> base.Scaler:
-        result = None
-        if isinstance(value, run.CloudRunScalingDefinition):
-            result = run.CloudRunScaler(value)
-        elif isinstance(value, sql.CloudSqlScalingDefinition):
-            result = sql.CloudSqlScaler(value)
-        else:
+    ) -> [base.Scaler]:
+        result = []
+        errors, scale_def_by_type = self._scaling_definition_by_type(value)
+        # Create scalers
+        for cls, scaling_def_lst in scale_def_by_type.items():
+            if cls is run.CloudRunScalingDefinition:
+                result.append(run.CloudRunScaler(*scaling_def_lst))
+            elif cls is sql.CloudSqlScalingDefinition:
+                result.append(sql.CloudSqlScaler(*scaling_def_lst))
+            else:
+                msg = (
+                    f"Scaler for definition <{cls.__name__}> "
+                    f"is not supported by {self.__class__.__name__}. "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaler.__name__}"
+                )
+                if raise_if_invalid_request:
+                    raise base.CategoryScaleRequestParserError(msg)
+                _LOGGER.warning(msg)
+        # check errors
+        if errors:
             msg = (
-                f"Scaler for definition <{value}> "
-                f"is not supported by {self.__class__.__name__}. "
-                f"Check implementation of {self._scaler.__name__} in {self.__class__.__name__}."
+                f"There are {len(errors)} issues with the scaling definitions: {errors}"
             )
             if raise_if_invalid_request:
                 raise base.CategoryScaleRequestParserError(msg)
             _LOGGER.warning(msg)
         return result
+
+    @classmethod
+    def _scaling_definition_by_type(
+        cls, value: Iterable[scaling.ScalingDefinition]
+    ) -> Tuple[List[str], Dict[type, List[scaling.ScalingDefinition]]]:
+        """
+
+        Args:
+            value:
+
+        Returns:
+
+        """
+        errors = []
+        result = {}
+        for val in value:
+            if isinstance(val, run.CloudRunScalingDefinition):
+                if run.CloudRunScalingDefinition not in result:
+                    result[run.CloudRunScalingDefinition] = []
+                result[run.CloudRunScalingDefinition].append(val)
+            elif isinstance(val, sql.CloudSqlScalingDefinition):
+                if sql.CloudSqlScalingDefinition not in result:
+                    result[sql.CloudSqlScalingDefinition] = []
+                result[sql.CloudSqlScalingDefinition].append(val)
+            else:
+                msg = (
+                    f"Scaler for definition <{val}> "
+                    f"is not supported by {cls.__name__}. "
+                    "Check implementation of "
+                    f"{cls._scaling_definition_by_type.__name__} in {cls.__name__}."
+                )
+                errors.append(msg)
+        return errors, result
 
     @staticmethod
     def _create_canonical_request(

@@ -18,7 +18,7 @@ from googleapiclient import discovery
 from yaas import logger
 from yaas.gcp import cloud_sql_const
 from yaas.dto import resource_regex
-from yaas import xpath
+from yaas import validation, xpath
 
 _LOGGER = logger.get(__name__)
 
@@ -159,17 +159,21 @@ def _sql_client() -> discovery.Resource:
 
 
 async def update_instance(
-    *, name: str, path: str, value: Optional[Any]
+    *, name: str, path_value_lst: List[Tuple[str, Optional[Any]]]
 ) -> Dict[str, Any]:
     # pylint: disable=line-too-long
     """
     Wrapper for :py:meth:`instances.patch` (`documentation`_).
+    The `path_value_lst` is a list of :py:class:`tuple`
+    and has the following format: ``[(<path>,<value>,)]`` where:
+        - ``path`` follows a simple `x-path`_ like path to the value
+            to be updated in the Cloud SQL instance.
+        - ``value`` the, optional, value that the attribute should assume.
 
     Args:
         name: full service name, e.g.:
             `my-project-123:my-location-123:my-instance-123`.
-        path: simple `x-path`_ like path to the value to be updated in the Cloud Run service.
-        value: what the end-node in `path` should contain.
+        path_value_lst: list of tuples ``[(<path>,<value>,)]``
 
     Returns:
 
@@ -177,18 +181,15 @@ async def update_instance(
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Updating service <%s> param <%s> with <%s>", name, path, value)
+    _LOGGER.debug("Updating instance <%s> with <%s>", name, path_value_lst)
     # validate
-    if not isinstance(path, str) or not path.strip():
-        raise TypeError(
-            f"Path argument must be a non-empty {str.__name__}. Got: <{path}>({type(path)}"
-        )
-    path = path.strip()
+    validate_cloud_sql_resource_name(name)
+    validation.validate_path_value_lst(path_value_lst)
     # logic
     await asyncio.sleep(0)
     project, _, instance_name = _sql_fqn_components(name)
     await asyncio.sleep(0)
-    update_request = xpath.create_dict_based_on_path(path, value)
+    update_request = xpath.create_dict_based_on_path_value_lst(path_value_lst)
     try:
         request = _sql_instances().patch(
             project=project, instance=instance_name, body=update_request
@@ -198,14 +199,13 @@ async def update_instance(
         await asyncio.sleep(0)
     except Exception as err:
         raise CloudSqlServiceError(
-            f"Could not update instance <{name}> with <{path}> set to <{value}>. "
+            f"Could not update instance <{name}> with <{path_value_lst}>. "
             f"Request: {request}. "
             f"Error: {err}"
         ) from err
     _LOGGER.info(
-        "Update request for instance %s with param %s = %s sent.",
+        "Update request for instance %s with %s sent.",
         name,
-        path,
-        value,
+        path_value_lst,
     )
     return result

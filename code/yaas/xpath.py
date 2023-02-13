@@ -5,7 +5,9 @@ Navigates objects or dictionaries using `x-path`_.
 
 .. _x-path: https://en.wikipedia.org/wiki/XPath
 """
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from yaas import validation
 
 ###########################
 #  Update Request: paths  #
@@ -16,12 +18,31 @@ REQUEST_PATH_SEP: str = "."
 
 def get_parent_node_based_on_path(value: Any, path: str) -> Tuple[Any, str]:
     """
+    Returns the node and the last key in the path.
+    Example with a :py:class:`dict`::
+
+        value = {
+            "root": {
+                "node_a": 123,
+                "node_b": "value_b",
+            }
+        }
+        node, key = get_parent_node_based_on_path(value, "root.node_a")
+        assert node == "node_a"
+        assert node.get(key) == 123
+
+    Example with an :py:class:`object`::
+
+        node, key = get_parent_node_based_on_path(value, "root.node_a")
+        assert node == "node_a"
+        assert getattr(node, key) == 123
 
     Args:
-        value: either an py:class:`object` or a py:class:`dict`.
+        value: either an :py:class:`object` or a :py:class:`dict`.
         path: `x-path`_ like path.
 
-    Returns:
+    Returns: :py:class:`tuple` in the format:
+        ``<node containing the last key in the path>, <last key in the path>``
 
     """
     # input validation
@@ -83,14 +104,37 @@ def create_dict_based_on_path(path: str, value: Any) -> Dict[str, Any]:
     Returns:
 
     """
+    return create_dict_based_on_path_value_lst([(path, value)])
+
+
+def create_dict_based_on_path_value_lst(
+    path_value_lst: List[Tuple[str, Optional[Any]]]
+) -> Dict[str, Any]:
+    """
+    Same as :py:func:`create_dict_based_on_path` but multiple times over the same :py:class:`dict`
+    Args:
+        path_value_lst: list of tuples ``[(<path>,<value>,)]``
+
+    Returns:
+
+    """
     # input validation
-    _validate_path(path)
+    validation.validate_path_value_lst(path_value_lst)
     # logic
     result = {}
+    for path, value in path_value_lst:
+        result = _create_dict_based_on_path(result, path, value)
+    return result
+
+
+def _create_dict_based_on_path(
+    result: Dict[str, Any], path: str, value: Any
+) -> Dict[str, Any]:
     node = result
     split_path = path.split(REQUEST_PATH_SEP)
     for entry in split_path[:-1]:
-        node[entry] = {}
+        if entry not in node:
+            node[entry] = {}
         node = node[entry]
     node[split_path[-1]] = value
     return result

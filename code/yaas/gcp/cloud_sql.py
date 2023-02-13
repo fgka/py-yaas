@@ -181,7 +181,7 @@ async def update_instance(
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Updating service <%s> with <%s>", name, path_value_lst)
+    _LOGGER.debug("Updating instance <%s> with <%s>", name, path_value_lst)
     # validate
     validate_cloud_sql_resource_name(name)
     validation.validate_path_value_lst(path_value_lst)

@@ -81,6 +81,11 @@ class Scaler(abc.ABC):
         Returns:
             :py:obj:`True` if successfully enacted.
         """
+        _LOGGER.debug(
+            "Enacting definitions for resource <%s>. Definitions: <%s>",
+            self.resource,
+            self.definitions,
+        )
         result = False
         can_enact, reason = await self.can_enact()
         if can_enact:
@@ -95,6 +100,11 @@ class Scaler(abc.ABC):
                 self._definition,
                 reason,
             )
+        _LOGGER.info(
+            "Enacted definitions for resource <%s>. Definitions: <%s>",
+            self.resource,
+            self.definitions,
+        )
         return result
 
     @abc.abstractmethod
@@ -204,6 +214,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Used :py:class:`Scaler`
         """
+        _LOGGER.debug("Enacting requests: <%s>", list(value))
         # validate input
         if raise_if_invalid_request is None:
             raise_if_invalid_request = self._strict_mode
@@ -215,6 +226,7 @@ class CategoryScaleRequestParser(abc.ABC):
         )
         item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
         result = list(zip(item_res_lst, item_lst))
+        _LOGGER.info("Enacted requests: <%s>", list(value))
         return result[0] if len(result) == 1 and singulate_if_only_one else result
 
     def scaler(
@@ -234,6 +246,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Instance of :py:cls:`Scaler`.
         """
+        _LOGGER.debug("Creating scaler(s) for requests: <%s>", list(value))
         # validate input
         self._validate_request(*value)
         if raise_if_invalid_request is None:
@@ -249,6 +262,11 @@ class CategoryScaleRequestParser(abc.ABC):
             try:
                 items = self._scaler(
                     scale_def_lst, raise_if_invalid_request=raise_if_invalid_request
+                )
+                _LOGGER.info(
+                    "Created <%d> scaler(s) for definitions: <%s>",
+                    len(items),
+                    scale_def_lst,
                 )
             except Exception as err:
                 raise CategoryScaleRequestParserError(

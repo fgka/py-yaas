@@ -204,7 +204,7 @@ async def send_requests() -> str:
 
 
 @MAIN_BP.route("/enact-standard-requests", methods=["POST"])
-async def enact_requests() -> str:
+async def enact_standard_requests() -> str:
     # pylint: disable=anomalous-backslash-in-string,line-too-long
     """
     Wrapper to :py:func:`entry.enact_requests`.
@@ -228,8 +228,59 @@ async def enact_requests() -> str:
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
     try:
-        _LOGGER.info("Calling %s", enact_requests.__name__)
+        _LOGGER.info("Calling %s", enact_standard_requests.__name__)
         parser = standard.StandardScalingCommandParser(strict_mode=False)
+        await entry.enact_requests(parser=parser, pubsub_event=flask.request)
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not enact request. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
+@MAIN_BP.route("/enact-gcs-requests", methods=["POST"])
+async def enact_gcs_requests() -> str:
+    # pylint: disable=anomalous-backslash-in-string,line-too-long
+    """
+    Wrapper to :py:func:`entry.enact_requests`.
+
+    Create GCS profile::
+        BUCKET_NAME="<MY_BUCKET_NAME>"
+        PROFILE_PREFIX="yaas/scaling_profiles"
+        PROFILE_NAME="hello_min_instances_11"
+
+        REGION="europe-west3"
+        PROJECT=$(gcloud config get project)
+
+        TMP=$(mktemp)
+        cat > ${TMP} << __END__
+        standard | projects/${PROJECT}/locations/${REGION}/services/hello | min_instances 11
+        __END__
+
+        gsutil cp ${TMP} gs://${BUCKET_NAME}/${PROFILE_PREFIX}/${PROFILE_NAME}
+
+
+    `curl`::
+        REGION="europe-west3"
+        PROJECT=$(gcloud config get project)
+        COMMAND="${PROFILE_PREFIX}/${PROFILE_NAME}"
+        TIMESTAMP=$(date -u +%s)
+        DATA="{\"collection\": [{\"topic\": \"gcs\", \"resource\": \"${BUCKET_NAME}\", \"command\": \"${COMMAND}\", \"timestamp_utc\": ${TIMESTAMP}, \"original_json_event\": null}]}"
+        DATA_BASE64=$(echo ${DATA} | base64)
+        curl \
+            -d "{\"data\":\"${DATA_BASE64}\"}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            http://localhost:8080/enact-gcs-requests
+    """
+    # pylint: enable=anomalous-backslash-in-string,line-too-long
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        _LOGGER.info("Calling %s", enact_standard_requests.__name__)
+        parser = None  # TODO
         await entry.enact_requests(parser=parser, pubsub_event=flask.request)
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except

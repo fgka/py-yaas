@@ -16,7 +16,8 @@ locals {
   pubsub_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
   pubsub_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
   pubsub_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
-  pubsub_enact_url                        = "${local.run_service_url}${var.service_path_enact_request}"
+  pubsub_enact_standard_url               = "${local.run_service_url}${var.service_path_enact_standard_request}"
+  pubsub_enact_gcs_url                    = "${local.run_service_url}${var.service_path_enact_gcs_batch_request}"
   // monitoring
   monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
   monitoring_alert_channel_type_to_name = tomap({
@@ -66,7 +67,8 @@ resource "local_file" "config_json" {
     SECRET_NAME                 = var.secrets_calendar_credentials_id,
     BUCKET_NAME                 = var.bucket_name,
     SQLITE_OBJECT_PATH          = var.sqlite_cache_path,
-    PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_request_id
+    PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_standard_request_id
+    PUBSUB_TOPIC_ENACT_GCS      = var.pubsub_enact_gcs_batch_request_id
   })
   filename = local.local_config_json
 }
@@ -132,13 +134,30 @@ resource "google_pubsub_subscription" "send_request" {
   }
 }
 
-resource "google_pubsub_subscription" "enact_request" {
-  name                       = "${google_cloud_run_service.yaas.name}_enact_http_push_subscription"
-  topic                      = var.pubsub_enact_request_id
+resource "google_pubsub_subscription" "enact_standard_request" {
+  name                       = "${google_cloud_run_service.yaas.name}_enact_standard_http_push_subscription"
+  topic                      = var.pubsub_enact_standard_request_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
-    push_endpoint = local.pubsub_enact_url
+    push_endpoint = local.pubsub_enact_standard_url
+    oidc_token {
+      service_account_email = var.run_sa_email
+      audience              = local.run_service_url
+    }
+  }
+  retry_policy {
+    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
+  }
+}
+
+resource "google_pubsub_subscription" "enact_gcs_request" {
+  name                       = "${google_cloud_run_service.yaas.name}_enact_gcs_batch_http_push_subscription"
+  topic                      = var.pubsub_enact_gcs_batch_request_id
+  ack_deadline_seconds       = var.run_timeout
+  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
+  push_config {
+    push_endpoint = local.pubsub_enact_gcs_url
     oidc_token {
       service_account_email = var.run_sa_email
       audience              = local.run_service_url

@@ -34,8 +34,12 @@ output "pubsub_send_request" {
   value = module.pubsub_send_request
 }
 
-output "pubsub_enact_request" {
-  value = module.pubsub_enact_request
+output "pubsub_enact_standard_request" {
+  value = module.pubsub_enact_standard_request
+}
+
+output "pubsub_enact_gcs_batch_request" {
+  value = module.pubsub_enact_gcs_batch_request
 }
 
 output "pubsub_notification_topic" {

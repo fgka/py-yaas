@@ -82,7 +82,12 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
         regex = cls._parameter_target_regex()
         match = regex.match(value)
         if match:
-            parameter, target = match.groups()
+            parameter_target = match.groups()
+            if len(parameter_target) > 1:
+                parameter, target = parameter_target
+            else:
+                parameter = parameter_target[0]
+                target = None
             try:
                 target = cls._convert_target_value_string(target)
             except Exception as err:
@@ -134,7 +139,11 @@ class ScalingDefinition(  # pylint: disable=too-few-public-methods
 
     @resource.validator
     def _is_resource_valid_call(self, attribute: attrs.Attribute, value: str) -> None:
-        err_msg = f"Attribute <{attribute.name}> is not a valid resource ID for <{self.__class__.__name__}>"
+        err_msg = (
+            f"Attribute <{attribute.name}> "
+            f"is not a valid resource ID for <{self.__class__.__name__}>. "
+            f"Got: <{value}>({type(value)})"
+        )
         try:
             result = self._is_resource_valid(value)
         except Exception as err:  # pylint: disable=broad-except

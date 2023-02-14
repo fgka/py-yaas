@@ -4,7 +4,7 @@
 GCS file based batch scaling.
 """
 import re
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import attrs
 
@@ -17,7 +17,7 @@ from yaas.scaler import base
 _LOGGER = logger.get(__name__)
 
 _GCS_BATCH_COMMAND_REGEX: re.Pattern = re.compile(
-    pattern=r"^\s*([^\s]+)\.*\s*$", flags=re.IGNORECASE
+    pattern=r"^\s*([^/\.][^\s]+[^/\.])\.*\s*$", flags=re.IGNORECASE
 )
 """
 Example input::
@@ -33,6 +33,20 @@ class GcsBatchScalingCommand(scaling.ScalingCommand):
     GCS based batch scaling command definition.
     """
 
+    def _is_parameter_value_valid(self, value: Any) -> bool:
+        result = False
+        if isinstance(value, str):
+            match = self._parameter_target_regex().match(value)
+            if match:
+                result = bool(match.groups())
+        return result
+
+    def _is_target_valid(self, name: str, value: Any) -> None:
+        if value is not None:
+            raise ValueError(
+                f"Attribute {name} should not be given (aka None) for {GcsBatchScalingCommand.__name__}. Got: <{value}>({type(value)})"
+            )
+
     @classmethod
     def _parameter_target_regex(cls) -> re.Pattern:
         return _GCS_BATCH_COMMAND_REGEX
@@ -47,9 +61,18 @@ class GcsBatchScalingDefinition(  # pylint: disable=too-few-public-methods
     """
 
     def _is_resource_valid(self, value: str) -> bool:
-        # TODO
-        lst_errors = gcs.validate_and_clean_bucket_name(value)
-        return not lst_errors
+        result = False
+        try:
+            cleaned_value = gcs.validate_and_clean_bucket_name(value)
+            result = cleaned_value == value
+        except Exception as err:
+            _LOGGER.warning(
+                f"Could not validate resource value for {self.__class__.__name__} <{value}>. Error: {err}"
+            )
+        return result
+
+    def _is_target_value_valid(self, value: Any) -> bool:
+        return value is None
 
     @classmethod
     def from_request(cls, value: request.ScaleRequest) -> "GcsBatchScalingDefinition":
@@ -78,17 +101,22 @@ class GcsBatchScaler(base.Scaler):
             )
         self._topic_to_pubsub = topic_to_pubsub
 
+    @property
+    def topic_to_pubsub(self) -> Dict[str, str]:
+        """
+        Topic to PubSub mapping
+        """
+        return self._topic_to_pubsub
+
     async def can_enact(self) -> Tuple[bool, str]:
         return True, ""
 
     async def _safe_enact(self) -> None:
         """
         Algorithm:
-            1- Reads from bucket;
-            2- Parses the requests;
-            3- Calls :py:func:`pu
-        Returns:
-
+            1. Reads from bucket;
+            2. Parses the requests;
+            3. Calls pubsub_dispatcher.
         """
         # TODO: read bucket objects
         # TODO: parse content into ScaleRequests
@@ -104,7 +132,8 @@ class GcsBatchScaler(base.Scaler):
         return GcsBatchScalingDefinition
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "GcsBatchScaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest], topic_to_pubsub: Dict[str, str]) -> "GcsBatchScaler":
         return GcsBatchScaler(
-            *[GcsBatchScalingDefinition.from_request(val) for val in value]
+            *[GcsBatchScalingDefinition.from_request(val) for val in value],
+            topic_to_pubsub=topic_to_pubsub
         )

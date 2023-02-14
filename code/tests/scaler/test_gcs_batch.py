@@ -237,16 +237,18 @@ class TestGcsBatchScaler:
         return called
 
     @pytest.mark.asyncio
-    async def test__safe_enact_ok(self):
+    async def test__safe_enact_ok(self, monkeypatch):
         # Given
         topic_to_pubsub = _TEST_TOPIC_TO_PUBSUB
-        req = common.create_scale_request(
-            resource=_TEST_GCS_BATCH_RESOURCE_STR,
-            command=_TEST_GCS_BATCH_COMMAND_STR,
+        obj = gcs_batch.GcsBatchScaler(
+            *_TEST_DEFINITIONS, topic_to_pubsub=topic_to_pubsub
         )
-        obj = gcs_batch.GcsBatchScaler.from_request(
-            req, topic_to_pubsub=topic_to_pubsub
-        )
+        called = self._mock_gcs_batch(monkeypatch)
         # When
         await obj._safe_enact()
-        # Then
+        # Then: gcs
+        gcs_called = called.get(gcs_batch.gcs.read_object.__name__)
+        assert isinstance(gcs_called, list)
+        # Then: pubsub
+        pubsub_called = called.get(gcs_batch.pubsub_dispatcher.dispatch.__name__)
+        assert isinstance(pubsub_called, list)

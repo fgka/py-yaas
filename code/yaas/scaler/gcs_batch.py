@@ -3,12 +3,14 @@
 """
 GCS file based batch scaling.
 """
+import asyncio
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import attrs
 
 from yaas import const, logger
+from yaas.cal import parser
 from yaas.dto import request, scaling
 from yaas.entry_point import pubsub_dispatcher
 from yaas.gcp import gcs
@@ -82,6 +84,13 @@ class GcsBatchScalingDefinition(  # pylint: disable=too-few-public-methods
             timestamp_utc=value.timestamp_utc,
         )
 
+    def as_gcs_uri(self) -> str:
+        """
+        Returns a GCS URI in the format::
+            "gs://<resource>/<command.parameter>
+        """
+        return f"gs://{self.resource}/{self.command.parameter}"
+
 
 class GcsBatchScaler(base.Scaler):
     """
@@ -93,7 +102,7 @@ class GcsBatchScaler(base.Scaler):
         *definition: Tuple[scaling.ScalingDefinition],
         topic_to_pubsub: Dict[str, str],
     ) -> None:
-        super().__init__(*definition)
+        super().__init__(*definition, sort_definitions_by_increasing_timestamp=False)
         if not isinstance(topic_to_pubsub, dict):
             raise TypeError(
                 f"Topic to pubsub argument must be an instance of {dict.__name__}. "
@@ -118,22 +127,64 @@ class GcsBatchScaler(base.Scaler):
             2. Parses the requests;
             3. Calls pubsub_dispatcher.
         """
-        # TODO: read bucket objects
-        # TODO: parse content into ScaleRequests
-        requests: List[request.ScaleRequest] = []
-        await pubsub_dispatcher.dispatch(
-            self._configuration.topic_to_pubsub,
-            *requests,
-            raise_if_invalid_request=False,
+        # get unique
+        processed = set()
+        for ndx, scale_def in enumerate(self.definitions):
+            obj_path = scale_def.command.parameter
+            # ignored already read objects
+            if obj_path in processed:
+                _LOGGER.warning(
+                    "Path <%s> already read. Ignoring. Full list: %s",
+                    obj_path,
+                    self.definitions,
+                )
+                continue
+            # logic
+            try:
+                await self._process_definition(scale_def)
+            except Exception as err:
+                msg = f"Cloud not process definition in <{scale_def}>[{ndx}]. Error: {err}"
+                if not self.allow_partial_enact:
+                    raise RuntimeError(msg) from err
+                _LOGGER.warning("%s. Ignoring", msg)
+            # mark as processed
+            processed.add(obj_path)
+
+    async def _process_definition(self, definition: GcsBatchScalingDefinition) -> None:
+        await asyncio.sleep(0)
+        content = gcs.read_object(
+            bucket_name=self.resource, object_path=definition.command.parameter
         )
+        await asyncio.sleep(0)
+        if content is not None:
+            request_str_lst = content.decode(encoding=const.ENCODING_UTF8).split("\n")
+            request_lst = parser.parse_lines(
+                lines=request_str_lst,
+                timestamp_utc=definition.timestamp_utc,
+                json_event=definition.as_json(),
+            )
+            if request_lst:
+                await pubsub_dispatcher.dispatch(
+                    self.topic_to_pubsub,
+                    *request_lst,
+                    raise_if_invalid_request=False,
+                )
+        else:
+            _LOGGER.warning(
+                "The content of <%s> from definition <%s> is empty. Ignoring.",
+                definition.as_gcs_uri(),
+                definition,
+            )
 
     @classmethod
     def _valid_definition_type(cls) -> type:
         return GcsBatchScalingDefinition
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest], topic_to_pubsub: Dict[str, str]) -> "GcsBatchScaler":
+    def from_request(
+        cls, *value: Tuple[request.ScaleRequest], topic_to_pubsub: Dict[str, str]
+    ) -> "GcsBatchScaler":
         return GcsBatchScaler(
             *[GcsBatchScalingDefinition.from_request(val) for val in value],
-            topic_to_pubsub=topic_to_pubsub
+            topic_to_pubsub=topic_to_pubsub,
         )

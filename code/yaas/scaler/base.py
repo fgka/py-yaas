@@ -18,15 +18,47 @@ class Scaler(abc.ABC):
     Generic class to define a scaler.
     """
 
-    def __init__(self, *definition: Tuple[scaling.ScalingDefinition]) -> None:
-        expected_type = self.__class__._valid_definition_type()
+    def __init__(
+        self,
+        *definition: Tuple[scaling.ScalingDefinition],
+        sort_definitions_by_increasing_timestamp: bool = True,
+        allow_partial_enact: bool = False,
+    ) -> None:
+        """
+        It will convert the `definition` argument into a list sorted by `timestamp_utc`.
+        Example::
+            # just the timestamp_utc field for simplicity
+            definition = [10, 9, 11, 2]
+            self.definitions = [2, 9, 10, 11]
+        Args:
+            *definition:
+            sort_definitions_by_increasing_timestamp: if :py:obj:`True` the latest definition,
+                by timestamp, is the last entry, otherwise the reversed order.
+            allow_partial_enact: if :py:obj:`True` will enact as much as possible
+                from the definitions. This can lead to inconsistencies, please be aware.
+        """
+        definitions, self._resource = self._validate_definitions(list(definition))
+        # The latest, based on timestamp_utc, last
+        self._definitions = sorted(
+            definitions,
+            key=lambda scale_def: scale_def.timestamp_utc,
+            reverse=not sort_definitions_by_increasing_timestamp,
+        )
+        self._allow_partial_enact = allow_partial_enact
+        super().__init__()
+
+    @classmethod
+    def _validate_definitions(
+        cls, definitions: List[scaling.ScalingDefinition]
+    ) -> Tuple[List[scaling.ScalingDefinition], str]:
+        expected_type = cls._valid_definition_type()
         resource = None
-        for ndx, item in enumerate(list(definition)):
+        for ndx, item in enumerate(definitions):
             if not isinstance(item, expected_type):
                 raise TypeError(
                     f"Definition must be an instance of {expected_type.__name__}. "
                     f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definition}>"
+                    f"All definitions: <{definitions}>"
                 )
             if resource is None:
                 resource = item.resource
@@ -34,11 +66,9 @@ class Scaler(abc.ABC):
                 raise ValueError(
                     f"All definitions must have the same resource <{resource}>."
                     f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definition}>"
+                    f"All definitions: <{definitions}>"
                 )
-        self._definition = definition
-        self._resource = resource
-        super().__init__()
+        return definitions, resource
 
     @classmethod
     def _valid_definition_type(cls) -> type:
@@ -52,7 +82,7 @@ class Scaler(abc.ABC):
         Returns:
             Scaling definition.
         """
-        return list(self._definition)
+        return self._definitions
 
     @property
     def resource(self) -> str:
@@ -60,6 +90,14 @@ class Scaler(abc.ABC):
         Which resource will be scaled.
         """
         return self._resource
+
+    @property
+    def allow_partial_enact(self) -> bool:
+        """
+        If :py:obj:`True`, indicates that enactment should try to ignore faulty requests
+        instead of failing all.
+        """
+        return self._allow_partial_enact
 
     @classmethod
     @abc.abstractmethod
@@ -97,7 +135,7 @@ class Scaler(abc.ABC):
                 "Reason: <%s>. "
                 "Check logs for details.",
                 self.__class__.__name__,
-                self._definition,
+                self._definitions,
                 reason,
             )
         _LOGGER.info(
@@ -134,7 +172,7 @@ class ScalerPathBased(Scaler, abc.ABC):
     async def _safe_enact(self) -> None:
         # Build path_value_lst
         path_value_lst = []
-        for ndx, scale_def in enumerate(self._definition):
+        for ndx, scale_def in enumerate(self.definitions):
             field = scale_def.command.parameter
             target = scale_def.command.target
             try:
@@ -148,12 +186,15 @@ class ScalerPathBased(Scaler, abc.ABC):
                     )
                 )
             except Exception as err:
-                raise RuntimeError(
+                msg = (
                     f"Could not parse path for resource={scale_def.resource}, "
                     f"field={field}, and target={target}. "
-                    f"Item {ndx} in {self._definition}"
+                    f"Item {ndx} in {self.definitions}"
                     f"Error: {err}"
-                ) from err
+                )
+                if not self.allow_partial_enact:
+                    raise RuntimeError(msg) from err
+                _LOGGER.warning("%s. Ignoring", msg)
         # Scale path_value_lst
         _LOGGER.debug("Scaling resource <%s> with <%s>", self.resource, path_value_lst)
         try:
@@ -283,6 +324,7 @@ class CategoryScaleRequestParser(abc.ABC):
                 )
                 if raise_if_invalid_request:
                     raise ValueError(msg)
+                _LOGGER.warning(msg)
                 continue
             result.extend(items)
         return result[0] if len(result) == 1 and singulate_if_only_one else result

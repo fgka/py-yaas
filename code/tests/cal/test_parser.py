@@ -186,6 +186,8 @@ def test__parse_start_to_utc_ok(value: str, expected: datetime):
     "value, expected",
     [
         (
+            # this is correct, there are some unconventional unicode spaces after the '|',
+            # please do not change
             "gcs | yaas-app-245814988234 | <span>yaas/batch/test.up</span>",
             "gcs |yaas-app-245814988234 |yaas/batch/test.up",
         ),

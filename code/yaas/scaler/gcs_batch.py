@@ -95,6 +95,24 @@ class GcsBatchScalingDefinition(  # pylint: disable=too-few-public-methods
         return f"gs://{self.resource}/{self.command.parameter}"
 
 
+class GcsBatchCategoryType(scaling.CategoryType):
+    """
+    GCS Batch supported categories.
+    """
+
+    GCS = "gcs"
+    GCS_BATCH = "gcs_batch"
+
+    @classmethod
+    def default(cls) -> "GcsBatchCategoryType":
+        """
+        Default type.
+
+        Returns:
+        """
+        return GcsBatchCategoryType.GCS
+
+
 class GcsBatchScaler(base.Scaler):
     """
     Apply the given GCS batched scaling definitions.
@@ -167,9 +185,10 @@ class GcsBatchScaler(base.Scaler):
                 json_event=definition.as_json(),
             )
             if request_lst:
+                valid_request_lst = self._filter_requests(request_lst)
                 await pubsub_dispatcher.dispatch(
                     self.topic_to_pubsub,
-                    *request_lst,
+                    *valid_request_lst,
                     raise_if_invalid_request=False,
                 )
         else:
@@ -180,7 +199,30 @@ class GcsBatchScaler(base.Scaler):
             )
 
     @classmethod
-    def _valid_definition_type(cls) -> type:
+    def _filter_requests(
+        cls, value: List[request.ScaleRequest]
+    ) -> List[request.ScaleRequest]:
+        result = []
+        for ndx, item in enumerate(value):
+            if GcsBatchCategoryType.from_str(item.topic) is not None:
+                _LOGGER.warning(
+                    "%s does not support recursive requests. "
+                    "Meaning: you cannot specify any of the topics <%s> in your content. "
+                    "Ignoring item: <%s>[%d](%s). "
+                    "All items: %s",
+                    cls.__name__,
+                    list(GcsBatchCategoryType),
+                    item,
+                    ndx,
+                    type(item),
+                    value,
+                )
+            else:
+                result.append(item)
+        return result
+
+    @classmethod
+    def _valid_definition_type(cls) -> Type[scaling.ScalingDefinition]:
         return GcsBatchScalingDefinition
 
     # pylint: disable=arguments-differ
@@ -194,24 +236,6 @@ class GcsBatchScaler(base.Scaler):
         )
 
     # pylint: enable=arguments-differ
-
-
-class GcsBatchCategoryType(scaling.CategoryType):
-    """
-    GCS Batch supported categories.
-    """
-
-    GCS = "gcs"
-    GCS_BATCH = "gcs_batch"
-
-    @classmethod
-    def default(cls) -> "GcsBatchCategoryType":
-        """
-        Default type.
-
-        Returns:
-        """
-        return GcsBatchCategoryType.GCS
 
 
 class GcsBatchCommandParser(base.CategoryScaleRequestParserWithScaler):

@@ -186,7 +186,7 @@ class TestGcsBatchScaler:
     @pytest.mark.asyncio
     async def test__process_definition(self, monkeypatch):
         # Given
-        definition = _TEST_DEFINITIONS[0]
+        definition = _TEST_DEFINITIONS[-1]
         gcs_content = _TEST_GCS_CONTENT
         called = self._mock_gcs_batch(monkeypatch, gcs_content=gcs_content)
         # When
@@ -260,6 +260,32 @@ class TestGcsBatchScaler:
             mocked_dispatch,
         )
         return called
+
+    def test__filter_requests_ok(self):
+        # Given
+        value = [
+            parser.parse_lines(
+                lines=[str(val, encoding=const.ENCODING_UTF8)], timestamp_utc=123
+            )[0]
+            for val in _TEST_GCS_CONTENT.values()
+        ]
+        wrong_values = [
+            val
+            for val in value
+            if gcs_batch.GcsBatchCategoryType.from_str(val.topic) is not None
+        ]
+        # When
+        result = gcs_batch.GcsBatchScaler._filter_requests(value)
+        # Then
+        assert isinstance(result, list)
+        assert result
+        assert value
+        assert wrong_values
+        assert len(result) == len(value) - len(wrong_values)
+        # Then: items in result
+        for item in result:
+            assert item not in wrong_values
+            assert gcs_batch.GcsBatchCategoryType.from_str(item.topic) is None
 
     @pytest.mark.asyncio
     async def test__safe_enact_ok(self, monkeypatch):

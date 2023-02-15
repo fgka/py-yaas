@@ -265,9 +265,13 @@ class CategoryScaleRequestParser(abc.ABC):
             singulate_if_only_one=False,
             raise_if_invalid_request=raise_if_invalid_request,
         )
-        item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
-        result = list(zip(item_res_lst, item_lst))
-        _LOGGER.info("Enacted requests: <%s>", list(value))
+        result = []
+        if item_lst:
+            item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
+            result = list(zip(item_res_lst, item_lst))
+            _LOGGER.info("Enacted requests: <%s>", list(value))
+        else:
+            _LOGGER.info("Nothing to enact from requests: %s", list(value))
         return result[0] if len(result) == 1 and singulate_if_only_one else result
 
     def scaler(

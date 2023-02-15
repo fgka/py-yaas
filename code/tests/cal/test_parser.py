@@ -180,3 +180,17 @@ def test__parse_start_to_utc_ok(value: str, expected: datetime):
     result = parser._parse_start_to_utc(value)
     # Then
     assert result == expected
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("gcs | yaas-app-245814988234 | <span>yaas/batch/test.up</span>", "gcs |yaas-app-245814988234 |yaas/batch/test.up",),
+    ("\ngcs|yaas-app-245814988234|yaas/batch/test.up\n", "gcs|yaas-app-245814988234|yaas/batch/test.up",),
+])
+def test__extract_text_from_html_ok_tricky_strings(value: str, expected: str):
+    # Given
+    # When
+    result = parser._extract_text_from_html(value)
+    # Then
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0] == expected

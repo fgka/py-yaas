@@ -10,6 +10,7 @@ Events are expected to come out of `list API`_.
 from datetime import datetime
 import json
 import re
+import string
 from typing import Any, Dict, Iterable, List, Optional
 
 import bs4
@@ -159,15 +160,24 @@ def _parse_event_description(
     """
     # pylint: enable=line-too-long
     return parse_lines(
-        lines=_extract_text_from_html(value).split("\n"),
+        lines=_extract_text_from_html(value),
         timestamp_utc=int(start_utc.timestamp()),
         json_event=json_event,
     )
 
 
-def _extract_text_from_html(value: str) -> str:
-    soup = bs4.BeautifulSoup(markup=value, features="html.parser")
-    return soup.get_text(separator="\n", strip=True)
+def _extract_text_from_html(value: str) -> List[str]:
+    result = []
+    value = "".join(filter(lambda x: x in set(string.printable), value))
+    for val in value.split("\n"):
+        soup = bs4.BeautifulSoup(markup=val, features="html.parser")
+        for br in soup.find_all("br"):
+            br.replace_with("\n" + br.text)
+        for span in soup.find_all("span"):
+            span.replace_with(span.text)
+        text = soup.text
+        result.extend([item for item in text.split("\n") if item])
+    return result
 
 
 def parse_lines(

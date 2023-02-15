@@ -176,6 +176,19 @@ def parse_lines(
     timestamp_utc: int,
     json_event: Optional[Dict[str, Any]] = None,
 ) -> List[request.ScaleRequest]:
+    """
+    Will assume each line in `lines` is a request string
+        to be converted to :py:class:`request.ScaleRequest` instances.
+    Example of a line::
+        "topic | resource | command target"
+    Args:
+        lines:
+        timestamp_utc:
+        json_event:
+
+    Returns:
+
+    """
     # input validation
     if not isinstance(lines, Iterable):
         raise TypeError(
@@ -183,7 +196,8 @@ def parse_lines(
         )
     if not isinstance(timestamp_utc, int) or timestamp_utc < 0:
         raise ValueError(
-            f"Timestamp must be an integer greater than 0. Got: <{timestamp_utc}>({type(timestamp_utc)})"
+            "Timestamp must be an integer greater than 0. "
+            f"Got: <{timestamp_utc}>({type(timestamp_utc)})"
         )
     # logic
     result = []
@@ -192,7 +206,9 @@ def parse_lines(
             req = _parse_description_target_line(
                 line.strip(), timestamp_utc, json_event
             )
-        except Exception as err:
+            if req is not None:
+                result.append(req)
+        except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
                 "Could not parse line: <%s>[%s](%s). Full content: %s. Error: %s. Ignoring",
                 line,
@@ -201,8 +217,6 @@ def parse_lines(
                 lines,
                 err,
             )
-        if req is not None:
-            result.append(req)
     return result
 
 

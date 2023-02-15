@@ -21,8 +21,8 @@ _CLOUD_LOGGING_CLIENT: cloud_logging.Client = None
 
 try:
     _CLOUD_LOGGING_CLIENT = cloud_logging.Client()
-except Exception as log_err:  # pylint: disable=broad-except
-    print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
+except Exception as err:  # pylint: disable=broad-except
+    print(f"Could not start Google Client logging. Ignoring. Error: {err}")
 
 
 LOG_LEVEL_ENV_VAR_NAME: str = "LOG_LEVEL"  # DEBUG or WARNING, etc

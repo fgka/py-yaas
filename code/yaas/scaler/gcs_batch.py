@@ -5,7 +5,7 @@ GCS file based batch scaling.
 """
 import asyncio
 import re
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import attrs
 
@@ -194,3 +194,96 @@ class GcsBatchScaler(base.Scaler):
         )
 
     # pylint: enable=arguments-differ
+
+
+class GcsBatchCategoryType(scaling.CategoryType):
+    """
+    GCS Batch supported categories.
+    """
+
+    GCS = "gcs"
+    GCS_BATCH = "gcs_batch"
+
+    @classmethod
+    def default(cls) -> "GcsBatchCategoryType":
+        """
+        Default type.
+
+        Returns:
+        """
+        return GcsBatchCategoryType.GCS
+
+
+class GcsBatchCommandParser(base.CategoryScaleRequestParserWithScaler):
+    """
+    GCS Batch category supported by YAAS.
+    """
+
+    def __init__(
+        self,
+        *,
+        strict_mode: Optional[bool] = True,
+        topic_to_pubsub: Dict[str, str],
+    ):
+        super().__init__(strict_mode=strict_mode)
+        if not isinstance(topic_to_pubsub, dict):
+            raise TypeError(
+                f"Topic to pubsub argument must be an instance of {dict.__name__}. "
+                f"Got: <{topic_to_pubsub}>({type(topic_to_pubsub)})"
+            )
+        self._topic_to_pubsub = topic_to_pubsub
+
+    @property
+    def topic_to_pubsub(self) -> Dict[str, str]:
+        """
+        Topic to PubSub mapping
+        """
+        return self._topic_to_pubsub
+
+    def _scaling_definition_from_request(
+        self, value: request.ScaleRequest
+    ) -> scaling.ScalingDefinition:
+        return GcsBatchScalingDefinition.from_request(value)
+
+    def _instantiate_scaler(
+        self,
+        scaler_type: Type[base.Scaler],
+        definitions: List[scaling.ScalingDefinition],
+    ) -> base.Scaler:
+        """
+        Check that implementation below is correct for your scaler. If not, overwrite it.
+        Args:
+            scaler_type:
+            definitions:
+
+        Returns:
+
+        """
+        return scaler_type(*definitions, topic_to_pubsub=self.topic_to_pubsub)
+
+    @classmethod
+    def _supported_scaling_definition_classes(
+        cls,
+    ) -> List[Type[scaling.ScalingDefinition]]:
+        return [GcsBatchScalingDefinition]
+
+    @classmethod
+    def _scaler_class_for_definition_class(
+        cls, definition_type: Type[scaling.ScalingDefinition]
+    ) -> Type[base.Scaler]:
+        """
+        For a subclass of :py:class:`scaling.ScalingDefinition`
+        returns the corresponding :py:class:`Scaler` subclass.
+        Args:
+            definition_type:
+
+        Returns:
+        """
+        result = None
+        if definition_type is GcsBatchScalingDefinition:
+            result = GcsBatchScaler
+        return result
+
+    @classmethod
+    def supported_categories(cls) -> List[scaling.CategoryType]:
+        return list(GcsBatchCategoryType)

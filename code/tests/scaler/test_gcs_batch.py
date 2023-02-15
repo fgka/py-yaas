@@ -286,3 +286,78 @@ class TestGcsBatchScaler:
         assert len(called) == len(set(called))
         for scale_def in called:
             assert scale_def in _TEST_DEFINITIONS
+
+
+def _create_request(
+    *,
+    topic: str = gcs_batch.GcsBatchCategoryType.default().value,
+    resource: str = _TEST_GCS_BATCH_RESOURCE_STR,
+    command: str = _TEST_GCS_BATCH_COMMAND_STR,
+) -> request.ScaleRequest:
+    return common.create_scale_request(
+        topic=topic,
+        resource=resource,
+        command=command,
+    )
+
+
+class TestStandardScalingCommandParser:
+    def setup(self):
+        self.obj = gcs_batch.GcsBatchCommandParser(
+            topic_to_pubsub=_TEST_TOPIC_TO_PUBSUB
+        )
+
+    def test_scaler_ok(self):
+        for topic in gcs_batch.GcsBatchCategoryType:
+            # Given
+            req = _create_request(
+                topic=topic.value,
+                resource=_TEST_GCS_BATCH_RESOURCE_STR,
+                command=_TEST_GCS_BATCH_COMMAND_STR,
+            )
+            # When
+            result = self.obj.scaler(req)
+            # Then
+            assert isinstance(result, gcs_batch.GcsBatchScaler)
+
+    def test_scaler_nok_wrong_topic(self):
+        for topic in gcs_batch.GcsBatchCategoryType:
+            # Given
+            req = _create_request(topic=topic.value + "_NOT")
+            # When/Then
+            with pytest.raises(ValueError):
+                self.obj.scaler(req)
+
+    def test_scaler_nok_wrong_resource(self):
+        # Given
+        req = _create_request(resource=_TEST_GCS_BATCH_RESOURCE_STR + "/")
+        # When/Then
+        with pytest.raises(ValueError):
+            self.obj.scaler(req)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            request.ScaleRequest(
+                topic="gcs",
+                resource="my-test-bucket-a",
+                command="path/to/object_a",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+            request.ScaleRequest(
+                topic="gcs_batch",
+                resource="my-test-bucket-b",
+                command="path/to/object_b",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+        ],
+    )
+    def test__scaling_definition_from_request_ok(self, value: request.ScaleRequest):
+        # Given/When
+        result = self.obj._scaling_definition_from_request(value)
+        # Then
+        assert isinstance(result, gcs_batch.GcsBatchScalingDefinition)
+        assert result.resource == value.resource
+        assert result.command.parameter == value.command

@@ -182,10 +182,19 @@ def test__parse_start_to_utc_ok(value: str, expected: datetime):
     assert result == expected
 
 
-@pytest.mark.parametrize("value, expected", [
-    ("gcs | yaas-app-245814988234 | <span>yaas/batch/test.up</span>", "gcs |yaas-app-245814988234 |yaas/batch/test.up",),
-    ("\ngcs|yaas-app-245814988234|yaas/batch/test.up\n", "gcs|yaas-app-245814988234|yaas/batch/test.up",),
-])
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (
+            "gcs | yaas-app-245814988234 | <span>yaas/batch/test.up</span>",
+            "gcs |yaas-app-245814988234 |yaas/batch/test.up",
+        ),
+        (
+            "\ngcs|yaas-app-245814988234|yaas/batch/test.up\n",
+            "gcs|yaas-app-245814988234|yaas/batch/test.up",
+        ),
+    ],
+)
 def test__extract_text_from_html_ok_tricky_strings(value: str, expected: str):
     # Given
     # When

@@ -171,10 +171,10 @@ def _extract_text_from_html(value: str) -> List[str]:
     value = "".join(filter(lambda x: x in set(string.printable), value))
     for val in value.split("\n"):
         soup = bs4.BeautifulSoup(markup=val, features="html.parser")
-        for br in soup.find_all("br"):
-            br.replace_with("\n" + br.text)
-        for span in soup.find_all("span"):
-            span.replace_with(span.text)
+        for tag_br in soup.find_all("br"):
+            tag_br.replace_with("\n" + tag_br.text)
+        for tag_span in soup.find_all("span"):
+            tag_span.replace_with(tag_span.text)
         text = soup.text
         result.extend([item for item in text.split("\n") if item])
     return result

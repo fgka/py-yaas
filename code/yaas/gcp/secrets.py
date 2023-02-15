@@ -67,10 +67,7 @@ async def list_versions(secret_name: str) -> List[str]:
     # validate input
     _validate_secret_name(secret_name)
     # logic
-    # secret_name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
-    if secrets_const.VERSION_SUB_STR in secret_name:
-        secret_name = secret_name.split(secrets_const.VERSION_SUB_STR)[0]
-    # secret_name: projects/<<project id>>/secrets/<<secret id>>
+    secret_name = _secret_name_parent(secret_name)
     await asyncio.sleep(0)
     try:
         result = [
@@ -89,6 +86,14 @@ async def list_versions(secret_name: str) -> List[str]:
         len(result),
     )
     return result
+
+
+def _secret_name_parent(value: str) -> str:
+    # secret_name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
+    if secrets_const.VERSION_SUB_STR in value:
+        value = value.split(secrets_const.VERSION_SUB_STR)[0]
+    # secret_name: projects/<<project id>>/secrets/<<secret id>>
+    return value
 
 
 async def exists(secret_name: str) -> bool:
@@ -195,13 +200,14 @@ async def put(*, secret_name: str, content: str) -> str:
     .. _API: https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets
     """
     _LOGGER.debug("Adding a version to secret <%s>", secret_name)
+    # validate input
     _validate_secret_name(secret_name)
     if not isinstance(content, str):
         raise SecretManagerAccessError(
             f"Content must be a string. Got: <{content}>({type(content)})"
         )
-    if secrets_const.VERSION_SUB_STR in secret_name:
-        secret_name = secret_name.split(secrets_const.VERSION_SUB_STR)[0]
+    # logic
+    secret_name = _secret_name_parent(secret_name)
     await asyncio.sleep(0)
     try:
         request = {
@@ -252,6 +258,7 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
         amount_to_keep = DEFAULT_AMOUNT_TO_KEEP
     amount_to_keep = max(MIN_AMOUNT_TO_KEEP, amount_to_keep)
     # logic
+    secret_name = _secret_name_parent(secret_name)
     version_names = await list_versions(secret_name)
     # version_numbers: <<version number>>
     version_numbers = sorted(

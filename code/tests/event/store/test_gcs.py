@@ -43,11 +43,12 @@ class TestGcsObjectStoreContextManager:
             project: Optional[str] = None,
             filename: Optional[pathlib.Path] = None,
             warn_read_failure: Optional[bool] = True,
-        ) -> Optional[bytes]:
+        ) -> Union[bytes, bool]:
             nonlocal called
             assert bucket_name == self.instance.bucket_name
             assert object_path == self.instance.db_object_path
             called[gcs.gcs.read_object.__name__] = filename
+            return True
 
         def mocked_write_object(  # pylint: disable=unused-argument
             *,

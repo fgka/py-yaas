@@ -9,30 +9,13 @@ GCP Cloud Run entry point:
 # pylint: enable=line-too-long
 import os
 
-# From: https://cloud.google.com/logging/docs/setup/python
-import google.cloud.logging
-
-# pylint: disable=wrong-import-position,ungrouped-imports
-from yaas import logger
-
-# pylint: enable=wrong-import-position,ungrouped-imports
-
-try:
-    client = google.cloud.logging.Client()
-    logger.set_handler_format(client.get_default_handler())
-    client.setup_logging()
-except Exception as log_err:  # pylint: disable=broad-except
-    print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
-
-# pylint: disable=wrong-import-order,wrong-import-position,ungrouped-imports
 import flask
 
+from yaas import logger
 from yaas.dto import config
 from yaas.entry_point import entry, pubsub_dispatcher
 from yaas.gcp import gcs
 from yaas.scaler import gcs_batch, standard
-
-# pylint: enable=wrong-import-order,wrong-import-position,ungrouped-imports
 
 _LOGGER = logger.get(__name__)
 MAIN_BP = flask.Blueprint("main", __name__, url_prefix="/")

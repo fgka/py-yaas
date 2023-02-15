@@ -4,32 +4,32 @@
 Logger definition, get all loggers from this module::
     from yaas import logger
     _LOGGER = logger.get(__name__)
+
+It also automatically install `Cloud Logging`_.
+
+.. _Cloud Logging: https://cloud.google.com/python/docs/reference/logging/latest/handlers-cloud-logging#google.cloud.logging_v2.handlers.handlers.CloudLoggingHandler
 """
 # pylint: enable=line-too-long
 import logging
 import os
 from typing import Optional, Union
 
+from google.cloud import logging as cloud_logging
+from google.cloud.logging import handlers as cloud_handlers
+
+_CLOUD_LOGGING_CLIENT: cloud_logging.Client = None
+
+try:
+    _CLOUD_LOGGING_CLIENT = cloud_logging.Client()
+except Exception as log_err:  # pylint: disable=broad-except
+    print(f"Could not start Google Client logging. Ignoring. Error: {log_err}")
+
+
 LOG_LEVEL_ENV_VAR_NAME: str = "LOG_LEVEL"  # DEBUG or WARNING, etc
 _DEFAULT_LOG_LEVEL: int = logging.INFO
 _LOGGER_FORMAT: str = (
     "[%(asctime)s %(filename)s.%(funcName)s:%(lineno)s]%(levelname)s: %(message)s"
 )
-
-
-def set_handler_format(
-    handler: logging.Handler, *, format_str: str = _LOGGER_FORMAT
-) -> None:
-    """
-    Set the format for the handler.
-    Args:
-        handler:
-        format_str:
-
-    Returns:
-
-    """
-    handler.setFormatter(logging.Formatter(format_str))
 
 
 def get(name: str, *, level: Optional[Union[str, int]] = None) -> logging.Logger:
@@ -80,8 +80,21 @@ def _create_logger(name: str, level: int) -> logging.Logger:
     result.setLevel(level)
     if level == logging.DEBUG:
         formatter = logging.Formatter(_LOGGER_FORMAT)
-        handler = logging.StreamHandler()
-        handler.setLevel(level)
-        handler.setFormatter(formatter)
-        result.addHandler(handler)
+        result.addHandler(_setup_handler(logging.StreamHandler(), level, formatter))
+        if _CLOUD_LOGGING_CLIENT is not None:
+            result.addHandler(
+                _setup_handler(
+                    cloud_handlers.CloudLoggingHandler(_CLOUD_LOGGING_CLIENT),
+                    level,
+                    formatter,
+                )
+            )
     return result
+
+
+def _setup_handler(
+    value: logging.Handler, level: int, formatter: logging.Formatter
+) -> logging.Handler:
+    value.setLevel(level)
+    value.setFormatter(formatter)
+    return value

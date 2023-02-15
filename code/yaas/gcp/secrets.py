@@ -53,7 +53,9 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
     )
 
 
-async def list_versions(secret_name: str, *, include_destroyed_versions: bool = False) -> List[str]:
+async def list_versions(
+    secret_name: str, *, include_destroyed_versions: bool = False
+) -> List[str]:
     """
     Will list all versions for the secret. Using following `API`_ and `filtering`_.
 
@@ -77,9 +79,7 @@ async def list_versions(secret_name: str, *, include_destroyed_versions: bool = 
     try:
         result = [
             version.name
-            for version in _secret_client().list_secret_versions(
-                request=request
-            )
+            for version in _secret_client().list_secret_versions(request=request)
         ]
     except Exception as err:
         raise SecretManagerAccessError(

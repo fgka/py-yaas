@@ -17,6 +17,19 @@ _LOGGER_FORMAT: str = (
 )
 
 
+def set_handler_format(handler: logging.Handler, *, format_str: str = _LOGGER_FORMAT) -> None:
+    """
+    Set the format for the handler.
+    Args:
+        handler:
+        format_str:
+
+    Returns:
+
+    """
+    handler.setFormatter(logging.Formatter(format_str))
+
+
 def get(name: str, *, level: Optional[Union[str, int]] = None) -> logging.Logger:
     """
     Creates a :py:class:`logging.Logger` setting the log level based on the following priority:

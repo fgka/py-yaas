@@ -100,7 +100,9 @@ class CloudSqlScaler(base.ScalerPathBased):
         return CloudSqlScalingDefinition
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "CloudSqlScaler":
+    def from_request(
+        cls, *value: Tuple[request.ScaleRequest], **kwargs
+    ) -> "CloudSqlScaler":
         return CloudSqlScaler(
             *[CloudSqlScalingDefinition.from_request(val) for val in value]
         )

@@ -102,7 +102,9 @@ class CloudRunScaler(base.ScalerPathBased):
         return CloudRunScalingDefinition
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "CloudRunScaler":
+    def from_request(
+        cls, *value: Tuple[request.ScaleRequest], **kwargs
+    ) -> "CloudRunScaler":
         return CloudRunScaler(
             *[CloudRunScalingDefinition.from_request(val) for val in value]
         )

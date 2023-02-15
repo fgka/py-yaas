@@ -3,7 +3,7 @@
 """
 Produce Google Cloud supported resources' scalers.
 """
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Type
 
 from yaas import logger
 from yaas.dto import request, resource_regex, scaling
@@ -30,7 +30,7 @@ class StandardCategoryType(scaling.CategoryType):
         return StandardCategoryType.STANDARD
 
 
-class StandardScalingCommandParser(base.CategoryScaleRequestParser):
+class StandardScalingCommandParser(base.CategoryScaleRequestParserWithScaler):
     """
     Standard category supported by YAAS.
     """
@@ -62,125 +62,28 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParser):
                 _LOGGER.warning(msg)
         return result
 
-    def _filter_requests(
-        self,
-        value: Iterable[scaling.ScalingDefinition],
-        raise_if_invalid_request: Optional[bool] = True,
-    ) -> List[scaling.ScalingDefinition]:
-        result = {}
-        for ndx, scaling_def in enumerate(
-            sorted(value, key=lambda val: val.timestamp_utc, reverse=True)
-        ):
-            if not isinstance(scaling_def, scaling.ScalingDefinition):
-                msg = (
-                    f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. "
-                    f"Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
-                )
-                if raise_if_invalid_request:
-                    raise TypeError(msg)
-                _LOGGER.warning(msg)
-            key = scaling_def.resource, scaling_def.command
-            previous = result.get(key)
-            if previous is not None:
-                _LOGGER.warning(
-                    "Discarding <%s>[%d] because there is an already a scaling definition "
-                    "at the same, or later, timestamp (timestamp diff: %d): <%s>. "
-                    "All elements: %s",
-                    scaling_def,
-                    ndx,
-                    scaling_def.timestamp_utc - previous.timestamp_utc,
-                    previous,
-                    value,
-                )
-            else:
-                result[key] = scaling_def
-        return list(result.values())
-
-    def _scaler(
-        self,
-        value: Iterable[scaling.ScalingDefinition],
-        raise_if_invalid_request: Optional[bool] = True,
-    ) -> [base.Scaler]:
-        result = []
-        errors, scale_def_by_type = self._scaling_definition_by_type(value)
-        # Create scalers
-        for cls, scaling_def_lst in scale_def_by_type.items():
-            if cls is run.CloudRunScalingDefinition:
-                result.append(run.CloudRunScaler(*scaling_def_lst))
-            elif cls is sql.CloudSqlScalingDefinition:
-                result.append(sql.CloudSqlScaler(*scaling_def_lst))
-            else:
-                msg = (
-                    f"Scaler for definition <{cls.__name__}> "
-                    f"is not supported by {self.__class__.__name__}. "
-                    f"Check implementation of {self.__class__.__name__}.{self._scaler.__name__}"
-                )
-                if raise_if_invalid_request:
-                    raise base.CategoryScaleRequestParserError(msg)
-                _LOGGER.warning(msg)
-        # check errors
-        if errors:
-            msg = (
-                f"There are {len(errors)} issues with the scaling definitions: {errors}"
-            )
-            if raise_if_invalid_request:
-                raise base.CategoryScaleRequestParserError(msg)
-            _LOGGER.warning(msg)
-        return result
+    @classmethod
+    def _supported_scaling_definition_classes(cls) -> List[type]:
+        return [run.CloudRunScalingDefinition, sql.CloudSqlScalingDefinition]
 
     @classmethod
-    def _scaling_definition_by_type(
-        cls, value: Iterable[scaling.ScalingDefinition]
-    ) -> Tuple[List[str], Dict[type, List[scaling.ScalingDefinition]]]:
+    def _scaler_class_for_definition_class(
+        cls, definition_type: Type[scaling.ScalingDefinition]
+    ) -> Type[base.Scaler]:
         """
-
+        For a subclass of :py:class:`scaling.ScalingDefinition`
+        returns the corresponding :py:class:`Scaler` subclass.
         Args:
-            value:
+            definition_type:
 
         Returns:
-
         """
-        errors = []
-        result = {}
-        for val in value:
-            if isinstance(val, run.CloudRunScalingDefinition):
-                if run.CloudRunScalingDefinition not in result:
-                    result[run.CloudRunScalingDefinition] = []
-                result[run.CloudRunScalingDefinition].append(val)
-            elif isinstance(val, sql.CloudSqlScalingDefinition):
-                if sql.CloudSqlScalingDefinition not in result:
-                    result[sql.CloudSqlScalingDefinition] = []
-                result[sql.CloudSqlScalingDefinition].append(val)
-            else:
-                msg = (
-                    f"Scaler for definition <{val}> "
-                    f"is not supported by {cls.__name__}. "
-                    "Check implementation of "
-                    f"{cls._scaling_definition_by_type.__name__} in {cls.__name__}."
-                )
-                errors.append(msg)
-        return errors, result
-
-    @staticmethod
-    def _create_canonical_request(
-        value: request.ScaleRequest,
-    ) -> Tuple[resource_regex.ResourceType, request.ScaleRequest]:
-        (
-            resource_type,
-            canonical_resource,
-        ) = resource_name_parser.canonical_resource_type_and_name(value.resource)
-        if canonical_resource:
-            value_dict = value.as_dict()
-            value_dict[request.ScaleRequest.resource.__name__] = canonical_resource
-            canonical_req = request.ScaleRequest.from_dict(value_dict)
-        else:
-            resource_type = None
-            canonical_req = None
-            _LOGGER.warning(
-                "Could not extract canonical resource name from request <%s>. Ignoring.",
-                value,
-            )
-        return resource_type, canonical_req
+        result = None
+        if definition_type is run.CloudRunScalingDefinition:
+            result = run.CloudRunScaler
+        elif definition_type is sql.CloudSqlScalingDefinition:
+            result = sql.CloudSqlScaler
+        return result
 
     @classmethod
     def supported_categories(cls) -> List[scaling.CategoryType]:

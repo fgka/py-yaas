@@ -8,7 +8,7 @@ import base64
 import json
 import pathlib
 import tempfile
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, Type
 
 import flask
 
@@ -17,7 +17,6 @@ from yaas.dto import config, event, request, scaling
 from yaas.gcp import pubsub
 from yaas.scaler import base as scaler_base, standard
 from yaas.event.store import base
-
 
 #############
 # Test Data #
@@ -202,7 +201,6 @@ class MyScalingDefinition(scaling.ScalingDefinition):
 
 
 class MyScaler(scaler_base.Scaler):
-
     cls_called: Dict[str, Any] = {}
 
     def __init__(
@@ -222,7 +220,7 @@ class MyScaler(scaler_base.Scaler):
         return True
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest], **kwargs) -> "Scaler":
         cls.cls_called[scaler_base.Scaler.from_request.__name__] = value
         return MyScaler(*[MyScalingDefinition.from_request(val) for val in value])
 
@@ -235,7 +233,6 @@ class MyScaler(scaler_base.Scaler):
 
 
 class MyScalerPathBased(scaler_base.ScalerPathBased):
-
     cls_called: Dict[str, Any] = {}
     cls_path: str = ""
 
@@ -255,7 +252,7 @@ class MyScalerPathBased(scaler_base.ScalerPathBased):
         return self._can_enact, self._reason
 
     @classmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest], **kwargs) -> "Scaler":
         cls.cls_called[scaler_base.ScalerPathBased.from_request.__name__] = value
         return MyScalerPathBased(
             *[MyScalingDefinition.from_request(val) for val in value]
@@ -283,7 +280,6 @@ class MyCategoryType(scaling.CategoryType):
 
 
 class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
-
     cls_called = {}
 
     def __init__(self, *args, **kwargs):
@@ -331,6 +327,87 @@ class MyCategoryScaleRequestParser(scaler_base.CategoryScaleRequestParser):
         return list(MyCategoryType)
 
 
+class MyCategoryScaleRequestParserWithFilter(
+    scaler_base.CategoryScaleRequestParserWithFilter
+):
+    cls_called = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.obj_called = {}
+
+    def _to_scaling_definition(
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
+    ) -> Iterable[scaling.ScalingDefinition]:
+        result = [MyScalingDefinition.from_request(val) for val in value]
+        self.obj_called[
+            scaler_base.CategoryScaleRequestParser._to_scaling_definition.__name__
+        ] = locals()
+        return result
+
+    def _scaler(
+        self,
+        value: Iterable[scaling.ScalingDefinition],
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> Iterable[scaler_base.Scaler]:
+        result = MyScaler(*value)
+        self.obj_called[
+            scaler_base.CategoryScaleRequestParser._scaler.__name__
+        ] = locals()
+        return [result]
+
+    @classmethod
+    def supported_categories(cls) -> List[scaling.CategoryType]:
+        cls.cls_called[
+            scaler_base.CategoryScaleRequestParser.supported_categories.__name__
+        ] = True
+        return list(MyCategoryType)
+
+
+class MyCategoryScaleRequestParserWithScaler(
+    scaler_base.CategoryScaleRequestParserWithScaler
+):
+    cls_called = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.obj_called = {}
+
+    def _to_scaling_definition(
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
+    ) -> Iterable[scaling.ScalingDefinition]:
+        result = [MyScalingDefinition.from_request(val) for val in value]
+        self.obj_called[
+            scaler_base.CategoryScaleRequestParser._to_scaling_definition.__name__
+        ] = locals()
+        return result
+
+    @classmethod
+    def _supported_scaling_definition_classes(
+        cls,
+    ) -> List[Type[scaling.ScalingDefinition]]:
+        return [MyScalingDefinition]
+
+    @classmethod
+    def _scaler_class_for_definition_class(
+        cls, definition_type: Type[scaling.ScalingDefinition]
+    ) -> Type[scaler_base.Scaler]:
+        return MyScaler
+
+    @classmethod
+    def supported_categories(cls) -> List[scaling.CategoryType]:
+        cls.cls_called[
+            scaler_base.CategoryScaleRequestParser.supported_categories.__name__
+        ] = True
+        return list(MyCategoryType)
+
+
 ##########
 # Config #
 ##########
@@ -355,6 +432,8 @@ TEST_CONFIG_LOCAL_JSON: config.Config = config.Config(
         standard.StandardCategoryType.STANDARD.value: _TEST_PUBSUB_TOPIC,
     },
 )
+
+
 # pylint: enable=consider-using-with
 
 

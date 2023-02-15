@@ -71,7 +71,7 @@ class Scaler(abc.ABC):
         return definitions, resource
 
     @classmethod
-    def _valid_definition_type(cls) -> type:
+    def _valid_definition_type(cls) -> Type[scaling.ScalingDefinition]:
         return scaling.ScalingDefinition
 
     @property

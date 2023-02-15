@@ -6,11 +6,12 @@
 # pylint: disable=duplicate-code
 # type: ignore
 import pathlib
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import pytest
 
 from yaas import const
+from yaas.cal import parser
 from yaas.dto import request
 from yaas.scaler import gcs_batch
 
@@ -124,6 +125,7 @@ _TEST_TOPIC_DEFINITION: Dict[str, List[gcs_batch.GcsBatchScalingDefinition]] = {
 _TEST_DEFINITIONS: List[gcs_batch.GcsBatchScalingDefinition] = [
     item for sublist in _TEST_TOPIC_DEFINITION.values() for item in sublist
 ]
+# pylint: disable=line-too-long
 _TEST_GCS_CONTENT: Dict[str, Any] = {
     definition.command.parameter: f"{topic} | some_resource.{topic} | some_cmd.{definition.command.parameter}".encode(
         const.ENCODING_UTF8
@@ -131,6 +133,7 @@ _TEST_GCS_CONTENT: Dict[str, Any] = {
     for topic, def_lst in _TEST_TOPIC_DEFINITION.items()
     for definition in def_lst
 }
+# pylint: enable=line-too-long
 
 
 class TestGcsBatchScaler:
@@ -184,21 +187,43 @@ class TestGcsBatchScaler:
     async def test__process_definition(self, monkeypatch):
         # Given
         definition = _TEST_DEFINITIONS[0]
-        called = self._mock_gcs_batch(monkeypatch)
+        gcs_content = _TEST_GCS_CONTENT
+        called = self._mock_gcs_batch(monkeypatch, gcs_content=gcs_content)
         # When
         await self.obj._process_definition(definition)
         # Then: gcs
         gcs_called = called.get(gcs_batch.gcs.read_object.__name__)
         assert isinstance(gcs_called, list)
+        assert len(gcs_called) == 1
+        assert gcs_called[0].get("bucket_name") == definition.resource
+        assert gcs_called[0].get("object_path") == definition.command.parameter
         # Then: pubsub
         pubsub_called = called.get(gcs_batch.pubsub_dispatcher.dispatch.__name__)
         assert isinstance(pubsub_called, list)
+        assert len(pubsub_called) == 1
+        assert pubsub_called[0].get("topic_to_pubsub") == self.obj.topic_to_pubsub
+        # Then: pubsub request
+        pubsub_req_lst = pubsub_called[0].get("value")
+        assert len(pubsub_req_lst) == 1
+        pubsub_req = pubsub_req_lst[0]
+        assert isinstance(pubsub_req, request.ScaleRequest)
+        expected_req = parser.parse_lines(
+            lines=[
+                str(
+                    gcs_content.get(definition.command.parameter),
+                    encoding=const.ENCODING_UTF8,
+                )
+            ],
+            timestamp_utc=definition.timestamp_utc,
+            json_event=definition.as_json(),
+        )
+        assert pubsub_req == expected_req[0]
 
     @staticmethod
     def _mock_gcs_batch(monkeypatch, gcs_content: Dict[str, Any] = _TEST_GCS_CONTENT):
         called = {}
 
-        def mocked_read_object(
+        def mocked_read_object(  # pylint: disable=unused-argument
             *,
             bucket_name: str,
             object_path: str,
@@ -214,7 +239,7 @@ class TestGcsBatchScaler:
             called[key].append(vars)
             return gcs_content.get(object_path)
 
-        async def mocked_dispatch(
+        async def mocked_dispatch(  # pylint: disable=unused-argument
             topic_to_pubsub: Dict[str, str],
             *value: request.ScaleRequest,
             raise_if_invalid_request: Optional[bool] = True,
@@ -243,12 +268,21 @@ class TestGcsBatchScaler:
         obj = gcs_batch.GcsBatchScaler(
             *_TEST_DEFINITIONS, topic_to_pubsub=topic_to_pubsub
         )
-        called = self._mock_gcs_batch(monkeypatch)
+        called = []
+
+        async def mocked_process_definition(
+            definition: gcs_batch.GcsBatchScalingDefinition,
+        ) -> None:
+            nonlocal called
+            called.append(definition)
+
+        monkeypatch.setattr(
+            obj, obj._process_definition.__name__, mocked_process_definition
+        )
         # When
         await obj._safe_enact()
-        # Then: gcs
-        gcs_called = called.get(gcs_batch.gcs.read_object.__name__)
-        assert isinstance(gcs_called, list)
-        # Then: pubsub
-        pubsub_called = called.get(gcs_batch.pubsub_dispatcher.dispatch.__name__)
-        assert isinstance(pubsub_called, list)
+        # Then
+        assert len(called) == len(_TEST_DEFINITIONS)
+        assert len(called) == len(set(called))
+        for scale_def in called:
+            assert scale_def in _TEST_DEFINITIONS

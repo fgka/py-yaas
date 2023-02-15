@@ -67,9 +67,12 @@ class GcsBatchScalingDefinition(  # pylint: disable=too-few-public-methods
         try:
             cleaned_value = gcs.validate_and_clean_bucket_name(value)
             result = cleaned_value == value
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
-                f"Could not validate resource value for {self.__class__.__name__} <{value}>. Error: {err}"
+                "Could not validate resource value for %s <%s>, Error: %s",
+                self.__class__.__name__,
+                value,
+                err,
             )
         return result
 
@@ -142,7 +145,7 @@ class GcsBatchScaler(base.Scaler):
             # logic
             try:
                 await self._process_definition(scale_def)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 msg = f"Cloud not process definition in <{scale_def}>[{ndx}]. Error: {err}"
                 if not self.allow_partial_enact:
                     raise RuntimeError(msg) from err
@@ -180,6 +183,7 @@ class GcsBatchScaler(base.Scaler):
     def _valid_definition_type(cls) -> type:
         return GcsBatchScalingDefinition
 
+    # pylint: disable=arguments-differ
     @classmethod
     def from_request(
         cls, *value: Tuple[request.ScaleRequest], topic_to_pubsub: Dict[str, str]
@@ -188,3 +192,5 @@ class GcsBatchScaler(base.Scaler):
             *[GcsBatchScalingDefinition.from_request(val) for val in value],
             topic_to_pubsub=topic_to_pubsub,
         )
+
+    # pylint: enable=arguments-differ

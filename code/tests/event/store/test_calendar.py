@@ -24,7 +24,7 @@ _TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 
 
 class TestReadOnlyGoogleCalendarStore:
-    def setup_method(self):
+    def setup(self):
         self.object = calendar.ReadOnlyGoogleCalendarStore(
             calendar_id=_TEST_CALENDAR_ID,
             credentials_json=_TEST_CREDENTIALS_JSON,

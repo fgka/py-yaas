@@ -53,15 +53,17 @@ def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> s
     )
 
 
-async def list_versions(secret_name: str) -> List[str]:
+async def list_versions(secret_name: str, *, include_destroyed_versions: bool = False) -> List[str]:
     """
-    Will list all versions for the secret. Using following `API`_.
+    Will list all versions for the secret. Using following `API`_ and `filtering`_.
 
     Args:
         secret_name: a secret name in the format:
             `projects/<<project id>>/secrets/<<secret id>>`
+        include_destroyed_versions:
 
     .. _API: https://cloud.google.com/secret-manager/docs/view-secret-version
+    .. _filtering: https://cloud.google.com/secret-manager/docs/filtering
     """
     _LOGGER.debug("Listing secret versions for <%s>", secret_name)
     # validate input
@@ -69,11 +71,14 @@ async def list_versions(secret_name: str) -> List[str]:
     # logic
     secret_name = _secret_name_parent(secret_name)
     await asyncio.sleep(0)
+    request = {"parent": secret_name}
+    if not include_destroyed_versions:
+        request["filter"] = "state:(ENABLED OR DISABLED)"
     try:
         result = [
             version.name
             for version in _secret_client().list_secret_versions(
-                request={"parent": secret_name}
+                request=request
             )
         ]
     except Exception as err:

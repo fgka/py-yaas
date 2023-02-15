@@ -42,7 +42,7 @@ def read_object(
     project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
-) -> Optional[bytes]:
+) -> Union[bytes,bool]:
     """
 
     Args:
@@ -59,7 +59,7 @@ def read_object(
             if :py:obj:`False` will just inform about it.
 
     Returns:
-        Content of the object
+        Content of the object if no output file is given, else :py:obj:`True` if read.
 
     """
     bucket_name, object_path = validate_and_clean_bucket_and_path(
@@ -152,7 +152,7 @@ def _read_object(
     project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
-) -> Optional[bytes]:
+) -> Union[bytes,bool]:
     result = None
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Reading <%s>", gcs_uri)
@@ -162,6 +162,7 @@ def _read_object(
         if blob.exists():
             if filename:
                 blob.download_to_filename(filename)
+                result = True
             else:
                 result = blob.download_as_bytes()
             _LOGGER.debug("Read <%s>", gcs_uri)
@@ -172,12 +173,15 @@ def _read_object(
                 gcs_uri,
                 result,
             )
+            if filename:
+                result = False
     except Exception as err:
         raise CloudStorageError(
             f"Could not download content from <{gcs_uri}> in project <{project}> "
             f"into <{filename}>. "
             f"Error: {err}"
         ) from err
+    _LOGGER.info("Read <%s>", gcs_uri)
     return result
 
 
@@ -272,3 +276,5 @@ def _write_object(
             f"into <{gcs_uri}> in project <{project}>. "
             f"Error: {err}"
         ) from err
+    _LOGGER.info("Wrote <%s>", gcs_uri)
+

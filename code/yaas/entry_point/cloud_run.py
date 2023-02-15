@@ -26,7 +26,7 @@ from yaas import logger
 from yaas.dto import config
 from yaas.entry_point import entry, pubsub_dispatcher
 from yaas.gcp import gcs
-from yaas.scaler import standard
+from yaas.scaler import gcs_batch, standard
 
 # pylint: enable=wrong-import-position
 
@@ -280,7 +280,9 @@ async def enact_gcs_requests() -> str:
     )
     try:
         _LOGGER.info("Calling %s", enact_standard_requests.__name__)
-        parser = None  # TODO
+        parser = gcs_batch.GcsBatchCommandParser(
+            topic_to_pubsub=_configuration().topic_to_pubsub
+        )
         await entry.enact_requests(parser=parser, pubsub_event=flask.request)
         result = flask.make_response(("OK", 200))
     except Exception as err:  # pylint: disable=broad-except

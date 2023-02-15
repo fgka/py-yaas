@@ -17,7 +17,9 @@ _LOGGER_FORMAT: str = (
 )
 
 
-def set_handler_format(handler: logging.Handler, *, format_str: str = _LOGGER_FORMAT) -> None:
+def set_handler_format(
+    handler: logging.Handler, *, format_str: str = _LOGGER_FORMAT
+) -> None:
     """
     Set the format for the handler.
     Args:

@@ -14,6 +14,7 @@ import google.cloud.logging
 
 # pylint: disable=wrong-import-position,ungrouped-imports
 from yaas import logger
+
 # pylint: enable=wrong-import-position,ungrouped-imports
 
 try:

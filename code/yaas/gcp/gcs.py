@@ -42,7 +42,7 @@ def read_object(
     project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
-) -> Union[bytes,bool]:
+) -> Union[bytes, bool]:
     """
 
     Args:
@@ -152,7 +152,7 @@ def _read_object(
     project: Optional[str] = None,
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
-) -> Union[bytes,bool]:
+) -> Union[bytes, bool]:
     result = None
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Reading <%s>", gcs_uri)
@@ -277,4 +277,3 @@ def _write_object(
             f"Error: {err}"
         ) from err
     _LOGGER.info("Wrote <%s>", gcs_uri)
-

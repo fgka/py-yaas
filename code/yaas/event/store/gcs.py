@@ -72,12 +72,21 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         return self._project
 
     async def _open(self) -> None:
-        gcs.read_object(
+        exists = gcs.read_object(
             bucket_name=self._bucket_name,
             object_path=self._db_object_path,
             filename=self.sqlite_file,
             project=self._project,
         )
+        # To force creation of the file remotely
+        if not exists:
+            _LOGGER.warning(
+                "Remote GCS object <%s> does not exist, "
+                "marking this %s instance as changed to force upload.",
+                self.gcs_uri,
+                self.__class__.__name__,
+            )
+            self._has_changed = True
         await super()._open()
 
     async def _close(self) -> None:

@@ -6,7 +6,7 @@
 .. _Cloud Run: https://cloud.google.com/run
 """
 import re
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Type
 
 import attrs
 
@@ -51,7 +51,7 @@ class CloudRunScalingCommand(scaling.ScalingCommand):
         return value >= 0
 
     @staticmethod
-    def _target_type() -> type:
+    def _target_type() -> Type[Any]:
         return int
 
     @classmethod
@@ -98,7 +98,7 @@ class CloudRunScaler(base.ScalerPathBased):
         return await cloud_run.can_be_deployed(self.resource)
 
     @classmethod
-    def _valid_definition_type(cls) -> type:
+    def _valid_definition_type(cls) -> Type[scaling.ScalingDefinition]:
         return CloudRunScalingDefinition
 
     @classmethod

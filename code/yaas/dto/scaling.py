@@ -5,7 +5,7 @@ Basic definitions for supporting scalers.
 """
 import abc
 import re
-from typing import Any
+from typing import Any, Type
 
 import attrs
 
@@ -59,7 +59,7 @@ class ScalingCommand(  # pylint: disable=too-few-public-methods
             )
 
     @staticmethod
-    def _target_type() -> type:
+    def _target_type() -> Type[Any]:
         """
         To be overwritten by child class. The default, :py:obj:`None` means any type.
         """

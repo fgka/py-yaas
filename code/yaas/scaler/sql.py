@@ -6,7 +6,7 @@
 .. _Cloud SQL: https://cloud.google.com/sql
 """
 import re
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Type
 
 import attrs
 
@@ -49,7 +49,7 @@ class CloudSqlScalingCommand(scaling.ScalingCommand):
         return bool(value)
 
     @staticmethod
-    def _target_type() -> type:
+    def _target_type() -> Type[Any]:
         return str
 
     @classmethod
@@ -96,7 +96,7 @@ class CloudSqlScaler(base.ScalerPathBased):
         return await cloud_sql.can_be_deployed(self.resource)
 
     @classmethod
-    def _valid_definition_type(cls) -> type:
+    def _valid_definition_type(cls) -> Type[scaling.ScalingDefinition]:
         return CloudSqlScalingDefinition
 
     @classmethod

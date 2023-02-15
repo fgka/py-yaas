@@ -6,7 +6,7 @@
 # type: ignore
 import pytest
 
-from yaas.dto import request
+from yaas.dto import request, scaling
 from yaas.scaler import resource_name_parser, run, sql, standard
 
 from tests import common
@@ -72,7 +72,7 @@ class TestStandardScalingCommandParser:
         # Given
         req = _create_request(resource=_TEST_CLOUD_FUNCTION_RESOURCE_STR)
         # When/Then
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             self.obj.scaler(req)
 
     @pytest.mark.parametrize(
@@ -94,13 +94,12 @@ class TestStandardScalingCommandParser:
             ),
         ],
     )
-    def test__to_scaling_definition_ok(self, value: request.ScaleRequest):
+    def test__scaling_definition_from_request_ok(self, value: request.ScaleRequest):
         # Given/When
-        result = self.obj._to_scaling_definition([value])
+        result = self.obj._scaling_definition_from_request(value)
         # Then
-        assert result and len(result) == 1
-        cmd = result[0]
+        assert isinstance(result, scaling.ScalingDefinition)
         _, canonical_resource = resource_name_parser.canonical_resource_type_and_name(
             value.resource
         )
-        assert cmd.resource == canonical_resource
+        assert result.resource == canonical_resource

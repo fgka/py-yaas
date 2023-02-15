@@ -376,13 +376,11 @@ class MyCategoryScaleRequestParserWithScaler(
         super().__init__(*args, **kwargs)
         self.obj_called = {}
 
-    def _to_scaling_definition(
+    def _scaling_definition_from_request(
         self,
-        value: Iterable[request.ScaleRequest],
-        *,
-        raise_if_error: Optional[bool] = True,
-    ) -> Iterable[scaling.ScalingDefinition]:
-        result = [MyScalingDefinition.from_request(val) for val in value]
+        value: request.ScaleRequest,
+    ) -> scaling.ScalingDefinition:
+        result = MyScalingDefinition.from_request(value)
         self.obj_called[
             scaler_base.CategoryScaleRequestParser._to_scaling_definition.__name__
         ] = locals()

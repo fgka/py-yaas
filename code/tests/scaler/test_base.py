@@ -344,6 +344,34 @@ class TestCategoryScaleRequestParserWithScaler:
     def setup(self):
         self.obj = common.MyCategoryScaleRequestParserWithScaler()
 
+    @pytest.mark.parametrize(
+        "value",
+        [
+            request.ScaleRequest(
+                topic="standard",
+                resource="locations/europe-west3/namespaces/yaas-test/services/integ-test",
+                command="min_instances 10",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+            request.ScaleRequest(
+                topic="standard",
+                resource="yaas-test:europe-west3:integ-test",
+                command="instance_type db-custom-2-3840",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+        ],
+    )
+    def test__to_scaling_definition_ok(self, value: request.ScaleRequest):
+        # Given/When
+        result = self.obj._to_scaling_definition([value])
+        # Then
+        assert result and len(result) == 1
+        cmd = result[0]
+        assert isinstance(cmd, common.MyScalingDefinition)
+        assert cmd.resource == value.resource
+
     def test__scaling_definition_by_type_ok(self):
         # Given
         req_a, scaling_def_a = _create_request_and_definition(

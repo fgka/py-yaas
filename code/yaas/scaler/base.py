@@ -502,6 +502,47 @@ class CategoryScaleRequestParserWithScaler(
     Implement: :py:meth:`_supported_scaling_definition_classes`
     """
 
+    def _to_scaling_definition(
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
+    ) -> Iterable[scaling.ScalingDefinition]:
+        result = []
+        for ndx, val in enumerate(value):
+            try:
+                scaling_def = self._scaling_definition_from_request(val)
+            except Exception as err:  # pylint: disable=broad-except
+                msg = (
+                    f"Cloud not create scaling definition for <{val}>[{ndx}]). "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
+                    f"Error: {err}. "
+                    f"Values: {value}"
+                )
+                if raise_if_error:
+                    raise ValueError(msg) from err
+                _LOGGER.warning(msg)
+            if not isinstance(scaling_def, scaling.ScalingDefinition):
+                msg = (
+                    f"Request <{val}>[{ndx}]) is not supported. "
+                    f"Got scaling definition: <{scaling_def}>({type(scaling_def)}). "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
+                    f"Values: {value}"
+                )
+                if raise_if_error:
+                    raise ValueError(msg)
+                _LOGGER.warning(msg)
+            result.append(scaling_def)
+        return result
+
+    @abc.abstractmethod
+    def _scaling_definition_from_request(
+        self, value: request.ScaleRequest
+    ) -> scaling.ScalingDefinition:
+        """
+        Converts a request into its corresponding scaling definition
+        """
+
     def _scaler(
         self,
         value: Iterable[scaling.ScalingDefinition],

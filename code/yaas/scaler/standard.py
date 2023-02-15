@@ -3,7 +3,7 @@
 """
 Produce Google Cloud supported resources' scalers.
 """
-from typing import Iterable, List, Optional, Type
+from typing import List, Type
 
 from yaas import logger
 from yaas.dto import request, resource_regex, scaling
@@ -14,7 +14,7 @@ _LOGGER = logger.get(__name__)
 
 class StandardCategoryType(scaling.CategoryType):
     """
-    Base type for encoding supported categories.
+    Standard supported categories.
     """
 
     STANDARD = "standard"
@@ -35,31 +35,21 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParserWithScaler):
     Standard category supported by YAAS.
     """
 
-    def _to_scaling_definition(
-        self,
-        value: Iterable[request.ScaleRequest],
-        *,
-        raise_if_error: Optional[bool] = True,
-    ) -> Iterable[scaling.ScalingDefinition]:
-        result = []
-        for ndx, val in enumerate(value):
-            res_type, _ = resource_name_parser.canonical_resource_type_and_name(
-                val.resource
+    def _scaling_definition_from_request(
+        self, value: request.ScaleRequest
+    ) -> scaling.ScalingDefinition:
+        res_type, _ = resource_name_parser.canonical_resource_type_and_name(
+            value.resource
+        )
+        if res_type == resource_regex.ResourceType.CLOUD_RUN:
+            result = run.CloudRunScalingDefinition.from_request(value)
+        elif res_type == resource_regex.ResourceType.CLOUD_SQL:
+            result = sql.CloudSqlScalingDefinition.from_request(value)
+        else:
+            raise TypeError(
+                f"Request <{value}> of type {res_type} is not supported. "
+                f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__}"
             )
-            if res_type == resource_regex.ResourceType.CLOUD_RUN:
-                result.append(run.CloudRunScalingDefinition.from_request(val))
-            elif res_type == resource_regex.ResourceType.CLOUD_SQL:
-                result.append(sql.CloudSqlScalingDefinition.from_request(val))
-            else:
-                msg = (
-                    f"Request <{val}>[{ndx}]) of type {res_type} is not supported. "
-                    f"Check implementation of {self._to_scaling_definition.__name__} "
-                    f"in {self.__class__.__name__}. "
-                    f"Values: {value}"
-                )
-                if raise_if_error:
-                    raise TypeError(msg)
-                _LOGGER.warning(msg)
         return result
 
     @classmethod

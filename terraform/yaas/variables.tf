@@ -89,10 +89,16 @@ variable "pubsub_send_request_name" {
   default     = "yaas-send-request"
 }
 
-variable "pubsub_enact_request_name" {
+variable "pubsub_enact_standard_request_name" {
   description = "Name of the Pub/Sub topic to send specific scaling requests."
   type        = string
-  default     = "yaas-enact-request"
+  default     = "yaas-enact-standard-request"
+}
+
+variable "pubsub_enact_gcs_batch_request_name" {
+  description = "Name of the Pub/Sub topic to send GCS based batch scaling requests."
+  type        = string
+  default     = "yaas-enact-gcs-batch-request"
 }
 
 variable "pubsub_notification_topic_name" {

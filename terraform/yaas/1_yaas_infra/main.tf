@@ -117,10 +117,19 @@ module "pubsub_send_request" {
   }
 }
 
-module "pubsub_enact_request" {
+module "pubsub_enact_standard_request" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
   project_id = var.project_id
-  name       = var.pubsub_enact_request_name
+  name       = var.pubsub_enact_standard_request_name
+  iam = {
+    "roles/pubsub.publisher" = [google_service_account.run_sa.member]
+  }
+}
+
+module "pubsub_enact_gcs_batch_request" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
+  project_id = var.project_id
+  name       = var.pubsub_enact_gcs_batch_request_name
   iam = {
     "roles/pubsub.publisher" = [google_service_account.run_sa.member]
   }

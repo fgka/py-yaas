@@ -197,7 +197,7 @@ class TestScalerPathBased:
 
 
 class TestCategoryScaleRequestParser:
-    def setup_method(self):
+    def setup(self):
         self.obj = common.MyCategoryScaleRequestParser()
 
     def test_scaler_ok(self):
@@ -314,3 +314,132 @@ class TestCategoryScaleRequestParser:
         # Then: scaler
         assert isinstance(scaler, base.Scaler)
         assert len(scaler.definitions) == amount
+
+
+class TestCategoryScaleRequestParserWithFilter:
+    def setup(self):
+        self.obj = common.MyCategoryScaleRequestParserWithFilter()
+
+    def test__filter_requests_ok(self):
+        # Given
+        _, old_def = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_A.name,
+            timestamp_utc=123,
+        )
+        _, new_def = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_A.name,
+            timestamp_utc=321,
+        )
+        # When
+        result = self.obj._filter_requests(
+            value=[{}, new_def, None, 123, old_def, ""], raise_if_invalid_request=False
+        )
+        # Then
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0] == new_def
+
+
+class TestCategoryScaleRequestParserWithScaler:
+    def setup(self):
+        self.obj = common.MyCategoryScaleRequestParserWithScaler()
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            request.ScaleRequest(
+                topic="standard",
+                resource="locations/europe-west3/namespaces/yaas-test/services/integ-test",
+                command="min_instances 10",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+            request.ScaleRequest(
+                topic="standard",
+                resource="yaas-test:europe-west3:integ-test",
+                command="instance_type db-custom-2-3840",
+                timestamp_utc=123,
+                original_json_event=None,
+            ),
+        ],
+    )
+    def test__to_scaling_definition_ok(self, value: request.ScaleRequest):
+        # Given/When
+        result = self.obj._to_scaling_definition([value])
+        # Then
+        assert result and len(result) == 1
+        cmd = result[0]
+        assert isinstance(cmd, common.MyScalingDefinition)
+        assert cmd.resource == value.resource
+
+    def test__scaling_definition_by_type_ok(self):
+        # Given
+        req_a, scaling_def_a = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_A.name,
+            timestamp_utc=123,
+        )
+        req_b, scaling_def_b = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_B.name,
+            timestamp_utc=321,
+        )
+        value = [
+            None,
+            "",
+            req_a,
+            scaling_def_a,
+            123,
+            scaling_def_b,
+            {},
+            req_b,
+            1.23,
+        ]
+        # When
+        (
+            errors,
+            scale_def_by_type,
+        ) = common.MyCategoryScaleRequestParserWithScaler._scaling_definition_by_type(
+            value
+        )
+        # Then: errors
+        assert isinstance(errors, list)
+        assert len(errors) == len(value) - 2
+        # Then: scale_def_by_type
+        assert isinstance(scale_def_by_type, dict)
+        assert len(scale_def_by_type) == 1
+        scale_def_lst = scale_def_by_type.get(common.MyScalingDefinition)
+        assert isinstance(scale_def_lst, list)
+        assert len(scale_def_lst) == 2
+        assert scaling_def_a in scale_def_lst
+        assert scaling_def_b in scale_def_lst
+
+    def test__scaler_ok(self):
+        # Given
+        req_a, scaling_def_a = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_A.name,
+            timestamp_utc=123,
+        )
+        req_b, scaling_def_b = _create_request_and_definition(
+            topic=common.MyCategoryType.CATEGORY_B.name,
+            timestamp_utc=321,
+        )
+        value = [
+            None,
+            "",
+            req_a,
+            scaling_def_a,
+            123,
+            scaling_def_b,
+            {},
+            req_b,
+            1.23,
+        ]
+        # When
+        result = self.obj._scaler(value, raise_if_invalid_request=False)
+        # Then
+        assert isinstance(result, list)
+        assert len(result) == 1
+        res_scaler = result[0]
+        assert isinstance(res_scaler, common.MyScaler)
+        assert len(res_scaler.definitions) == 2
+        assert scaling_def_a in res_scaler.definitions
+        assert scaling_def_b in res_scaler.definitions

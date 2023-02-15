@@ -23,7 +23,8 @@ class TestCloudSqlScalingCommand:
             # When
             obj = sql.CloudSqlScalingCommand(parameter=param.value, target="value")
             # Then
-            assert obj is not None
+            assert isinstance(obj, sql.CloudSqlScalingCommand)
+            assert obj.parameter == param.value
 
     @pytest.mark.parametrize(
         "parameter,target,exception",
@@ -45,7 +46,8 @@ class TestCloudSqlScalingCommand:
             # When
             obj = sql.CloudSqlScalingCommand.from_command_str(cmd_str)
             # Then
-            assert obj is not None
+            assert isinstance(obj, sql.CloudSqlScalingCommand)
+            assert obj.parameter == param.value
 
 
 _TEST_CLOUD_SQL_RESOURCE_STR: str = "my-project-123:my-location-123:my-instance-123"
@@ -77,8 +79,8 @@ class TestCloudRunScalingDefinition:
         # When
         obj = _create_cloud_sql_scaling_definition(resource=resource)
         # Then
-        assert obj is not None
-        assert obj.resource == _TEST_CLOUD_SQL_RESOURCE_STR
+        assert isinstance(obj, sql.CloudSqlScalingDefinition)
+        assert obj.resource == resource
 
     def test_ctor_nok_wrong_resource(self):
         # Given
@@ -102,8 +104,8 @@ class TestCloudRunScalingDefinition:
         # When
         obj = sql.CloudSqlScalingDefinition.from_request(req)
         # Then
-        assert obj is not None
-        assert obj.resource == _TEST_CLOUD_SQL_RESOURCE_STR
+        assert isinstance(obj, sql.CloudSqlScalingDefinition)
+        assert obj.resource == req.resource
 
 
 class TestCloudRunScaler:
@@ -119,7 +121,7 @@ class TestCloudRunScaler:
         # Given/When
         obj = sql.CloudSqlScaler(*self.definition)
         # Then
-        assert obj is not None
+        assert isinstance(obj, sql.CloudSqlScaler)
 
     def test_from_request_ok(self):
         # Given
@@ -130,7 +132,8 @@ class TestCloudRunScaler:
         # When
         obj = sql.CloudSqlScaler.from_request(req)
         # Then
-        assert obj is not None
+        assert isinstance(obj, sql.CloudSqlScaler)
+        assert obj.resource == req.resource
 
     @pytest.mark.parametrize(
         "field,expected",

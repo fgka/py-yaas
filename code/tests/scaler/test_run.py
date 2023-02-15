@@ -23,7 +23,8 @@ class TestCloudRunScalingCommand:
             # When
             obj = run.CloudRunScalingCommand(parameter=param.value, target=123)
             # Then
-            assert obj is not None
+            assert isinstance(obj, run.CloudRunScalingCommand)
+            assert obj.parameter == param.value
 
     @pytest.mark.parametrize(
         "parameter,target,exception",
@@ -45,7 +46,8 @@ class TestCloudRunScalingCommand:
             # When
             obj = run.CloudRunScalingCommand.from_command_str(cmd_str)
             # Then
-            assert obj is not None
+            assert isinstance(obj, run.CloudRunScalingCommand)
+            assert obj.parameter == param.value
 
 
 _TEST_CLOUD_RUN_RESOURCE_STR: str = (
@@ -73,8 +75,8 @@ class TestCloudRunScalingDefinition:
         # When
         obj = _create_cloud_run_scaling_definition(resource=resource)
         # Then
-        assert obj is not None
-        assert obj.resource == _TEST_CLOUD_RUN_RESOURCE_STR
+        assert isinstance(obj, run.CloudRunScalingDefinition)
+        assert obj.resource == resource
 
     def test_ctor_nok_wrong_resource(self):
         # Given
@@ -97,8 +99,8 @@ class TestCloudRunScalingDefinition:
         # When
         obj = run.CloudRunScalingDefinition.from_request(req)
         # Then
-        assert obj is not None
-        assert obj.resource == _TEST_CLOUD_RUN_RESOURCE_STR
+        assert isinstance(obj, run.CloudRunScalingDefinition)
+        assert obj.resource == req.resource
 
 
 class TestCloudRunScaler:
@@ -112,7 +114,7 @@ class TestCloudRunScaler:
         # Given/When
         obj = run.CloudRunScaler(*self.definition)
         # Then
-        assert obj is not None
+        assert isinstance(obj, run.CloudRunScaler)
 
     def test_from_request_ok(self):
         # Given
@@ -123,7 +125,8 @@ class TestCloudRunScaler:
         # When
         obj = run.CloudRunScaler.from_request(req)
         # Then
-        assert obj is not None
+        assert isinstance(obj, run.CloudRunScaler)
+        assert obj.resource == req.resource
 
     @pytest.mark.parametrize(
         "field,expected",

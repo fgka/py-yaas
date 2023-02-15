@@ -10,7 +10,8 @@ Events are expected to come out of `list API`_.
 from datetime import datetime
 import json
 import re
-from typing import Any, Dict, List, Optional
+import string
+from typing import Any, Dict, Iterable, List, Optional
 
 import bs4
 import pytz
@@ -32,29 +33,26 @@ _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP: str = "|"
 # pylint: disable=anomalous-backslash-in-string
 _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SCALING_SPEC_REGEX: re.Pattern = re.compile(
     pattern=r"^\s*\.?\s*"  # space prefix
-    + "([^"
+    + "([^\\.\s][^"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
-    + "\\."
-    + "]+)"  # topic
+    + "]+[^\\.\s])"  # topic
     + r"\s*\.?\s*"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
     + r"\s*\.?\s*"  # separator
-    + "([^"
+    + "([^\\.\s][^"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
-    + "\\."
-    + "]+)"  # resource
+    + "]+[^\\.\s])"  # resource
     + r"\s*\.?\s*"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
     + r"\s*\.?\s*"  # separator
-    + "([^"
+    + "([^\\.\s][^"
     + "\\"
     + _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP
-    + "\\."
-    + "]+)"  # what/command
+    + "]+[^\\.\s])"  # what/command
     + r"\s*\.?\s*$",  # trailing space and/or period ('.')
     flags=re.IGNORECASE | re.MULTILINE,
 )
@@ -161,19 +159,75 @@ def _parse_event_description(
         :py:cls:`request.ScaleRequest` instances corresponding to the lines in the value.
     """
     # pylint: enable=line-too-long
+    return parse_lines(
+        lines=_extract_text_from_html(value),
+        timestamp_utc=int(start_utc.timestamp()),
+        json_event=json_event,
+    )
+
+
+def _extract_text_from_html(value: str) -> List[str]:
     result = []
-    for line in _extract_text_from_html(value).split("\n"):
-        req = _parse_description_target_line(
-            line, int(start_utc.timestamp()), json_event
-        )
-        if req is not None:
-            result.append(req)
+    value = "".join(filter(lambda x: x in set(string.printable), value))
+    for val in value.split("\n"):
+        soup = bs4.BeautifulSoup(markup=val, features="html.parser")
+        for tag_br in soup.find_all("br"):
+            tag_br.replace_with("\n" + tag_br.text)
+        for tag_span in soup.find_all("span"):
+            tag_span.replace_with(tag_span.text)
+        text = soup.text
+        result.extend([item for item in text.split("\n") if item])
     return result
 
 
-def _extract_text_from_html(value: str) -> str:
-    soup = bs4.BeautifulSoup(markup=value, features="html.parser")
-    return soup.get_text(separator="\n", strip=True)
+def parse_lines(
+    *,
+    lines: Iterable[str],
+    timestamp_utc: int,
+    json_event: Optional[Dict[str, Any]] = None,
+) -> List[request.ScaleRequest]:
+    """
+    Will assume each line in `lines` is a request string
+        to be converted to :py:class:`request.ScaleRequest` instances.
+    Example of a line::
+        "topic | resource | command target"
+    Args:
+        lines:
+        timestamp_utc:
+        json_event:
+
+    Returns:
+
+    """
+    # input validation
+    if not isinstance(lines, Iterable):
+        raise TypeError(
+            f"Argument lines is not iterable. Got: <{lines}>({type(lines)})"
+        )
+    if not isinstance(timestamp_utc, int) or timestamp_utc < 0:
+        raise ValueError(
+            "Timestamp must be an integer greater than 0. "
+            f"Got: <{timestamp_utc}>({type(timestamp_utc)})"
+        )
+    # logic
+    result = []
+    for ndx, line in enumerate(lines):
+        try:
+            req = _parse_description_target_line(
+                line.strip(), timestamp_utc, json_event
+            )
+            if req is not None:
+                result.append(req)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.warning(
+                "Could not parse line: <%s>[%s](%s). Full content: %s. Error: %s. Ignoring",
+                line,
+                ndx,
+                type(line),
+                lines,
+                err,
+            )
+    return result
 
 
 def _parse_description_target_line(

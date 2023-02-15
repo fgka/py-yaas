@@ -5,7 +5,7 @@ Basic definition of types and expected functionality for resource scaler.
 """
 import abc
 import asyncio
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 
 from yaas.dto import request, scaling
 from yaas import logger
@@ -18,15 +18,47 @@ class Scaler(abc.ABC):
     Generic class to define a scaler.
     """
 
-    def __init__(self, *definition: Tuple[scaling.ScalingDefinition]) -> None:
-        expected_type = self.__class__._valid_definition_type()
+    def __init__(
+        self,
+        *definition: Tuple[scaling.ScalingDefinition],
+        sort_definitions_by_increasing_timestamp: bool = True,
+        allow_partial_enact: bool = False,
+    ) -> None:
+        """
+        It will convert the `definition` argument into a list sorted by `timestamp_utc`.
+        Example::
+            # just the timestamp_utc field for simplicity
+            definition = [10, 9, 11, 2]
+            self.definitions = [2, 9, 10, 11]
+        Args:
+            *definition:
+            sort_definitions_by_increasing_timestamp: if :py:obj:`True` the latest definition,
+                by timestamp, is the last entry, otherwise the reversed order.
+            allow_partial_enact: if :py:obj:`True` will enact as much as possible
+                from the definitions. This can lead to inconsistencies, please be aware.
+        """
+        definitions, self._resource = self._validate_definitions(list(definition))
+        # The latest, based on timestamp_utc, last
+        self._definitions = sorted(
+            definitions,
+            key=lambda scale_def: scale_def.timestamp_utc,
+            reverse=not sort_definitions_by_increasing_timestamp,
+        )
+        self._allow_partial_enact = allow_partial_enact
+        super().__init__()
+
+    @classmethod
+    def _validate_definitions(
+        cls, definitions: List[scaling.ScalingDefinition]
+    ) -> Tuple[List[scaling.ScalingDefinition], str]:
+        expected_type = cls._valid_definition_type()
         resource = None
-        for ndx, item in enumerate(list(definition)):
+        for ndx, item in enumerate(definitions):
             if not isinstance(item, expected_type):
                 raise TypeError(
                     f"Definition must be an instance of {expected_type.__name__}. "
                     f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definition}>"
+                    f"All definitions: <{definitions}>"
                 )
             if resource is None:
                 resource = item.resource
@@ -34,14 +66,12 @@ class Scaler(abc.ABC):
                 raise ValueError(
                     f"All definitions must have the same resource <{resource}>."
                     f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definition}>"
+                    f"All definitions: <{definitions}>"
                 )
-        self._definition = definition
-        self._resource = resource
-        super().__init__()
+        return definitions, resource
 
     @classmethod
-    def _valid_definition_type(cls) -> type:
+    def _valid_definition_type(cls) -> Type[scaling.ScalingDefinition]:
         return scaling.ScalingDefinition
 
     @property
@@ -52,7 +82,7 @@ class Scaler(abc.ABC):
         Returns:
             Scaling definition.
         """
-        return list(self._definition)
+        return self._definitions
 
     @property
     def resource(self) -> str:
@@ -61,9 +91,17 @@ class Scaler(abc.ABC):
         """
         return self._resource
 
+    @property
+    def allow_partial_enact(self) -> bool:
+        """
+        If :py:obj:`True`, indicates that enactment should try to ignore faulty requests
+        instead of failing all.
+        """
+        return self._allow_partial_enact
+
     @classmethod
     @abc.abstractmethod
-    def from_request(cls, *value: Tuple[request.ScaleRequest]) -> "Scaler":
+    def from_request(cls, *value: Tuple[request.ScaleRequest], **kwargs) -> "Scaler":
         """
         Return an instance corresponding to the :py:cls:`scale_request.ScaleRequest`.
 
@@ -97,7 +135,7 @@ class Scaler(abc.ABC):
                 "Reason: <%s>. "
                 "Check logs for details.",
                 self.__class__.__name__,
-                self._definition,
+                self._definitions,
                 reason,
             )
         _LOGGER.info(
@@ -134,7 +172,7 @@ class ScalerPathBased(Scaler, abc.ABC):
     async def _safe_enact(self) -> None:
         # Build path_value_lst
         path_value_lst = []
-        for ndx, scale_def in enumerate(self._definition):
+        for ndx, scale_def in enumerate(self.definitions):
             field = scale_def.command.parameter
             target = scale_def.command.target
             try:
@@ -147,13 +185,16 @@ class ScalerPathBased(Scaler, abc.ABC):
                         target,
                     )
                 )
-            except Exception as err:
-                raise RuntimeError(
+            except Exception as err:  # pylint: disable=broad-except
+                msg = (
                     f"Could not parse path for resource={scale_def.resource}, "
                     f"field={field}, and target={target}. "
-                    f"Item {ndx} in {self._definition}"
+                    f"Item {ndx} in {self.definitions}"
                     f"Error: {err}"
-                ) from err
+                )
+                if not self.allow_partial_enact:
+                    raise RuntimeError(msg) from err
+                _LOGGER.warning("%s. Ignoring", msg)
         # Scale path_value_lst
         _LOGGER.debug("Scaling resource <%s> with <%s>", self.resource, path_value_lst)
         try:
@@ -283,6 +324,7 @@ class CategoryScaleRequestParser(abc.ABC):
                 )
                 if raise_if_invalid_request:
                     raise ValueError(msg)
+                _LOGGER.warning(msg)
                 continue
             result.extend(items)
         return result[0] if len(result) == 1 and singulate_if_only_one else result
@@ -403,3 +445,236 @@ class CategoryScaleRequestParser(abc.ABC):
                 result = True
                 break
         return result
+
+
+class CategoryScaleRequestParserWithFilter(CategoryScaleRequestParser, abc.ABC):
+    """
+    CategoryScaleRequestParser augmented with filter removing invalid items in definitions and
+    already existing commands for same resource.
+    """
+
+    def _filter_requests(
+        self,
+        value: Iterable[scaling.ScalingDefinition],
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> List[scaling.ScalingDefinition]:
+        result = {}
+        valid_value = []
+        for ndx, scaling_def in enumerate(value):
+            if not isinstance(scaling_def, scaling.ScalingDefinition):
+                msg = (
+                    f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. "
+                    f"Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
+                )
+                if raise_if_invalid_request:
+                    raise TypeError(msg)
+                _LOGGER.warning(msg)
+            else:
+                valid_value.append(scaling_def)
+        for ndx, scaling_def in enumerate(
+            sorted(valid_value, key=lambda val: val.timestamp_utc, reverse=True)
+        ):
+            key = scaling_def.resource, scaling_def.command
+            previous = result.get(key)
+            if previous is not None:
+                _LOGGER.warning(
+                    "Discarding <%s>[%d] because there is an already a scaling definition "
+                    "at the same, or later, timestamp (timestamp diff: %d): <%s>. "
+                    "All elements: %s",
+                    scaling_def,
+                    ndx,
+                    scaling_def.timestamp_utc - previous.timestamp_utc,
+                    previous,
+                    valid_value,
+                )
+            else:
+                result[key] = scaling_def
+        return list(result.values())
+
+
+class CategoryScaleRequestParserWithScaler(
+    CategoryScaleRequestParserWithFilter, abc.ABC
+):
+    """
+    CategoryScaleRequestParserWithFilter augmented with :py:meth:`_scaler`
+    based on scaling definition supported classes.
+
+    Implement: :py:meth:`_supported_scaling_definition_classes`
+    """
+
+    def _to_scaling_definition(
+        self,
+        value: Iterable[request.ScaleRequest],
+        *,
+        raise_if_error: Optional[bool] = True,
+    ) -> Iterable[scaling.ScalingDefinition]:
+        result = []
+        for ndx, val in enumerate(value):
+            try:
+                scaling_def = self._scaling_definition_from_request(val)
+            except Exception as err:  # pylint: disable=broad-except
+                msg = (
+                    f"Cloud not create scaling definition for <{val}>[{ndx}]). "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
+                    f"Error: {err}. "
+                    f"Values: {value}"
+                )
+                if raise_if_error:
+                    raise ValueError(msg) from err
+                _LOGGER.warning(msg)
+            if not isinstance(scaling_def, scaling.ScalingDefinition):
+                msg = (
+                    f"Request <{val}>[{ndx}]) is not supported. "
+                    f"Got scaling definition: <{scaling_def}>({type(scaling_def)}). "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
+                    f"Values: {value}"
+                )
+                if raise_if_error:
+                    raise ValueError(msg)
+                _LOGGER.warning(msg)
+            result.append(scaling_def)
+        return result
+
+    @abc.abstractmethod
+    def _scaling_definition_from_request(
+        self, value: request.ScaleRequest
+    ) -> scaling.ScalingDefinition:
+        """
+        Converts a request into its corresponding scaling definition
+        """
+
+    def _scaler(
+        self,
+        value: Iterable[scaling.ScalingDefinition],
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> List[Scaler]:
+        result = []
+        errors, scale_def_by_type = self._scaling_definition_by_type(value)
+        # Create scalers
+        for cls, scaling_def_lst in scale_def_by_type.items():
+            try:
+                scaler_type = self._scaler_class_for_definition_class(cls)
+            except Exception as err:  # pylint: disable=broad-except
+                msg = (
+                    f"Could not find a scaler type for definition class <{cls}>. "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaler_class_for_definition_class.__name__}. "
+                    f"Error: {err}"
+                )
+                if raise_if_invalid_request:
+                    raise CategoryScaleRequestParserError(msg) from err
+                _LOGGER.warning(msg)
+            if scaler_type is not None:
+                try:
+                    scaler = self._instantiate_scaler(scaler_type, scaling_def_lst)
+                    result.append(scaler)
+                except Exception as err:  # pylint: disable=broad-except
+                    msg = (
+                        f"Scaler for definition class <{scaler_type.__name__}> "
+                        f"could not be instantiate with scaling definitions {scaling_def_lst}. "
+                        f"Check implementation of {self.__class__.__name__}.{self._instantiate_scaler.__name__}. "
+                        f"Error: {err}"
+                    )
+                    if raise_if_invalid_request:
+                        raise CategoryScaleRequestParserError(msg) from err
+                    _LOGGER.warning(msg)
+            else:
+                msg = (
+                    f"Could not find a scaler for definition <{cls.__name__}> "
+                    f"Check implementation of {self.__class__.__name__}.{self._scaler_class_for_definition_class.__name__}"
+                )
+                if raise_if_invalid_request:
+                    raise CategoryScaleRequestParserError(msg)
+                _LOGGER.warning(msg)
+        # check errors
+        if errors:
+            msg = (
+                f"There are {len(errors)} issues with the scaling definitions: {errors}"
+            )
+            if raise_if_invalid_request:
+                raise CategoryScaleRequestParserError(msg)
+            _LOGGER.warning(msg)
+        return result
+
+    @classmethod
+    def _scaling_definition_by_type(
+        cls, value: Iterable[scaling.ScalingDefinition]
+    ) -> Tuple[
+        List[str],
+        Dict[Type[scaling.ScalingDefinition], List[scaling.ScalingDefinition]],
+    ]:
+        """
+
+        Args:
+            value:
+
+        Returns:
+
+        """
+        errors = []
+        result = {}
+        for val in value:
+            key = cls._scaling_definition_class(val)
+            if key is not None:
+                if key not in result:
+                    result[key] = []
+                result[key].append(val)
+            else:
+                msg = (
+                    f"Scaler for definition <{val}> "
+                    f"is not supported by {cls.__name__}. "
+                    "Check implementation of "
+                    f"{cls._scaling_definition_by_type.__name__} in {cls.__name__}."
+                )
+                errors.append(msg)
+        return errors, result
+
+    @classmethod
+    def _scaling_definition_class(
+        cls, value: scaling.ScalingDefinition
+    ) -> Type[scaling.ScalingDefinition]:
+        result = None
+        for cls_item in cls._supported_scaling_definition_classes():
+            if isinstance(value, cls_item):
+                result = cls_item
+                break
+        return result
+
+    @classmethod
+    @abc.abstractmethod
+    def _supported_scaling_definition_classes(
+        cls,
+    ) -> List[Type[scaling.ScalingDefinition]]:
+        """
+        To be overwritten with supported subclass list.
+        Example accepting all::
+            [scaling.ScalingDefinition]
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def _scaler_class_for_definition_class(
+        cls, definition_type: Type[scaling.ScalingDefinition]
+    ) -> Type[Scaler]:
+        """
+        For a subclass of :py:class:`scaling.ScalingDefinition`
+        returns the corresponding :py:class:`Scaler` subclass.
+        Args:
+            definition_type:
+
+        Returns:
+
+        """
+
+    def _instantiate_scaler(
+        self, scaler_type: Type[Scaler], definitions: List[scaling.ScalingDefinition]
+    ) -> Scaler:
+        """
+        Check that implementation below is correct for your scaler. If not, overwrite it.
+        Args:
+            scaler_type:
+            definitions:
+
+        Returns:
+
+        """
+        return scaler_type(*definitions)

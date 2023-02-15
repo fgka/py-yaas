@@ -61,8 +61,13 @@ variable "pubsub_send_request_id" {
   type        = string
 }
 
-variable "pubsub_enact_request_id" {
-  description = "ID of the Pub/Sub topic to send specific scaling requests."
+variable "pubsub_enact_standard_request_id" {
+  description = "ID of the Pub/Sub topic to send standard scaling requests."
+  type        = string
+}
+
+variable "pubsub_enact_gcs_batch_request_id" {
+  description = "ID of the Pub/Sub topic to to send GCS based batch scaling requests."
   type        = string
 }
 
@@ -147,10 +152,17 @@ variable "service_path_request_emission" {
 }
 
 // Do **NOT** change. Check code first
-variable "service_path_enact_request" {
-  description = "YAAS Coud Run service path to enact requests."
+variable "service_path_enact_standard_request" {
+  description = "YAAS Coud Run service path to enact standard requests."
   type        = string
   default     = "/enact-standard-requests"
+}
+
+// Do **NOT** change. Check code first
+variable "service_path_enact_gcs_batch_request" {
+  description = "YAAS Coud Run service path to enact GCS batch requests."
+  type        = string
+  default     = "/enact-gcs-requests"
 }
 
 //////////////////

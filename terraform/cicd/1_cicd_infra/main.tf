@@ -71,20 +71,20 @@ module "build_service_account" {
   }
 }
 
-resource "google_artifact_registry_repository_iam_binding" "bindings" {
+resource "google_artifact_registry_repository_iam_member" "iam_members" {
   for_each   = local.artifact_registry_repos
   provider   = google-beta
   project    = var.project_id
   location   = each.value.location
   repository = each.value.name
   role       = "roles/artifactregistry.writer"
-  members    = [module.build_service_account.iam_email]
+  member     = module.build_service_account.iam_email
 }
 
-resource "google_project_iam_binding" "cloud_build_roles" {
-  members = [local.cloud_build_sa_member]
+resource "google_project_iam_member" "cloud_build_roles" {
   project = var.project_id
   role    = "roles/editor"
+  member  = local.cloud_build_sa_member
 }
 
 /////////////

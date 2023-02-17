@@ -1,4 +1,5 @@
 init.tf
 **/.terraform*
+**/backend.tf
 **/dist
 **/terraform.tfstate*

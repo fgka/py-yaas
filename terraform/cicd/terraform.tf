@@ -8,10 +8,6 @@ terraform {
       source = "hashicorp/local"
     }
   }
-  backend "gcs" {
-    bucket = "yaas-tf-state-245814988234"
-    prefix = "terraform/europe-west3/state/cicd"
-  }
 }
 
 provider "google" {

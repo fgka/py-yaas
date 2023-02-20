@@ -1,3 +1,5 @@
+' https://github.com/tupadr3/plantuml-icon-font-sprites
+' https://github.com/Crashedmind/PlantUML-icons-GCP
 @startuml Container
 !include <C4/C4_Container>
 !define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons2

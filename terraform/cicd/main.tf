@@ -9,6 +9,7 @@ locals {
     calendar_id = var.calendar_id
   })
   tf_cicd_plan_args = merge(local.common_tf_plan_args, tomap({
+    terraform_bucket_name          = var.terraform_bucket_name
     build_monitoring_email_address = var.build_monitoring_email_address,
     monitoring_email_address       = var.monitoring_email_address,
     github_owner                   = var.github_owner,
@@ -60,6 +61,7 @@ module "cicd_build" {
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email
   // resources
+  terraform_bucket_name                = var.terraform_bucket_name
   build_bucket_name                    = module.cicd_infra.build_bucket.name
   docker_artifact_registry_url         = module.cicd_infra.docker_repo_url
   python_artifact_registry_url         = module.cicd_infra.python_repo_url

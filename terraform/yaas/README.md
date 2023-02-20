@@ -1,5 +1,7 @@
 # Using Terraform to deploy all
 
+It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
+
 ## Authenticate
 
 ```bash

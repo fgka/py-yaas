@@ -15,10 +15,11 @@ locals {
   # Wait script
   wait_for_run_ready_script_filename = "${local.terraform_cicd_module_root_dir}/${var.wait_for_run_ready_script_filename}"
   # Cloud build template files
-  tf_build_template_filename     = "${local.terraform_cicd_module_root_dir}/${var.tf_build_template_filename}"
-  tf_yaas_template_filename      = "${local.terraform_cicd_module_root_dir}/${var.tf_yaas_template_filename}"
-  python_build_template_filename = "${local.terraform_cicd_module_root_dir}/${var.python_build_template_filename}"
-  image_build_template_filename  = "${local.terraform_cicd_module_root_dir}/${var.image_build_template_filename}"
+  tf_build_template_filename      = "${local.terraform_cicd_module_root_dir}/${var.tf_build_template_filename}"
+  tf_yaas_template_filename       = "${local.terraform_cicd_module_root_dir}/${var.tf_yaas_template_filename}"
+  python_build_template_filename  = "${local.terraform_cicd_module_root_dir}/${var.python_build_template_filename}"
+  image_build_template_filename   = "${local.terraform_cicd_module_root_dir}/${var.image_build_template_filename}"
+  tf_backend_tf_template_filename = "${local.terraform_cicd_module_root_dir}/${var.tf_backend_tf_template_filename}"
 }
 
 data "google_project" "project" {
@@ -49,6 +50,9 @@ resource "google_cloudbuild_trigger" "tf_build" {
   filename           = local.tf_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
+    _TF_BUCKET_NAME       = var.terraform_bucket_name
+    _TF_MODULE            = "cicd"
+    _TF_BACKEND_TF_TMPL   = local.tf_backend_tf_template_filename
     _BUCKET_NAME          = var.build_bucket_name
     _TF_PLAN_ARGS         = local.tf_cicd_plan_args_str
     _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
@@ -76,10 +80,13 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
   filename           = local.tf_yaas_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
-    _BUCKET_NAME  = var.build_bucket_name
-    _TF_PLAN_ARGS = local.tf_yaas_plan_args_str
-    _SERVICE_NAME = var.run_name
-    _WAIT_SCRIPT  = local.wait_for_run_ready_script_filename
+    _TF_BUCKET_NAME     = var.terraform_bucket_name
+    _TF_MODULE          = "yaas"
+    _TF_BACKEND_TF_TMPL = local.tf_backend_tf_template_filename
+    _BUCKET_NAME        = var.build_bucket_name
+    _TF_PLAN_ARGS       = local.tf_yaas_plan_args_str
+    _SERVICE_NAME       = var.run_name
+    _WAIT_SCRIPT        = local.wait_for_run_ready_script_filename
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

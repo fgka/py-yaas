@@ -6,13 +6,17 @@ locals {
   # Cloud Build SA
   cloud_build_sa_email        = "${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
   cloud_build_sa_email_member = "serviceAccount:${local.cloud_build_sa_email}"
-  # backend.tf
+  # root dir
   terraform_module_root_dir = path.module
-  backend_tf_tmpl           = "${local.terraform_module_root_dir}/${var.backend_tf_tmpl}"
-  backend_tf                = "${local.terraform_module_root_dir}/output/${var.backend_tf}"
+  output_dir                = "${local.terraform_module_root_dir}/output"
+  # backend.tf
+  backend_tf_tmpl = "${local.terraform_module_root_dir}/${var.backend_tf_tmpl}"
+  backend_tf      = "${local.output_dir}/${var.backend_tf}"
+  # output
   output_filenames = [
     for local_filename in local_file.backend_tf : local_filename.filename
   ]
+  build_pipeline_backend_tf_tmpl = "${local.output_dir}/${var.build_pipeline_backend_tf_tmpl}"
 }
 
 data "google_project" "project" {
@@ -72,4 +76,13 @@ resource "local_file" "backend_tf" {
     MODULE      = each.key
   })
   filename = "${local.backend_tf}.${each.key}"
+}
+
+resource "local_file" "build_backend_tf_tmpl" {
+  content = templatefile(local.backend_tf_tmpl, {
+    BUCKET_NAME = "@@BUCKET_NAME@@",
+    REGION      = "@@REGION@@",
+    MODULE      = "@@MODULE@@",
+  })
+  filename = local.build_pipeline_backend_tf_tmpl
 }

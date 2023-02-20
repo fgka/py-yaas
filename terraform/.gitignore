@@ -3,3 +3,4 @@ init.tf
 **/backend.tf
 **/dist
 **/terraform.tfstate*
+**/output

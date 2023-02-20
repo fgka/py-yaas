@@ -51,11 +51,10 @@ terraform plan \
 terraform apply ${TMP} && rm -f ${TMP}
 ```
 
-## Copy generated `backend.tf` over
-
-Get file name:
+## Copy generated `backend.tf` over to each module
 
 ```bash
+TARGET_FILENAME="backend.tf"
 OUT_JSON=$(mktemp)
 terraform output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
@@ -63,20 +62,26 @@ echo "Terraform output in ${OUT_JSON}"
 jq -c -r ".backend_tf.value[]" ${OUT_JSON} \
   | while read FILENAME; \
     do \
-      local TARGET=$(basename ${FILENAME}); \
-      TARGET=${TARGET%.*}; \
       local MODULE=${FILENAME##*.}; \
-      local OUTPUT="../${MODULE}/${TARGET}"; \
+      local OUTPUT="../${MODULE}/${TARGET_FILENAME}"; \
       echo "Copying: <${FILENAME}> to <${OUTPUT}>"; \
       cp ${FILENAME} ${OUTPUT}; \
     done
 rm -f ${OUT_JSON}
 ```
 
-Copy over:
+## Copy generated `backend.tf.tmpl` over CI/CD template directory
 
 ```bash
-cp ${BACKEND_TF} ../cicd/
-cp ${BACKEND_TF} ../yaas/
+TARGET="../cicd/2_cicd_build/templates/backend.tf.tmpl"
+OUT_JSON=$(mktemp)
+terraform output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+SOURCE=$(jq -c -r ".build_pipeline_backend_tf_tmpl.value" ${OUT_JSON})
+echo "Copying: <${SOURCE}> to <${TARGET}>"
+rm -f ${OUT_JSON}
 ```
+
+**NOTE**: Please commit the new template, if necessary, in the `cicd` module.
 

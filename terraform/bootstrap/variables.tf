@@ -61,13 +61,19 @@ variable "backend_tf_modules" {
 }
 
 variable "backend_tf_tmpl" {
-  description = "Template for backend.tf"
+  description = "Template for backend.tf. Only change if you know what you are doing."
   type        = string
   default     = "templates/backend.tf.tmpl"
 }
 
 variable "backend_tf" {
-  description = "Where to store backend.tf"
+  description = "Where to store backend.tf. Only change if you know what you are doing."
   type        = string
   default     = "backend.tf"
+}
+
+variable "build_pipeline_backend_tf_tmpl" {
+  description = "Template for backend.tf to be used in CloudBuild. Only change if you know what you are doing."
+  type        = string
+  default     = "cloud_build.backend.tf.tmpl"
 }

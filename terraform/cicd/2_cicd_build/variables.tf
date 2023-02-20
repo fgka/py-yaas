@@ -42,6 +42,11 @@ variable "build_bucket_name" {
   type        = string
 }
 
+variable "terraform_bucket_name" {
+  description = "Bucket name to store terraform states."
+  type        = string
+}
+
 ///////////////////////
 // Artifact Registry //
 ///////////////////////
@@ -170,6 +175,12 @@ variable "tf_yaas_template_filename" {
   description = "Cloud Build template for YAAS infrastructure Terraform code."
   type        = string
   default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
+}
+
+variable "tf_backend_tf_template_filename" {
+  description = "Cloud Build template for backend.tf."
+  type        = string
+  default     = "templates/backend.tf.yaml"
 }
 
 ////////////

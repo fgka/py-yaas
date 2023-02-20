@@ -9,3 +9,7 @@ output "tf_state_bucket" {
 output "backend_tf" {
   value = local.output_filenames
 }
+
+output "build_pipeline_backend_tf_tmpl" {
+  value = local.build_pipeline_backend_tf_tmpl
+}

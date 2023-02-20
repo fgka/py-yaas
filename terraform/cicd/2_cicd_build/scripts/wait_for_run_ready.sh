@@ -233,7 +233,7 @@ function is_service_created
 
   local FOUND=$(gcloud run services list \
     --region="${REGION}" \
-    --project="${PROJECT_ID}" \
+    --project="${PROJECT}" \
     --format=json \
     | jq -c -r ".[].metadata.name" \
     | grep -e "^${SERVICE_NAME}$"

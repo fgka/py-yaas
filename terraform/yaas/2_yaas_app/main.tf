@@ -253,6 +253,7 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
 // Monitoring and Alerting //
 /////////////////////////////
 
+/*
 resource "google_monitoring_alert_policy" "alert_error_log" {
   for_each     = local.monitoring_alert_policies_error_log
   display_name = "${google_cloud_run_service.yaas.name}-${each.key}-error-monitoring"
@@ -304,3 +305,4 @@ resource "google_monitoring_alert_policy" "alert_not_executed" {
   }
   notification_channels = [each.value.channel_name]
 }
+*/

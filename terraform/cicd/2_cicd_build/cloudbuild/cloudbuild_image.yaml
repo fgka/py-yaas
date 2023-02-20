@@ -32,7 +32,7 @@ steps:
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: WAIT_FOR_RUN_READY
     entrypoint: "bash"
-    args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
+    args: ["-c", "apt-get install -y jq; ${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: IMAGE_DEPLOY
     entrypoint: "gcloud"

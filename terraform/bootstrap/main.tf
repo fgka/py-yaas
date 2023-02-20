@@ -48,9 +48,10 @@ resource "google_project_iam_member" "cloud_build" {
   for_each = toset([
     "roles/storage.admin",
   ])
-  project = var.project_id
-  role    = each.key
-  member  = local.cloud_build_sa_email_member
+  project    = var.project_id
+  role       = each.key
+  member     = local.cloud_build_sa_email_member
+  depends_on = [google_project_service.project]
 }
 
 /////////////

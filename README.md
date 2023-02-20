@@ -2,6 +2,10 @@
 
 YAAS stands for Yet Another Auto Scaler.
 
+## [End-to-End install](./INSTALL.md)
+
+How to install YAAS, end-to-end, documentation. If you just landed here, this is the one for you.
+
 ## [Code](./code)
 
 Inside `code` you have all pointer to the code and how to navigate all the branches. 

@@ -1,6 +1,0 @@
-terraform {
-  backend "gcs" {
-    bucket = "yaas-terraform-245814988234"
-    prefix = "terraform/europe-west3/state/yaas"
-  }
-}

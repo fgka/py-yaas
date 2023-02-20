@@ -20,6 +20,7 @@ Manually set:
 export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
+
 Code dependant:
 
 ```bash
@@ -161,6 +162,31 @@ terraform -chdir=${TF_DIR} plan \
 
 ```bash
 terraform -chdir=${TF_DIR} apply ${TMP} && rm -f ${TMP}
+```
+
+### (Only Once) Give Build Service Account Permission To State Bucket
+
+Since the bucket is created without any extra permissions, you need to grant the build SA access.
+
+Service account email:
+
+```bash
+OUT_JSON=$(mktemp)
+terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+BUILD_SA_MEMBER_EMAIL=$(jq -c -r ".cicd_infra.value.tf_build_service_account.member" ${OUT_JSON})
+echo "Build Service Account member email: <${BUILD_SA_MEMBER_EMAIL}>"
+
+rm -f ${OUT_JSON}
+```
+
+Grant permissions:
+
+```bash
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member=${BUILD_SA_MEMBER_EMAIL} \
+  --role="roles/storage.admin"
 ```
 
 ### Trigger Build

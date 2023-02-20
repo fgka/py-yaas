@@ -14,7 +14,7 @@ steps:
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: WAIT_FOR_RUN_READY
     entrypoint: "bash"
-    args: ["-c", "${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
+    args: ["-c", "apt-get install -y jq; ${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_APPLY
     entrypoint: "sh"

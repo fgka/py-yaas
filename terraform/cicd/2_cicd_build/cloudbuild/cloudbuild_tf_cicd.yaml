@@ -40,7 +40,7 @@ substitutions:
   _TF_BUCKET_NAME: ""
   _TF_MODULE: ""
   _TF_BACKEND_TF_TMPL: ""
-  _TF_DIR: "terraform/${_MODULE}"
+  _TF_DIR: "terraform/${_TF_MODULE}"
   _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
   _PYTHON_BUILD_TRIGGER: ""

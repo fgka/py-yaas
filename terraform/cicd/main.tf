@@ -4,9 +4,10 @@
 
 locals {
   common_tf_plan_args = tomap({
-    project_id  = var.project_id,
-    region      = var.region,
-    calendar_id = var.calendar_id
+    project_id            = var.project_id,
+    region                = var.region,
+    calendar_id           = var.calendar_id
+    terraform_bucket_name = var.terraform_bucket_name
   })
   tf_cicd_plan_args = merge(local.common_tf_plan_args, tomap({
     build_monitoring_email_address = var.build_monitoring_email_address,

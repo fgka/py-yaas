@@ -1,5 +1,7 @@
 # Using Terraform to deploy all
 
+It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
+
 ## Authenticate
 
 ```bash
@@ -55,26 +57,6 @@ echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
-## Enable APIs
-
-```bash
-gcloud services enable \
-  artifactregistry.googleapis.com \
-  cloudapis.googleapis.com \
-  cloudbuild.googleapis.com \
-  cloudresourcemanager.googleapis.com \
-  iam.googleapis.com \
-  iamcredentials.googleapis.com \
-  logging.googleapis.com \
-  monitoring.googleapis.com \
-  pubsub.googleapis.com \
-  secretmanager.googleapis.com \
-  servicemanagement.googleapis.com \
-  serviceusage.googleapis.com \
-  storage.googleapis.com \
-  --project="${PROJECT_ID}"
-```
-
 ## Init
 
 ```bash
@@ -82,8 +64,6 @@ terraform init -upgrade
 ```
 
 ## Plan
-
-Without integration test data:
 
 ```bash
 TMP=$(mktemp)

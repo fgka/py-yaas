@@ -206,6 +206,6 @@ Status:
 gcloud builds describe ${BUILD_ID} --region=${REGION}
 ```
 
-## (Only If Manual Deployment Is Required) [YAAS](../yaas/README.md)
+## (Only If Manual Deployment Is Required) [YAAS](./yaas/README.md)
 
 **NOTE:** This should not be required at all, use the Cloud Build triggers.

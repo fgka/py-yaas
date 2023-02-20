@@ -22,14 +22,17 @@ variable "minimum_apis" {
   type        = list(string)
   default = [
     "artifactregistry.googleapis.com",
+    "calendar-json.googleapis.com",
     "cloudapis.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "cloudscheduler.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
+    "run.googleapis.com",
     "secretmanager.googleapis.com",
     "servicemanagement.googleapis.com",
     "serviceusage.googleapis.com",

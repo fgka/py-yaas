@@ -22,6 +22,7 @@ REQUIRED_UTILITIES=(
   "bash"
   "getopt"
   "gcloud"
+  "jq"
 )
 if [ "Darwin" == $(uname -s) ]; then
   REQUIRED_UTILITIES+=("${MAC_GETOPT_CMD}")

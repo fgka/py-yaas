@@ -39,3 +39,26 @@ python -m yaas.main update-calendar-credentials \
   --secret-name ${SECRET_FULL_NAME} \
   --credentials-json ${INITIAL_CREDENTIALS_JSON}
 ```
+
+### Authorization Steps
+
+This will open a browser window to authorize YAAS to access the calendar.
+Just accept all.
+
+#### Visually
+
+Select account:
+
+![select](../doc/calendar/authorize/1-calendar-authorize-select-account.png)
+
+Continue:
+
+![continue](../doc/calendar/authorize/2-calendar-authorize-continue.png)
+
+Confirm:
+
+![confirm](../doc/calendar/authorize/3-calendar-authorize-confirm.png)
+
+Confirmation:
+
+![confirmation](../doc/calendar/authorize/4-calendar-authorize-confirmation.png)

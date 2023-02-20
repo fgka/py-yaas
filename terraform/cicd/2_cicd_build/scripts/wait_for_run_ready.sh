@@ -178,6 +178,7 @@ function help {
 ###############################################################
 ### Helper functions
 ###############################################################
+
 function set_globals
 {
   REGION="${REGION:-$DEFAULT_REGION}"
@@ -216,6 +217,28 @@ function is_ready
   LATEST_TYPE_STATUS=$(latest_type_status)
 
   if [ "${LATEST_TYPE_STATUS}" == "${VALID_TYPE_STATUS}" ]
+  then
+    RESULT=0
+  fi
+  return ${RESULT}
+}
+
+###############################################################
+### Exists?
+###############################################################
+
+function is_service_created
+{
+  local RESULT=1
+
+  local FOUND=$(gcloud run services list \
+    --region="${REGION}" \
+    --project="${PROJECT_ID}" \
+    --format=json \
+    | jq -c -r ".[].metadata.name" \
+    | grep -e "^${SERVICE_NAME}$"
+  )
+  if [ "${FOUND}" == "${SERVICE_NAME}" ]
   then
     RESULT=0
   fi
@@ -267,8 +290,15 @@ function main {
   set_globals
   echo "Waiting for service ${SERVICE_LOG_STR} to be ready <${VALID_TYPE_STATUS}>"
   echo "Max retries is ${MAX_RETRIES} with sleep time of ${RETRY_SLEEP_IN_SECS} seconds in between."
-  wait_for_ready
-  exit ${?}
+  is_service_created
+  local EXISTS=${?}
+  if [ ${EXISTS} -eq 0 ]
+  then
+    wait_for_ready
+    exit ${?}
+  else
+    echo "Service ${SERVICE_LOG_STR} does not exist yet."
+  fi
 }
 
 ###############################################################

@@ -51,6 +51,11 @@ variable "object_age_in_days" {
   default     = 7
 }
 
+variable "terraform_bucket_name" {
+  description = "Bucket name to store terraform states."
+  type        = string
+}
+
 ///////////////////////
 // Artifact Registry //
 ///////////////////////

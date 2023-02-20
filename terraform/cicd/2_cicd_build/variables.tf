@@ -80,25 +80,25 @@ variable "build_email_monitoring_channel_name" {
 ////////////
 
 variable "docker_base_image" {
-  description = "Docker base image"
+  description = "Docker base image. Only change if you know what you are doing."
   type        = string
   default     = "python:buster"
 }
 
 variable "yaas_image_name" {
-  description = "YAAS docker application image"
+  description = "YAAS docker application image."
   type        = string
   default     = "yaas"
 }
 
 variable "yaas_dockerfile" {
-  description = "YAAS application Dockerfile"
+  description = "YAAS application Dockerfile. Only change if you know what you are doing."
   type        = string
   default     = "./docker/Dockerfile"
 }
 
 variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
+  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest. Only change if you know what you are doing."
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
@@ -130,7 +130,7 @@ variable "python_build_trigger_name" {
 }
 
 variable "python_build_template_filename" {
-  description = "Cloud Build template for Python code."
+  description = "Cloud Build template for Python code. Only change if you know what you are doing."
   type        = string
   default     = "cloudbuild/cloudbuild_py.yaml"
 }
@@ -142,13 +142,13 @@ variable "app_build_trigger_name" {
 }
 
 variable "image_build_template_filename" {
-  description = "Cloud Build template for docker image."
+  description = "Cloud Build template for docker image. Only change if you know what you are doing."
   type        = string
   default     = "cloudbuild/cloudbuild_image.yaml"
 }
 
 variable "wait_for_run_ready_script_filename" {
-  description = "BASH script for waiting until Cloud Run is ready."
+  description = "BASH script for waiting until Cloud Run is ready. Only change if you know what you are doing."
   type        = string
   default     = "scripts/wait_for_run_ready.sh"
 }
@@ -160,7 +160,7 @@ variable "tf_build_trigger_name" {
 }
 
 variable "tf_build_template_filename" {
-  description = "Cloud Build template for CI/CD Terraform code."
+  description = "Cloud Build template for CI/CD Terraform code. Only change if you know what you are doing."
   type        = string
   default     = "cloudbuild/cloudbuild_tf_cicd.yaml"
 }
@@ -172,15 +172,15 @@ variable "tf_yaas_trigger_name" {
 }
 
 variable "tf_yaas_template_filename" {
-  description = "Cloud Build template for YAAS infrastructure Terraform code."
+  description = "Cloud Build template for YAAS infrastructure Terraform code. Only change if you know what you are doing."
   type        = string
   default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
 }
 
 variable "tf_backend_tf_template_filename" {
-  description = "Cloud Build template for backend.tf."
+  description = "Cloud Build template for backend.tf. Only change if you know what you are doing."
   type        = string
-  default     = "templates/backend.tf.yaml"
+  default     = "templates/backend.tf.tmpl"
 }
 
 ////////////

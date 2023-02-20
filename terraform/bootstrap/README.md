@@ -51,6 +51,18 @@ terraform plan \
 terraform apply ${TMP} && rm -f ${TMP}
 ```
 
+## Export bucket name
+
+```bash
+OUT_JSON=$(mktemp)
+terraform output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+export TF_STATE_BUCKET=$(jq -c -r ".tf_state_bucket.value.name" ${OUT_JSON})
+echo "Terraform state bucket name: <${TF_STATE_BUCKET}>"
+rm -f ${OUT_JSON}
+```
+
 ## Copy generated `backend.tf` over to each module
 
 ```bash

@@ -2,12 +2,7 @@ steps:
   - name: "bash"
     id: BACKEND_TF
     entrypoint: "bash"
-    args: ["-c", "sed",
-           "-e \"s/@@BUCKET_NAME@@/${_TF_BUCKET_NAME}/g\"",
-           "-e \"s/@@MODULE@@/${_TF_MODULE}/g\"",
-           "-e \"s/@@REGION@@/${LOCATION}/g\"",
-           "${_TF_BACKEND_TF_TMPL}",
-           "> ${_TF_DIR}/backend.tf"]
+    args: ["-c", "sed -e \"s/@@BUCKET_NAME@@/${_TF_BUCKET_NAME}/g\" -e \"s/@@MODULE@@/${_TF_MODULE}/g\" -e \"s/@@REGION@@/${LOCATION}/g\" ${_TF_BACKEND_TF_TMPL} > ${_TF_DIR}/backend.tf"]
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_INIT
     entrypoint: "sh"

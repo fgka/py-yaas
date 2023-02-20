@@ -91,6 +91,7 @@ terraform plan \
   -out ${TMP} \
   -var "project_id=${PROJECT_ID}" \
   -var "region=${REGION}" \
+  -var "terraform_bucket_name=${TF_STATE_BUCKET}" \
   -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "monitoring_email_address=${NOTIFICATION_EMAIL}" \
   -var "github_owner=${GITHUB_OWNER}" \

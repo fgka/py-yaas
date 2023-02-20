@@ -60,6 +60,7 @@ module "cicd_build" {
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email
   // resources
+  terraform_bucket_name                = var.terraform_bucket_name
   build_bucket_name                    = module.cicd_infra.build_bucket.name
   docker_artifact_registry_url         = module.cicd_infra.docker_repo_url
   python_artifact_registry_url         = module.cicd_infra.python_repo_url

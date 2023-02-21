@@ -162,6 +162,9 @@ curl http://localhost:8080/config
 
 ## PyCharm Users
 
+<details>
+<summary>Click me</summary>
+
 You need to add ``--no-cov`` to your `Run/Debug` settings.
 Below are the instructions on how to do it.
 Tested with `PyCharm 2022.2.1 (Professional Edition)` for macOS.
@@ -185,3 +188,5 @@ Add `--no-cov` to `Additional Arguments` field:
 Add `--no-cov` to `Additional Arguments` field:
 
 ![pytest](./doc/pycharm/3_pycharm_pytest_template.png)
+  
+</details>

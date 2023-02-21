@@ -82,9 +82,9 @@ variable "build_monitoring_topic_name" {
   default     = "yass-build-notification"
 }
 
-////////////////
-// Monitoring //
-////////////////
+/////////////////////////////
+// Monitoring and Alerting //
+/////////////////////////////
 
 variable "build_pubsub_monitoring_channel_name" {
   description = "Build monitoring channel name."

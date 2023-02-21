@@ -16,7 +16,7 @@ from yaas import logger
 from yaas.dto import config
 from yaas.entry_point import entry, pubsub_dispatcher
 from yaas.gcp import gcs
-from yaas.scaler import gcs_batch, standard
+from yaas.scaler import base, gcs_batch, standard
 
 _LOGGER = logger.get(__name__)
 MAIN_BP = flask.Blueprint("main", __name__, url_prefix="/")
@@ -118,7 +118,11 @@ def _flask_kwargs(
     try:
         kwargs = create_fn(flask.request)
     except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not create kwargs from request <{flask.request}> using <{create_fn.__name__}>. Error: {err}"
+        msg = (
+            f"Could not create kwargs from request <{flask.request}> "
+            f"using <{create_fn.__name__}>. "
+            f"Error: {err}"
+        )
         _LOGGER.exception(msg)
     return kwargs, msg
 
@@ -143,7 +147,11 @@ async def _flask_response(
             await async_fn(**kwargs)
             result = flask.make_response(("OK", 200))
         except Exception as err:  # pylint: disable=broad-except
-            msg = f"Could not process {what} using <{async_fn.__name__}> and arguments: <{kwargs}>. Error: {err}"
+            msg = (
+                f"Could not process {what} using <{async_fn.__name__}> "
+                f"and arguments: <{kwargs}>. "
+                f"Error: {err}"
+            )
             _LOGGER.exception(msg)
             result = flask.jsonify({"error": msg})
     return result
@@ -272,7 +280,7 @@ async def enact_standard_requests() -> str:
 
 
 async def _flask_response_enact(
-    parser_fn: Callable[[], standard.CategoryScaleRequestParser]
+    parser_fn: Callable[[], base.CategoryScaleRequestParser]
 ) -> str:
     kwargs, err_msg = _flask_kwargs(
         lambda event: dict(

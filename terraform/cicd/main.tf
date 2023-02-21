@@ -61,12 +61,10 @@ module "cicd_build" {
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email
   // resources
-  terraform_bucket_name                = var.terraform_bucket_name
-  build_bucket_name                    = module.cicd_infra.build_bucket.name
-  docker_artifact_registry_url         = module.cicd_infra.docker_repo_url
-  python_artifact_registry_url         = module.cicd_infra.python_repo_url
-  build_pubsub_monitoring_channel_name = module.cicd_infra.build_pubsub_monitoring_channel.display_name
-  build_email_monitoring_channel_name  = module.cicd_infra.build_email_monitoring_channel.display_name
+  terraform_bucket_name        = var.terraform_bucket_name
+  build_bucket_name            = module.cicd_infra.build_bucket.name
+  docker_artifact_registry_url = module.cicd_infra.docker_repo_url
+  python_artifact_registry_url = module.cicd_infra.python_repo_url
   // docker image
   docker_base_image = var.docker_base_image
   yaas_image_name   = var.yaas_image_name
@@ -90,5 +88,6 @@ module "cicd_build" {
   tf_cicd_plan_args      = local.tf_cicd_plan_args
   tf_yaas_plan_args      = local.tf_infra_plan_args
   tf_build_ignored_files = var.tf_build_ignored_files
-  depends_on             = [module.cicd_infra]
+  // dependencies
+  depends_on = [module.cicd_infra]
 }

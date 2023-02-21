@@ -235,15 +235,6 @@ variable "monitoring_pubsub_channel_name" {
   type        = string
 }
 
-variable "monitoring_not_executed_align_period_in_seconds" {
-  description = "Maximum period to tolerate lack of execution for specific commands"
-  type = object({
-    calendar_credentials_refresh = number
-    cache_refresh                = number
-    send_request                 = number
-  })
-}
-
 variable "monitoring_alert_severity" {
   description = "Severity, included, above which it should generate an alert."
   type        = string

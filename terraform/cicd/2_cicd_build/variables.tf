@@ -61,20 +61,6 @@ variable "python_artifact_registry_url" {
   type        = string
 }
 
-////////////////
-// Monitoring //
-////////////////
-
-variable "build_pubsub_monitoring_channel_name" {
-  description = "Build monitoring channel name."
-  type        = string
-}
-
-variable "build_email_monitoring_channel_name" {
-  description = "Build monitoring channel name to email."
-  type        = string
-}
-
 ////////////
 // Docker //
 ////////////

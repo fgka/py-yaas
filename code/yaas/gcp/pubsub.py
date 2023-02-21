@@ -101,7 +101,15 @@ def parse_pubsub(
         if iso_str_timestamp is not None:
             timestamp = _extract_timestamp_from_iso_str(iso_str_timestamp)
     obj_dict = _parse_json_data(data)
-    return dict_to_obj_fn(obj_dict, timestamp)
+    try:
+        result = dict_to_obj_fn(obj_dict, timestamp)
+    except Exception as err:
+        raise RuntimeError(
+            f"Could not call converter function <{dict_to_obj_fn.__name__}> "
+            f"with: <{obj_dict}> and <{timestamp}>. "
+            f"Error: {err}"
+        ) from err
+    return result
 
 
 def _extract_timestamp_from_iso_str(value: str) -> int:

@@ -129,11 +129,25 @@ def _dto_from_event(
     def dict_to_obj_fn(  # pylint: disable=unused-argument
         value: Dict[str, Any], *args, **kwargs
     ) -> dto_defaults.HasFromDict:
-        return result_type.from_dict(value)
+        try:
+            result = result_type.from_dict(value)
+        except Exception as err_fn:
+            raise RuntimeError(
+                f"Could not extract <{result_type.__name__}> from dict <{value}>. Error: {err_fn}"
+            ) from err_fn
+        return result
 
-    result = pubsub.parse_pubsub(
-        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
-    )
+    try:
+        result = pubsub.parse_pubsub(
+            event=event,
+            dict_to_obj_fn=dict_to_obj_fn,
+            iso_str_timestamp=iso_str_timestamp,
+        )
+    except Exception as err:
+        raise RuntimeError(
+            f"Could extract {result_type.__name__} from event <{event}>. "
+            f"Error: {err}"
+        ) from err
     if not isinstance(result, result_type):
         raise ValueError(
             f"Parsed value is not an instance of {result_type.__name__}. "
@@ -183,11 +197,27 @@ def command_from_event(
     def dict_to_obj_fn(  # pylint: disable=unused-argument
         value: Dict[str, Any], *args, **kwargs
     ) -> command.CommandBase:
-        return command_parser.to_command(value)
+        try:
+            result = command_parser.to_command(value)
+        except Exception as err_fn:
+            raise RuntimeError(
+                f"Could not convert dict <{value}> to {command.CommandBase.__name__}. "
+                f"Check {command_parser.__name__}.{command_parser.to_command.__name__}. "
+                f"Error: {err_fn}"
+            ) from err_fn
+        return result
 
-    result = pubsub.parse_pubsub(
-        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
-    )
+    try:
+        result = pubsub.parse_pubsub(
+            event=event,
+            dict_to_obj_fn=dict_to_obj_fn,
+            iso_str_timestamp=iso_str_timestamp,
+        )
+    except Exception as err:
+        raise RuntimeError(
+            f"Could extract {command.CommandBase.__name__} from event <{event}>. "
+            f"Error: {err}"
+        ) from err
     if not isinstance(result, command.CommandBase):
         raise ValueError(
             f"Parsed value is not an instance of {command.CommandBase.__name__}. "

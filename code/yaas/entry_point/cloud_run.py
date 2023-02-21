@@ -89,7 +89,7 @@ async def command() -> str:
     `curl`::
         PERIOD_DAYS="3"
         PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
-        DATA="{\"type\": \"UPDATE_CALENDAR_CREDENTIALS_SECRET\", \"range\": {\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}}"
+        DATA="{\"type\": \"UPDATE_CALENDAR_CACHE\", \"range\": {\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}}"
         DATA_BASE64=$(echo ${DATA} | base64)
         curl \
             -d "{\"data\":\"${DATA_BASE64}\"}" \

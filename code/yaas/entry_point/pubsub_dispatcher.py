@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Iterable, Optional, Type, Union
 import flask
 
 from yaas.dto import command, dto_defaults, request
+from yaas.entry_point import command_parser
 from yaas.gcp import pubsub
 from yaas import logger
 
@@ -115,18 +116,19 @@ def _dto_from_event(
     *,
     event: Union[flask.Request, Dict[str, Any]],
     iso_str_timestamp: Optional[str] = None,
-    result_type: Type[Any],
+    result_type: Type[dto_defaults.HasFromDict],
 ) -> Type[Any]:
     # validate input
     if not issubclass(result_type, dto_defaults.HasFromDict):
         raise TypeError(
-            f"Type <{result_type.__name__}>({type(result_type)}) must be a sub-class of <{dto_defaults.HasFromDict.__name__}>"
+            f"Type <{result_type.__name__}>({type(result_type)}) "
+            f"must be a sub-class of <{dto_defaults.HasFromDict.__name__}>"
         )
     # logic
 
     def dict_to_obj_fn(  # pylint: disable=unused-argument
         value: Dict[str, Any], *args, **kwargs
-    ) -> request.ScaleRequestCollection:
+    ) -> dto_defaults.HasFromDict:
         return result_type.from_dict(value)
 
     result = pubsub.parse_pubsub(
@@ -177,8 +179,18 @@ def command_from_event(
     Returns:
 
     """
-    return _dto_from_event(
-        event=event,
-        iso_str_timestamp=iso_str_timestamp,
-        result_type=request.Range,
+
+    def dict_to_obj_fn(  # pylint: disable=unused-argument
+        value: Dict[str, Any], *args, **kwargs
+    ) -> command.CommandBase:
+        return command_parser.to_command(value)
+
+    result = pubsub.parse_pubsub(
+        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
     )
+    if not isinstance(result, command.CommandBase):
+        raise ValueError(
+            f"Parsed value is not an instance of {command.CommandBase.__name__}. "
+            f"Got: <{result}>({type(result)})"
+        )
+    return result

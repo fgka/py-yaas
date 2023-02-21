@@ -47,6 +47,9 @@ Just accept all.
 
 #### Visually
 
+<details>
+<summary>Click me</summary>
+
 Select account:
 
 ![select](../doc/calendar/authorize/1-calendar-authorize-select-account.png)
@@ -62,3 +65,5 @@ Confirm:
 Confirmation:
 
 ![confirmation](../doc/calendar/authorize/4-calendar-authorize-confirmation.png)
+
+</details>

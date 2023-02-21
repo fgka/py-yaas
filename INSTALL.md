@@ -88,7 +88,9 @@ The step-by-step below:
     - Test users: ``<YOUR GMAIL ACCOUNT EMAIL>``.
 
 #### Visually
-
+<details>
+<summary>Click me</summary>
+  
 User type:
 
 ![external](./doc/apis/consent/1-consent-external.png)
@@ -105,6 +107,9 @@ Set scope:
 
 ![scope](./doc/apis/consent/5-consent-scope.png)
 
+</details>
+
+
 ### OAuth Credentials
 
 1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard);
@@ -117,6 +122,9 @@ Set scope:
    - It is assumed you saved the file under ``${HOME}/calendar-api-initial.json``
 
 #### Visually
+
+<details>
+<summary>Click me</summary>
 
 Create:
 
@@ -137,6 +145,8 @@ Download:
 List of clients:
 
 ![list](./doc/apis/oauth/5-oath-list.png)
+  
+</details>
 
 ## Enable Your Github Repository (if needed)
 
@@ -157,6 +167,8 @@ You need to enable Cloud Build to access your Github repo.
 1. At ``Create a trigger`` click ``Done``;
 
 #### Visually
+<details>
+<summary>Click me</summary>
 
 Region in ``Triggers``:
 
@@ -181,6 +193,7 @@ Select a repo:
 Done:
 
 ![done](./doc/build/github/6-build-done.png)
+</details>
 
 ## Google Calendar For YAAS
 
@@ -203,6 +216,9 @@ The ID follows the pattern: ``<some large hexdecimal value>@group.calendar.googl
 
 #### Visually
 
+<details>
+<summary>Click me</summary>
+
 _Tripple dot_ menu:
 
 ![tripple-dot](./doc/calendar/new/1-calendar-tripple-dot.png)
@@ -212,6 +228,7 @@ Calendar ID:
 
 ![calendar-id](./doc/calendar/new/2-calendar-integrate-calendar.png)
 
+</details>
 
 ## Resume Deployment
 

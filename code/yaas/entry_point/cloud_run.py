@@ -80,6 +80,39 @@ def configuration() -> str:
     return flask.jsonify(_configuration().as_dict())
 
 
+@MAIN_BP.route("/command", methods=["POST"])
+async def command() -> str:
+    # pylint: disable=anomalous-backslash-in-string,line-too-long
+    """
+    Wrapper to :py:func:`entry.command`.
+
+    `curl`::
+        PERIOD_DAYS="3"
+        PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
+        DATA="{\"type\": \"UPDATE_CALENDAR_CREDENTIALS_SECRET\", \"range\": {\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}}"
+        DATA_BASE64=$(echo ${DATA} | base64)
+        curl \
+            -d "{\"data\":\"${DATA_BASE64}\"}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            http://localhost:8080/command
+    """
+    # pylint: enable=anomalous-backslash-in-string,line-too-long
+    _LOGGER.debug(
+        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    )
+    try:
+        _LOGGER.info("Calling %s", command.__name__)
+        cmd = pubsub_dispatcher.command_from_event(event=flask.request)
+        await entry.process_command(cmd, configuration=_configuration())
+        result = flask.make_response(("OK", 200))
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not update calendar credentials. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
+
+
 @MAIN_BP.route("/update-calendar-credentials-secret", methods=["POST"])
 async def update_calendar_credentials() -> str:
     # pylint: disable=anomalous-backslash-in-string

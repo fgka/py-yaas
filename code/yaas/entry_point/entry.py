@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Callable, Optional, Tuple, Union
 import flask
 
 from yaas.cal import google_cal
-from yaas.dto import config, event
+from yaas.dto import command, config, event
 from yaas.entry_point import pubsub_dispatcher
 from yaas.event.store import base, calendar, factory
 from yaas.event import version_control
@@ -23,6 +23,51 @@ def _merge_strategy_always_a(
     comparison: event.EventSnapshotComparison,
 ) -> event.EventSnapshot:
     return comparison.snapshot_a
+
+
+async def process_command(
+    value: command.CommandBase, *, configuration: config.Config
+) -> None:
+    """
+    Processes a command.
+
+    Args:
+        value:
+        configuration
+
+    Returns:
+
+    """
+    # validate input
+    if not isinstance(value, command.CommandBase):
+        raise ValueError(
+            f"Value argument is not an instance <{command.CommandBase.__name__}>. "
+            f"Got: <{value}>({type(value)})"
+        )
+    # logic
+    if value.type == command.CommandType.UPDATE_CALENDAR_CREDENTIALS_SECRET.value:
+        await update_calendar_credentials(configuration=configuration)
+    elif value.type == command.CommandType.UPDATE_CALENDAR_CACHE.value:
+        start_ts_utc, end_ts_utc = value.range.timestamp_range()
+        await update_cache(
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+            configuration=configuration,
+        )
+    elif value.type == command.CommandType.SEND_SCALING_REQUESTS.value:
+        start_ts_utc, end_ts_utc = value.range.timestamp_range()
+        await send_requests(
+            start_ts_utc=start_ts_utc,
+            end_ts_utc=end_ts_utc,
+            configuration=configuration,
+            raise_if_invalid_request=False,
+        )
+    else:
+        raise ValueError(
+            f"Command type <{value.type}> cannot be processed. "
+            f"Check implementation: {__name__}.{process_command.__name__}. "
+            f"Got: <{value}>({type(value)})"
+        )
 
 
 async def update_calendar_credentials(  # pylint: disable=too-many-arguments

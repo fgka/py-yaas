@@ -5,7 +5,7 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
 import pathlib
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import flask
 
@@ -17,11 +17,110 @@ from yaas.scaler import base as scaler_base
 from yaas.entry_point import entry
 
 from tests import common
+from tests.dto import command_test_data
 
 _TEST_REQUEST: request.ScaleRequest = common.create_scale_request()
 _TEST_TOPIC_TO_PUBSUB: Dict[str, str] = {_TEST_REQUEST.topic: "test_pubsub_topic"}
 _TEST_START_TS_UTC: int = 100
 _TEST_END_TS_UTC: int = _TEST_START_TS_UTC + 1000
+
+
+@pytest.mark.asyncio
+async def test_process_command_ok_update_cal_credentials(monkeypatch):
+    # Given
+    kwargs = dict(
+        value=command_test_data.TEST_COMMAND_UPDATE_CALENDAR_CREDENTIALS_SECRET,
+        configuration=common.TEST_CONFIG_LOCAL_JSON,
+    )
+    called = False
+
+    async def mocked_update_calendar_credentials(configuration: config.Config) -> None:
+        nonlocal called, kwargs
+        assert configuration == kwargs.get("configuration")
+        called = True
+
+    monkeypatch.setattr(
+        entry,
+        entry.update_calendar_credentials.__name__,
+        mocked_update_calendar_credentials,
+    )
+
+    # When
+    await entry.process_command(**kwargs)
+    # Then
+    assert called
+
+
+@pytest.mark.asyncio
+async def test_process_command_ok_update_cal_cache(monkeypatch):
+    # Given
+    kwargs = dict(
+        value=command_test_data.TEST_COMMAND_UPDATE_CALENDAR_CACHE,
+        configuration=common.TEST_CONFIG_LOCAL_JSON,
+    )
+    called = False
+
+    async def mocked_update_cache(
+        *,
+        start_ts_utc: int,
+        end_ts_utc: int,
+        configuration: config.Config,
+        merge_strategy: Optional[
+            Callable[[event.EventSnapshotComparison], event.EventSnapshot]
+        ] = None,
+    ) -> None:
+        nonlocal called, kwargs
+        assert configuration == kwargs.get("configuration")
+        cmd_range = kwargs.get("value").range
+        assert int((end_ts_utc - start_ts_utc) / 60) == cmd_range.period_minutes
+        assert merge_strategy is None
+        called = True
+
+    monkeypatch.setattr(
+        entry,
+        entry.update_cache.__name__,
+        mocked_update_cache,
+    )
+
+    # When
+    await entry.process_command(**kwargs)
+    # Then
+    assert called
+
+
+@pytest.mark.asyncio
+async def test_process_command_ok_send_scaling_reqs(monkeypatch):
+    # Given
+    kwargs = dict(
+        value=command_test_data.TEST_COMMAND_SEND_SCALING_REQUESTS,
+        configuration=common.TEST_CONFIG_LOCAL_JSON,
+    )
+    called = False
+
+    async def mocked_send_requests(
+        *,
+        start_ts_utc: int,
+        end_ts_utc: int,
+        configuration: config.Config,
+        raise_if_invalid_request: Optional[bool] = True,
+    ) -> None:
+        nonlocal called, kwargs
+        assert configuration == kwargs.get("configuration")
+        cmd_range = kwargs.get("value").range
+        assert int((end_ts_utc - start_ts_utc) / 60) == cmd_range.period_minutes
+        assert not raise_if_invalid_request
+        called = True
+
+    monkeypatch.setattr(
+        entry,
+        entry.send_requests.__name__,
+        mocked_send_requests,
+    )
+
+    # When
+    await entry.process_command(**kwargs)
+    # Then
+    assert called
 
 
 @pytest.mark.asyncio
@@ -33,17 +132,8 @@ async def test_update_calendar_credentials_ok(monkeypatch):
     )
     # When
     await entry.update_calendar_credentials(**kwargs)
-    # Then: calendar
-    called_update = called.get(entry.google_cal.update_secret_credentials.__name__)
-    assert (
-        called_update.get("calendar_id")
-        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.calendar_id
-    )
-    assert (
-        called_update.get("secret_name")
-        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.secret_name
-    )
-    assert called_update.get("initial_credentials_json") is None
+    # Then
+    await _verify_calendar_credentials_called(called)
 
 
 def _mock_entry(
@@ -141,6 +231,19 @@ def _mock_entry(
     return called
 
 
+async def _verify_calendar_credentials_called(called: Dict[str, Any]) -> None:
+    called_update = called.get(entry.google_cal.update_secret_credentials.__name__)
+    assert (
+        called_update.get("calendar_id")
+        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.calendar_id
+    )
+    assert (
+        called_update.get("secret_name")
+        == common.TEST_CONFIG_LOCAL_JSON.calendar_config.secret_name
+    )
+    assert called_update.get("initial_credentials_json") is None
+
+
 @pytest.mark.asyncio
 async def test_update_cache_ok_no_change(monkeypatch):
     # Given
@@ -152,6 +255,15 @@ async def test_update_cache_ok_no_change(monkeypatch):
     )
     # When
     await entry.update_cache(**kwargs)
+    # Then
+    await _verify_update_cal_cache_called(called, kwargs)
+
+
+async def _verify_update_cal_cache_called(
+    called: Dict[str, Any],
+    kwargs: Dict[str, Any],
+    expected_cache_store: event.EventSnapshot = None,
+) -> None:
     # Then: calendar
     _verify_calendar_snapshot_called(
         called.get(entry._calendar_snapshot.__name__), kwargs
@@ -159,12 +271,26 @@ async def test_update_cache_ok_no_change(monkeypatch):
     # Then: cache
     called_cache_snapshot = called.get(entry._cache_store_and_snapshot.__name__)
     _verify_cache_snapshot_called(called_cache_snapshot, kwargs)
-    assert not called_cache_snapshot.get("cache_store").called.get(
-        base.StoreContextManager.write.__name__
-    )
+    assert bool(
+        called_cache_snapshot.get("cache_store").called.get(
+            base.StoreContextManager.write.__name__
+        )
+    ) == bool(expected_cache_store is not None)
     assert called_cache_snapshot.get("cache_store").called.get(
         base.StoreContextManager.clean_up.__name__
     )
+    if expected_cache_store is not None:
+        # Then: store
+        store_called = called_cache_snapshot.get("cache_store").called
+        assert isinstance(store_called, dict)
+        assert (
+            store_called.get(base.StoreContextManager.write.__name__).get("value")
+            == expected_cache_store
+        )
+        assert (
+            store_called.get(base.StoreContextManager.clean_up.__name__).get("value")
+            == common.TEST_CONFIG_LOCAL_JSON.retention_config
+        )
 
 
 def _verify_calendar_snapshot_called(
@@ -207,24 +333,8 @@ async def test_update_cache_ok(monkeypatch):
     )
     # When
     await entry.update_cache(**kwargs)
-    # Then: calendar
-    _verify_calendar_snapshot_called(
-        called.get(entry._calendar_snapshot.__name__), kwargs
-    )
-    # Then: cache
-    called_calendar_snapshot = called.get(entry._cache_store_and_snapshot.__name__)
-    _verify_cache_snapshot_called(called_calendar_snapshot, kwargs)
-    # Then: store
-    store_called = called_calendar_snapshot.get("cache_store").called
-    assert isinstance(store_called, dict)
-    assert (
-        store_called.get(base.StoreContextManager.write.__name__).get("value")
-        == expected
-    )
-    assert (
-        store_called.get(base.StoreContextManager.clean_up.__name__).get("value")
-        == common.TEST_CONFIG_LOCAL_JSON.retention_config
-    )
+    # Then
+    await _verify_update_cal_cache_called(called, kwargs, expected)
 
 
 @pytest.mark.asyncio

@@ -9,10 +9,11 @@ from typing import Any, Callable, Dict, Optional, Union
 import flask
 import pytest
 
-from yaas.dto import request
+from yaas.dto import dto_defaults, request
 from yaas.entry_point import pubsub_dispatcher
 
 from tests import common
+from tests.dto import command_test_data
 
 _TEST_REQUEST: request.ScaleRequest = common.create_scale_request()
 _TEST_TOPIC_TO_PUBSUB: Dict[str, str] = {_TEST_REQUEST.topic: "test_pubsub_topic"}
@@ -94,6 +95,47 @@ async def test_dispatch_nok_topic_not_present():
             _TEST_REQUEST.clone(topic=_TEST_REQUEST.topic + "_NOT"),
             raise_if_invalid_request=True,
         )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        _TEST_REQUEST,
+        request.ScaleRequestCollection.from_lst([_TEST_REQUEST]),
+        command_test_data.TEST_COMMAND_SEND_SCALING_REQUESTS,
+        command_test_data.TEST_COMMAND_UPDATE_CALENDAR_CACHE,
+        command_test_data.TEST_COMMAND_UPDATE_CALENDAR_CREDENTIALS_SECRET,
+        request.Range(period_minutes=10, now_diff_minutes=-1),
+    ],
+)
+def test__dto_from_event_ok(monkeypatch, value: dto_defaults.HasFromDict):
+    # Given
+    pubsub = _MyPubSub()
+
+    def mocked_parse_pubsub(
+        *,
+        event: Union[flask.Request, Dict[str, Any]],
+        dict_to_obj_fn: Callable[[Dict[str, Any], int], Any],
+        iso_str_timestamp: Optional[str] = None,
+    ) -> Any:
+        nonlocal pubsub
+        return pubsub.parse_pubsub(
+            event=event,
+            dict_to_obj_fn=dict_to_obj_fn,
+            iso_str_timestamp=iso_str_timestamp,
+        )
+
+    monkeypatch.setattr(
+        pubsub_dispatcher.pubsub,
+        pubsub_dispatcher.pubsub.parse_pubsub.__name__,
+        mocked_parse_pubsub,
+    )
+    # When
+    result = pubsub_dispatcher._dto_from_event(
+        event=value.as_dict(), result_type=value.__class__
+    )
+    # Then
+    assert isinstance(result, value.__class__)
 
 
 def test_from_event_ok(monkeypatch):

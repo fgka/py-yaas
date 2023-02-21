@@ -98,10 +98,32 @@ class TestConfig:
         # Then
         assert result == expected, f"JSON: {json}"
 
-    def test_from_disk_ok(self):
+    def test_from_dict_ok(self):
+        # Given
+        expected = common.TEST_CONFIG_LOCAL_JSON
+        value = expected.as_dict()
+        # When
+        result = config.Config.from_dict(value)
+        # Then
+        assert result == expected, f"dict: {value}"
+
+    def test_from_json_ok_from_disk(self):
         with open(
             common.TEST_DATA_CONFIG_JSON, "r", encoding=const.ENCODING_UTF8
         ) as in_json:
             result = config.Config.from_json(in_json.read())
         assert result.calendar_config.calendar_id == "calendar_id"
         assert result.retention_config is not None
+
+    def test_from_dict_ok_from_disk(self):
+        # Given
+        with open(
+            common.TEST_DATA_CONFIG_JSON, "r", encoding=const.ENCODING_UTF8
+        ) as in_json:
+            obj = config.Config.from_json(in_json.read())
+            value = obj.as_dict()
+        # When
+        result = config.Config.from_dict(value)
+        # Then
+        assert isinstance(result, config.Config)
+        assert obj == result

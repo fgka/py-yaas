@@ -15,6 +15,18 @@ locals {
     for k, v in local.artifact_registry_repos :
     k => "${v.location}-${lower(v.format)}.pkg.dev/${v.project}/${v.name}"
   })
+  // monitoring
+  monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
+  monitoring_alert_policies_error_log = tomap({
+    email = {
+      period_in_secs = var.monitoring_notification_email_rate_limit_in_minutes * 60,
+      channel_name   = google_monitoring_notification_channel.build_email_monitoring_channel.id,
+    },
+    pubsub = {
+      period_in_secs = var.monitoring_notification_pubsub_rate_limit_in_minutes * 60,
+      channel_name   = google_monitoring_notification_channel.build_pubsub_monitoring_channel.id,
+    },
+  })
 }
 
 data "google_project" "project" {
@@ -148,7 +160,6 @@ module "build_monitoring_topic" {
   }
 }
 
-
 /////////////////////////////
 // Monitoring and Alerting //
 /////////////////////////////
@@ -167,4 +178,27 @@ resource "google_monitoring_notification_channel" "build_email_monitoring_channe
   labels = {
     email_address = var.build_monitoring_email_address
   }
+}
+
+resource "google_monitoring_alert_policy" "alert_error_log" {
+  for_each     = local.monitoring_alert_policies_error_log
+  display_name = "CI/CD-${each.key}-error-monitoring"
+  documentation {
+    content   = "Alerts for YAAS CI/CD build execution errors - ${each.key}"
+    mime_type = "text/markdown"
+  }
+  alert_strategy {
+    notification_rate_limit {
+      period = "${each.value.period_in_secs}s"
+    }
+    auto_close = "${local.monitoring_auto_close_in_seconds}s"
+  }
+  combiner = "OR"
+  conditions {
+    display_name = "ERROR in log for YAAS CI/CD build"
+    condition_matched_log {
+      filter = "resource.type=\"build\"\ntextPayload=~\"ERROR\""
+    }
+  }
+  notification_channels = [each.value.channel_name]
 }

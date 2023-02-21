@@ -71,9 +71,9 @@ variable "build_monitoring_topic_name" {
   default     = "yass-build-notification"
 }
 
-////////////////
-// Monitoring //
-////////////////
+/////////////////////////////
+// Monitoring and Alerting //
+/////////////////////////////
 
 variable "build_pubsub_monitoring_channel_name" {
   description = "Build monitoring channel name."
@@ -90,4 +90,22 @@ variable "build_email_monitoring_channel_name" {
 variable "build_monitoring_email_address" {
   description = "When the build fails, it needs to send the alert to a specific email."
   type        = string
+}
+
+variable "monitoring_notification_email_rate_limit_in_minutes" {
+  description = "For how many minutes to wait for until sending the next email notification."
+  type        = number
+  default     = 60
+}
+
+variable "monitoring_notification_pubsub_rate_limit_in_minutes" {
+  description = "For how many minutes to wait for until sending the next Pub/Sub notification."
+  type        = number
+  default     = 5
+}
+
+variable "monitoring_notification_auto_close_in_days" {
+  description = "For how many days to keep an alert alive before closing due to lack of reaction to it."
+  type        = number
+  default     = 7
 }

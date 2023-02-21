@@ -2,18 +2,6 @@
 
 It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
 
-## Authenticate
-
-```bash
-gcloud auth application-default login
-```
-
-### Set default project
-
-```bash
-gcloud init
-```
-
 ## Definitions
 
 Manually set:

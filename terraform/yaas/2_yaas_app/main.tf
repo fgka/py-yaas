@@ -13,11 +13,9 @@ locals {
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url
   // pubsub endpoints
-  pubsub_calendar_credentials_refresh_url = "${local.run_service_url}${var.service_path_update_calendar_credentials}"
-  pubsub_cache_refresh_url                = "${local.run_service_url}${var.service_path_update_cache}"
-  pubsub_request_url                      = "${local.run_service_url}${var.service_path_request_emission}"
-  pubsub_enact_standard_url               = "${local.run_service_url}${var.service_path_enact_standard_request}"
-  pubsub_enact_gcs_url                    = "${local.run_service_url}${var.service_path_enact_gcs_batch_request}"
+  pubsub_command_url        = "${local.run_service_url}${var.service_path_command}"
+  pubsub_enact_standard_url = "${local.run_service_url}${var.service_path_enact_standard_request}"
+  pubsub_enact_gcs_url      = "${local.run_service_url}${var.service_path_enact_gcs_batch_request}"
   // monitoring
   monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
   monitoring_alert_policies_error_log = tomap({
@@ -62,47 +60,13 @@ resource "google_storage_bucket_object" "config_json" {
 // Pub/Sub Subscriptions //
 ///////////////////////////
 
-resource "google_pubsub_subscription" "cal_creds_refresh" {
-  name                       = "${google_cloud_run_service.yaas.name}_cal_creds_http_push_subscription"
-  topic                      = var.pubsub_cal_creds_refresh_id
+resource "google_pubsub_subscription" "command" {
+  name                       = "${google_cloud_run_service.yaas.name}_command_http_push_subscription"
+  topic                      = var.pubsub_command_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
-    push_endpoint = local.pubsub_calendar_credentials_refresh_url
-    oidc_token {
-      service_account_email = var.run_sa_email
-      audience              = local.pubsub_calendar_credentials_refresh_url
-    }
-  }
-  retry_policy {
-    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
-  }
-}
-
-resource "google_pubsub_subscription" "cache_refresh" {
-  name                       = "${google_cloud_run_service.yaas.name}_cache_http_push_subscription"
-  topic                      = var.pubsub_cache_refresh_id
-  ack_deadline_seconds       = var.run_timeout
-  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
-  push_config {
-    push_endpoint = local.pubsub_cache_refresh_url
-    oidc_token {
-      service_account_email = var.run_sa_email
-      audience              = local.run_service_url
-    }
-  }
-  retry_policy {
-    minimum_backoff = "${var.pubsub_subscription_min_retry_backoff_in_sec}s"
-  }
-}
-
-resource "google_pubsub_subscription" "send_request" {
-  name                       = "${google_cloud_run_service.yaas.name}_send_http_push_subscription"
-  topic                      = var.pubsub_send_request_id
-  ack_deadline_seconds       = var.run_timeout
-  message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
-  push_config {
-    push_endpoint = local.pubsub_request_url
+    push_endpoint = local.pubsub_command_url
     oidc_token {
       service_account_email = var.run_sa_email
       audience              = local.run_service_url

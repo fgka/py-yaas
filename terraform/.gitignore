@@ -4,3 +4,4 @@ init.tf
 **/dist
 **/terraform.tfstate*
 **/output
+**/*.tmpl.local

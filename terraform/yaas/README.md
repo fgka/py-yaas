@@ -2,18 +2,6 @@
 
 It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
 
-## Authenticate
-
-```bash
-gcloud auth application-default login
-```
-
-### Set default project
-
-```bash
-gcloud init
-```
-
 ## Definitions
 
 Manually set:
@@ -38,23 +26,6 @@ echo "Email: ${NOTIFICATION_EMAIL}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
-## Enable APIs
-
-```bash
-gcloud services enable \
-  calendar-json.googleapis.com \
-  cloudscheduler.googleapis.com \
-  iam.googleapis.com \
-  iamcredentials.googleapis.com \
-  logging.googleapis.com \
-  monitoring.googleapis.com \
-  pubsub.googleapis.com \
-  run.googleapis.com \
-  secretmanager.googleapis.com \
-  storage.googleapis.com \
-  --project="${PROJECT_ID}"
-```
-
 ## Init
 
 ```bash
@@ -62,8 +33,6 @@ terraform init -upgrade
 ```
 
 ## Plan
-
-Without integration test data:
 
 ```bash
 TMP=$(mktemp)

@@ -235,7 +235,5 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
         converter=attrs.converters.default_if_none(
             default=attrs.Factory(DataRetentionConfig)
         ),
-        validator=attrs.validators.optional(
-            attrs.validators.instance_of(DataRetentionConfig)
-        ),
+        validator=attrs.validators.instance_of(DataRetentionConfig),
     )

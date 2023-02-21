@@ -2,6 +2,12 @@
 
 Below how to bootstrap your python environment, so it is sandboxed.
 
+**NOTE:** Execute the below instructions inside the ``code`` dir:
+
+```bash
+cd code
+```
+
 ## Development Environment Using Pyenv and Virtualenv
 
 Install:
@@ -11,13 +17,21 @@ Install:
 
 ### macOS
 
+<details>
+<summary>Click me</summary>
+
 You need `Xcode`:
 
 ```bash
 xcode-select --install
 ```
 
+</details>
+
 ### (Optional) Pyenv
+
+<details>
+<summary>Click me</summary>
 
 For macOS follow [https://gist.github.com/eliangcs/43a51f5c95dd9b848ddc](https://gist.github.com/eliangcs/43a51f5c95dd9b848ddc).
 You might also need [https://github.com/jiansoung/issues-list/issues/13#issuecomment-478575934](https://github.com/jiansoung/issues-list/issues/13#issuecomment-478575934).
@@ -33,6 +47,8 @@ Set pyenv defaults:
 pyenv global 3.10.6
 pyenv local 3.10.6
 ```
+
+</details>
 
 ### Virtualenv
 
@@ -91,6 +107,9 @@ In this project black was chosen for the auto-formatter.
 
 ### Install black with vim
 
+<details>
+<summary>Click me</summary>
+
 After following the instructions I have in my ``~/.vimrc`` the following:
 
 ```vimrc
@@ -100,9 +119,14 @@ let g:black_skip_string_normalization=1
 autocmd BufWritePre *.py execute ':Black'
 ```
 
-# Deployment
+</details>
 
-## Install
+# Building Assets
+
+## Install Wheel File
+
+<details>
+<summary>Click me</summary>
 
 Will add the library to your local python environment (if you are using virtualenv, it will be added to it only).
 
@@ -130,20 +154,47 @@ Expected:
 py_yaas_playground-1.0-py2.py3-none-any.whl
 ```
 
+</details>
+
 ## Build Docker Image
 
+<details>
+<summary>Click me</summary>
+
 ```bash
-docker build -t yaas-playground .
+pushd ../
+docker build \
+  --build-arg DIST_DIR="./code/dist" \
+  --tag yaas-playground \
+  --file ./docker/Dockerfile \
+  .
+popd 
 ```
 
 ### Test Docker Image Locally
+
+If you follow standard terraform code:
+
+```bash
+PROJECT_ID=$(gcloud config get-value core/project)
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectNumber)")
+
+CONFIG_BUCKET_NAME="yaas-app-${PROJECT_NUMBER}"
+CONFIG_OBJECT_PATH="yaas/config.json"
+```
+
+Or set it manually:
+
+```bash
+CONFIG_BUCKET_NAME="BUCKET_NAME"
+CONFIG_OBJECT_PATH="path/to/config.json"
+```
 
 Start image:
 
 ```bash
 PORT=8080
-CONFIG_BUCKET_NAME="yaas_cache"
-CONFIG_OBJECT_PATH="yaas.cfg"
+
 docker run \
   --publish 127.0.0.1:${PORT}:${PORT} \
   --volume "${HOME}/.config/gcloud/application_default_credentials.json":/gcp/creds.json:ro \
@@ -160,7 +211,9 @@ Test the image:
 curl http://localhost:8080/config
 ```
 
-## PyCharm Users
+</details>
+
+# PyCharm Users
 
 <details>
 <summary>Click me</summary>

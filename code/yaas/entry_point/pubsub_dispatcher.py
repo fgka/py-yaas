@@ -5,11 +5,12 @@ On receiving a scaling request(s) route it properly through `PubSub`_.
 
 .. _PubSub: https://cloud.google.com/pubsub/
 """
-from typing import Any, Dict, List, Iterable, Optional, Union
+from typing import Any, Dict, List, Iterable, Optional, Type, Union
 
 import flask
 
-from yaas.dto import request
+from yaas.dto import command, dto_defaults, request
+from yaas.entry_point import command_parser
 from yaas.gcp import pubsub
 from yaas import logger
 
@@ -103,22 +104,56 @@ def from_event(
     Returns:
 
     """
+    result = _dto_from_event(
+        event=event,
+        iso_str_timestamp=iso_str_timestamp,
+        result_type=request.ScaleRequestCollection,
+    )
+    return result.collection
+
+
+def _dto_from_event(
+    *,
+    event: Union[flask.Request, Dict[str, Any]],
+    iso_str_timestamp: Optional[str] = None,
+    result_type: Type[dto_defaults.HasFromDict],
+) -> Type[Any]:
+    # validate input
+    if not issubclass(result_type, dto_defaults.HasFromDict):
+        raise TypeError(
+            f"Type <{result_type.__name__}>({type(result_type)}) "
+            f"must be a sub-class of <{dto_defaults.HasFromDict.__name__}>"
+        )
+    # logic
 
     def dict_to_obj_fn(  # pylint: disable=unused-argument
         value: Dict[str, Any], *args, **kwargs
-    ) -> request.ScaleRequestCollection:
-        return request.ScaleRequestCollection.from_dict(value)
+    ) -> dto_defaults.HasFromDict:
+        try:
+            result = result_type.from_dict(value)
+        except Exception as err_fn:
+            raise RuntimeError(
+                f"Could not extract <{result_type.__name__}> from dict <{value}>. Error: {err_fn}"
+            ) from err_fn
+        return result
 
-    result = pubsub.parse_pubsub(
-        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
-    )
-    if not isinstance(result, request.ScaleRequestCollection):
+    try:
+        result = pubsub.parse_pubsub(
+            event=event,
+            dict_to_obj_fn=dict_to_obj_fn,
+            iso_str_timestamp=iso_str_timestamp,
+        )
+    except Exception as err:
+        raise RuntimeError(
+            f"Could extract {result_type.__name__} from event <{event}>. "
+            f"Error: {err}"
+        ) from err
+    if not isinstance(result, result_type):
         raise ValueError(
-            f"Parsed value is not an instance of {request.ScaleRequestCollection.__name__}. "
+            f"Parsed value is not an instance of {result_type.__name__}. "
             f"Got: <{result}>({type(result)})"
         )
-
-    return result.collection
+    return result
 
 
 def range_from_event(
@@ -127,6 +162,29 @@ def range_from_event(
     iso_str_timestamp: Optional[str] = None,
 ) -> request.Range:
     """
+    Extracts a range embedded into a Pub/Sub payload.
+
+    Args:
+        event:
+        iso_str_timestamp:
+
+    Returns:
+
+    """
+    return _dto_from_event(
+        event=event,
+        iso_str_timestamp=iso_str_timestamp,
+        result_type=request.Range,
+    )
+
+
+def command_from_event(
+    *,
+    event: Union[flask.Request, Dict[str, Any]],
+    iso_str_timestamp: Optional[str] = None,
+) -> command.CommandBase:
+    """
+    Extracts a command embedded into a Pub/Sub payload.
 
     Args:
         event:
@@ -138,15 +196,31 @@ def range_from_event(
 
     def dict_to_obj_fn(  # pylint: disable=unused-argument
         value: Dict[str, Any], *args, **kwargs
-    ) -> request.Range:
-        return request.Range.from_dict(value)
+    ) -> command.CommandBase:
+        try:
+            result = command_parser.to_command(value)
+        except Exception as err_fn:
+            raise RuntimeError(
+                f"Could not convert dict <{value}> to {command.CommandBase.__name__}. "
+                f"Check {command_parser.__name__}.{command_parser.to_command.__name__}. "
+                f"Error: {err_fn}"
+            ) from err_fn
+        return result
 
-    result = pubsub.parse_pubsub(
-        event=event, dict_to_obj_fn=dict_to_obj_fn, iso_str_timestamp=iso_str_timestamp
-    )
-    if not isinstance(result, request.Range):
+    try:
+        result = pubsub.parse_pubsub(
+            event=event,
+            dict_to_obj_fn=dict_to_obj_fn,
+            iso_str_timestamp=iso_str_timestamp,
+        )
+    except Exception as err:
+        raise RuntimeError(
+            f"Could extract {command.CommandBase.__name__} from event <{event}>. "
+            f"Error: {err}"
+        ) from err
+    if not isinstance(result, command.CommandBase):
         raise ValueError(
-            f"Parsed value is not an instance of {request.Range.__name__}. "
+            f"Parsed value is not an instance of {command.CommandBase.__name__}. "
             f"Got: <{result}>({type(result)})"
         )
     return result

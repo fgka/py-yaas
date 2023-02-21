@@ -28,9 +28,7 @@ module "yaas_infra" {
   // bucket
   bucket_name_prefix = var.bucket_name_prefix
   // pubsub
-  pubsub_cal_creds_refresh_name       = var.pubsub_cal_creds_refresh_name
-  pubsub_cache_refresh_name           = var.pubsub_cache_refresh_name
-  pubsub_send_request_name            = var.pubsub_send_request_name
+  pubsub_command_name                 = var.pubsub_command_name
   pubsub_enact_standard_request_name  = var.pubsub_enact_standard_request_name
   pubsub_enact_gcs_batch_request_name = var.pubsub_enact_gcs_batch_request_name
   pubsub_notification_topic_name      = var.pubsub_notification_topic_name
@@ -70,9 +68,7 @@ module "yaas_app" {
   // bucket
   bucket_name = module.yaas_infra.bucket.name
   // pubsub
-  pubsub_cal_creds_refresh_id       = module.yaas_infra.pubsub_cal_creds_refresh.id
-  pubsub_cache_refresh_id           = module.yaas_infra.pubsub_cache_refresh.id
-  pubsub_send_request_id            = module.yaas_infra.pubsub_send_request.id
+  pubsub_command_id                 = module.yaas_infra.pubsub_command.id
   pubsub_enact_standard_request_id  = module.yaas_infra.pubsub_enact_standard_request.id
   pubsub_enact_gcs_batch_request_id = module.yaas_infra.pubsub_enact_gcs_batch_request.id
   pubsub_notification_topic_id      = module.yaas_infra.pubsub_notification_topic.id
@@ -81,11 +77,8 @@ module "yaas_app" {
   // image
   image_name_uri = var.image_name_uri
   // code
-  calendar_id                              = var.calendar_id
-  log_level                                = var.log_level
-  service_path_update_calendar_credentials = var.service_path_update_calendar_credentials
-  service_path_update_cache                = var.service_path_update_cache
-  service_path_request_emission            = var.service_path_request_emission
+  calendar_id = var.calendar_id
+  log_level   = var.log_level
   // cloud run
   run_name                  = var.run_name
   run_container_concurrency = var.run_container_concurrency

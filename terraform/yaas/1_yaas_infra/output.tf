@@ -22,16 +22,8 @@ output "bucket" {
 // Pub/Sub Topics //
 ////////////////////
 
-output "pubsub_cal_creds_refresh" {
-  value = module.pubsub_cal_creds_refresh
-}
-
-output "pubsub_cache_refresh" {
-  value = module.pubsub_cache_refresh
-}
-
-output "pubsub_send_request" {
-  value = module.pubsub_send_request
+output "pubsub_command" {
+  value = module.pubsub_command
 }
 
 output "pubsub_enact_standard_request" {

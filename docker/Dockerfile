@@ -38,6 +38,7 @@ RUN ls -1 ./*.whl \
     | while read WHL; \
       do \
         python3 -m pip install ${WHL}; \
+        echo "Installed: ${WHL}"; \
       done
 
 ## Clean-up pip cache

@@ -8,6 +8,7 @@ GCP Cloud Run entry point:
 """
 # pylint: enable=line-too-long
 import os
+from typing import Any, Dict, Callable, Optional, Tuple
 
 import flask
 
@@ -98,18 +99,53 @@ async def command() -> str:
             http://localhost:8080/command
     """
     # pylint: enable=anomalous-backslash-in-string,line-too-long
+    kwargs, err_msg = _flask_kwargs(
+        lambda event: dict(
+            value=pubsub_dispatcher.command_from_event(event=event),
+            configuration=_configuration(),
+        )
+    )
+    return await _flask_response(
+        what="command", async_fn=entry.process_command, kwargs=kwargs, err_msg=err_msg
+    )
+
+
+def _flask_kwargs(
+    create_fn: Callable[[flask.Request], Dict[str, Any]]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    kwargs = None
+    msg = None
+    try:
+        kwargs = create_fn(flask.request)
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could not create kwargs from request <{flask.request}> using <{create_fn.__name__}>. Error: {err}"
+        _LOGGER.exception(msg)
+    return kwargs, msg
+
+
+async def _flask_response(
+    *,
+    what: str,
+    async_fn: Callable[[Dict[str, Any]], None],
+    kwargs: Dict[str, Any],
+    err_msg: Optional[str] = None,
+) -> None:
     _LOGGER.debug(
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
-    try:
-        _LOGGER.info("Calling %s", command.__name__)
-        cmd = pubsub_dispatcher.command_from_event(event=flask.request)
-        await entry.process_command(cmd, configuration=_configuration())
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not update calendar credentials. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
+    if err_msg:
+        result = flask.jsonify({"error": err_msg})
+    else:
+        try:
+            _LOGGER.info(
+                "Calling %s through <%s> with <%s>", what, async_fn.__name__, kwargs
+            )
+            await async_fn(**kwargs)
+            result = flask.make_response(("OK", 200))
+        except Exception as err:  # pylint: disable=broad-except
+            msg = f"Could not process {what} using <{async_fn.__name__}> and arguments: <{kwargs}>. Error: {err}"
+            _LOGGER.exception(msg)
+            result = flask.jsonify({"error": msg})
     return result
 
 
@@ -127,20 +163,17 @@ async def update_calendar_credentials() -> str:
             http://localhost:8080/update-calendar-credentials-secret
     """
     # pylint: enable=anomalous-backslash-in-string
-    _LOGGER.debug(
-        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
-    )
-    try:
-        _LOGGER.info("Calling %s", update_calendar_credentials.__name__)
-        await entry.update_calendar_credentials(
+    kwargs, err_msg = _flask_kwargs(
+        lambda event: dict(
             configuration=_configuration(),
         )
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not update calendar credentials. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
-    return result
+    )
+    return await _flask_response(
+        what="update_calendar_credentials",
+        async_fn=entry.update_calendar_credentials,
+        kwargs=kwargs,
+        err_msg=err_msg,
+    )
 
 
 @MAIN_BP.route("/update-cache", methods=["POST"])
@@ -161,26 +194,19 @@ async def update_cache() -> str:
             http://localhost:8080/update-cache
     """
     # pylint: enable=anomalous-backslash-in-string
-    _LOGGER.debug(
-        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
-    )
-    try:
-        update_range = pubsub_dispatcher.range_from_event(event=flask.request)
-        _LOGGER.info(
-            "Calling %s with range %s", update_cache.__name__, update_range.as_log_str()
-        )
+    def create_kwargs(event: flask.Request) -> Dict[str, Any]:
+        update_range = pubsub_dispatcher.range_from_event(event=event)
         start_ts_utc, end_ts_utc = update_range.timestamp_range()
-        await entry.update_cache(
+        return dict(
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
             configuration=_configuration(),
         )
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not update cache. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
-    return result
+
+    kwargs, err_msg = _flask_kwargs(create_kwargs)
+    return await _flask_response(
+        what="update_cache", async_fn=entry.update_cache, kwargs=kwargs, err_msg=err_msg
+    )
 
 
 @MAIN_BP.route("/send-requests", methods=["POST"])
@@ -200,27 +226,23 @@ async def send_requests() -> str:
             http://localhost:8080/send-requests
     """
     # pylint: enable=anomalous-backslash-in-string
-    _LOGGER.debug(
-        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
-    )
-    try:
-        send_range = pubsub_dispatcher.range_from_event(event=flask.request)
-        _LOGGER.info(
-            "Calling %s with range %s", send_requests.__name__, send_range.as_log_str()
-        )
+    def create_kwargs(event: flask.Request) -> Dict[str, Any]:
+        send_range = pubsub_dispatcher.range_from_event(event=event)
         start_ts_utc, end_ts_utc = send_range.timestamp_range()
-        await entry.send_requests(
+        return dict(
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
             configuration=_configuration(),
             raise_if_invalid_request=False,
         )
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not send requests. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
-    return result
+
+    kwargs, err_msg = _flask_kwargs(create_kwargs)
+    return await _flask_response(
+        what="send_requests",
+        async_fn=entry.send_requests,
+        kwargs=kwargs,
+        err_msg=err_msg,
+    )
 
 
 @MAIN_BP.route("/enact-standard-requests", methods=["POST"])
@@ -244,19 +266,23 @@ async def enact_standard_requests() -> str:
             http://localhost:8080/enact-standard-requests
     """
     # pylint: enable=anomalous-backslash-in-string,line-too-long
-    _LOGGER.debug(
-        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
+    return await _flask_response_enact(
+        parser_fn=lambda: standard.StandardScalingCommandParser(strict_mode=False)
     )
-    try:
-        _LOGGER.info("Calling %s", enact_standard_requests.__name__)
-        parser = standard.StandardScalingCommandParser(strict_mode=False)
-        await entry.enact_requests(parser=parser, pubsub_event=flask.request)
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not enact request. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
-    return result
+
+
+async def _flask_response_enact(
+    parser_fn: Callable[[], standard.CategoryScaleRequestParser]
+) -> str:
+    kwargs, err_msg = _flask_kwargs(
+        lambda event: dict(
+            parser=parser_fn(),
+            pubsub_event=event,
+        )
+    )
+    return await _flask_response(
+        what="enact", async_fn=entry.enact_requests, kwargs=kwargs, err_msg=err_msg
+    )
 
 
 @MAIN_BP.route("/enact-gcs-requests", methods=["POST"])
@@ -295,21 +321,11 @@ async def enact_gcs_requests() -> str:
             http://localhost:8080/enact-gcs-requests
     """
     # pylint: enable=anomalous-backslash-in-string,line-too-long
-    _LOGGER.debug(
-        "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
-    )
-    try:
-        _LOGGER.info("Calling %s", enact_standard_requests.__name__)
-        parser = gcs_batch.GcsBatchCommandParser(
+    return await _flask_response_enact(
+        parser_fn=lambda: gcs_batch.GcsBatchCommandParser(
             topic_to_pubsub=_configuration().topic_to_pubsub
         )
-        await entry.enact_requests(parser=parser, pubsub_event=flask.request)
-        result = flask.make_response(("OK", 200))
-    except Exception as err:  # pylint: disable=broad-except
-        msg = f"Could not enact request. Error: {err}"
-        _LOGGER.exception(msg)
-        result = flask.jsonify({"error": msg})
-    return result
+    )
 
 
 def _main():

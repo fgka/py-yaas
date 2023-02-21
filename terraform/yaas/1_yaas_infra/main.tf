@@ -12,10 +12,10 @@ locals {
   scheduler_cron_entry_request             = "*/${var.scheduler_request_rate_in_minutes} * * * *"
   // scheduler data
   cache_refresh_range_in_minutes = var.cache_refresh_range_in_days * 24 * 60
-  calendar_creds_refresh_data    = "{\"to_be_ignored\": \"this not used anywhere\"}"
-  scheduler_cache_refresh_data   = "{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}"
+  calendar_creds_refresh_data    = "{\"type\":\"UPDATE_CALENDAR_CREDENTIALS_SECRET\"}"
+  scheduler_cache_refresh_data   = "{\"type\":\"UPDATE_CALENDAR_CACHE\",\"range\":{\"period_minutes\":${local.cache_refresh_range_in_minutes}, \"now_diff_minutes\":${var.scheduler_request_rate_in_minutes}}}"
   scheduler_request_now_diff     = -1
-  scheduler_request_data         = "{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}}"
+  scheduler_request_data         = "{\"type\":\"SEND_SCALING_REQUESTS\",\"range\":{\"period_minutes\":${var.scheduler_request_rate_in_minutes - local.scheduler_request_now_diff}, \"now_diff_minutes\":${local.scheduler_request_now_diff}}}"
   // secret
   secrets_calendar_credentials_content = var.secrets_calendar_credentials_file == null || var.secrets_calendar_credentials_file == "" ? {} : {
     "${var.secrets_calendar_credentials_name}" = {
@@ -99,33 +99,6 @@ module "pubsub_command" {
   }
 }
 
-module "pubsub_cal_creds_refresh" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
-  project_id = var.project_id
-  name       = var.pubsub_cal_creds_refresh_name
-  iam = {
-    "roles/pubsub.publisher" = [local.scheduler_system_sa_iam_member]
-  }
-}
-
-module "pubsub_cache_refresh" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
-  project_id = var.project_id
-  name       = var.pubsub_cache_refresh_name
-  iam = {
-    "roles/pubsub.publisher" = [local.scheduler_system_sa_iam_member]
-  }
-}
-
-module "pubsub_send_request" {
-  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
-  project_id = var.project_id
-  name       = var.pubsub_send_request_name
-  iam = {
-    "roles/pubsub.publisher" = [local.scheduler_system_sa_iam_member]
-  }
-}
-
 module "pubsub_enact_standard_request" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
   project_id = var.project_id
@@ -164,7 +137,7 @@ resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
   time_zone   = var.scheduler_cron_timezone
   pubsub_target {
     # topic.id is the topic's full resource name.
-    topic_name = module.pubsub_cal_creds_refresh.topic.id
+    topic_name = module.pubsub_command.topic.id
     data       = base64encode(local.calendar_creds_refresh_data)
   }
 }
@@ -176,7 +149,7 @@ resource "google_cloud_scheduler_job" "cache_refresh" {
   time_zone   = var.scheduler_cron_timezone
   pubsub_target {
     # topic.id is the topic's full resource name.
-    topic_name = module.pubsub_cache_refresh.topic.id
+    topic_name = module.pubsub_command.topic.id
     data       = base64encode(local.scheduler_cache_refresh_data)
   }
 }
@@ -188,7 +161,7 @@ resource "google_cloud_scheduler_job" "request_emission" {
   time_zone   = var.scheduler_cron_timezone
   pubsub_target {
     # topic.id is the topic's full resource name.
-    topic_name = module.pubsub_send_request.topic.id
+    topic_name = module.pubsub_command.topic.id
     data       = base64encode(local.scheduler_request_data)
   }
 }

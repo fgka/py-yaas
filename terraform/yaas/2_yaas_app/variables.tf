@@ -51,21 +51,6 @@ variable "pubsub_command_id" {
   type        = string
 }
 
-variable "pubsub_cal_creds_refresh_id" {
-  description = "ID of the Pub/Sub topic to send Google Calendar credentials refresh requests."
-  type        = string
-}
-
-variable "pubsub_cache_refresh_id" {
-  description = "Name of the Pub/Sub topic to send Google Calendar cache refresh requests."
-  type        = string
-}
-
-variable "pubsub_send_request_id" {
-  description = "ID of the Pub/Sub topic to send requests to process all upcoming scaling requests."
-  type        = string
-}
-
 variable "pubsub_enact_standard_request_id" {
   description = "ID of the Pub/Sub topic to send standard scaling requests."
   type        = string
@@ -140,27 +125,6 @@ variable "service_path_command" {
   description = "YAAS Cloud Run service path to trigger commands."
   type        = string
   default     = "/command"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_update_calendar_credentials" {
-  description = "YAAS Cloud Run service path to trigger calendar credentials OAuth2 refresh."
-  type        = string
-  default     = "/update-calendar-credentials-secret"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_update_cache" {
-  description = "YAAS Cloud Run service path to trigger calendar cache update."
-  type        = string
-  default     = "/update-cache"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_request_emission" {
-  description = "YAAS Cloud Run service path to trigger scaling requests emission."
-  type        = string
-  default     = "/send-requests"
 }
 
 // Do **NOT** change. Check code first

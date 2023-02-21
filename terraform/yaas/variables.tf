@@ -77,24 +77,6 @@ variable "pubsub_command_name" {
   default     = "yaas-command"
 }
 
-variable "pubsub_cal_creds_refresh_name" {
-  description = "Name of the Pub/Sub topic to send Google Calendar credentials refresh requests."
-  type        = string
-  default     = "yaas-cal-creds-refresh"
-}
-
-variable "pubsub_cache_refresh_name" {
-  description = "Name of the Pub/Sub topic to send Google Calendar cache refresh requests."
-  type        = string
-  default     = "yaas-cache-refresh"
-}
-
-variable "pubsub_send_request_name" {
-  description = "Name of the Pub/Sub topic to send requests to process all upcoming scaling requests."
-  type        = string
-  default     = "yaas-send-request"
-}
-
 variable "pubsub_enact_standard_request_name" {
   description = "Name of the Pub/Sub topic to send specific scaling requests."
   type        = string

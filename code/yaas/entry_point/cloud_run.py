@@ -54,10 +54,25 @@ def create_app(  # pylint: disable=unused-argument,keyword-arg-before-vararg
 def _configuration() -> config.Config:
     bucket_name = os.getenv(CONFIG_BUCKET_NAME_ENV_VAR)
     object_path = os.getenv(CONFIG_OBJECT_PATH_ENV_VAR)
-    config_json = gcs.read_object(
-        bucket_name=bucket_name, object_path=object_path, warn_read_failure=True
-    )
-    return config.Config.from_json(config_json)
+    try:
+        config_json = gcs.read_object(
+            bucket_name=bucket_name, object_path=object_path, warn_read_failure=True
+        )
+    except Exception as err:
+        raise RuntimeError(
+            f"Could not read config object in bucket <{bucket_name}> "
+            f"and object <{object_path}>. "
+            f"Error: {err}"
+        ) from err
+    try:
+        result = config.Config.from_json(config_json)
+    except Exception as err:
+        raise RuntimeError(
+            f"Could not extract <{config.Config.__name__}> "
+            f"from JSON content: <{config_json}>. "
+            f"Error: {err}"
+        ) from err
+    return result
 
 
 #############
@@ -78,7 +93,13 @@ def configuration() -> str:
         "Request data: <%s>(%s)", flask.request.data, type(flask.request.data)
     )
     _LOGGER.info("Calling %s", configuration.__name__)
-    return flask.jsonify(_configuration().as_dict())
+    try:
+        result = flask.jsonify(_configuration().as_dict())
+    except Exception as err:  # pylint: disable=broad-except
+        msg = f"Could get configuration. Error: {err}"
+        _LOGGER.exception(msg)
+        result = flask.jsonify({"error": msg})
+    return result
 
 
 @MAIN_BP.route("/command", methods=["POST"])

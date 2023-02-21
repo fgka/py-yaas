@@ -46,6 +46,11 @@ variable "bucket_name" {
 // Pub/Sub //
 /////////////
 
+variable "pubsub_command_id" {
+  description = "ID of the Pub/Sub topic to send commands to."
+  type        = string
+}
+
 variable "pubsub_cal_creds_refresh_id" {
   description = "ID of the Pub/Sub topic to send Google Calendar credentials refresh requests."
   type        = string
@@ -131,36 +136,43 @@ variable "config_path" {
 }
 
 // Do **NOT** change. Check code first
+variable "service_path_command" {
+  description = "YAAS Cloud Run service path to trigger commands."
+  type        = string
+  default     = "/command"
+}
+
+// Do **NOT** change. Check code first
 variable "service_path_update_calendar_credentials" {
-  description = "YAAS Coud Run service path to trigger calendar credentials OAuth2 refresh."
+  description = "YAAS Cloud Run service path to trigger calendar credentials OAuth2 refresh."
   type        = string
   default     = "/update-calendar-credentials-secret"
 }
 
 // Do **NOT** change. Check code first
 variable "service_path_update_cache" {
-  description = "YAAS Coud Run service path to trigger calendar cache update."
+  description = "YAAS Cloud Run service path to trigger calendar cache update."
   type        = string
   default     = "/update-cache"
 }
 
 // Do **NOT** change. Check code first
 variable "service_path_request_emission" {
-  description = "YAAS Coud Run service path to trigger scaling requests emission."
+  description = "YAAS Cloud Run service path to trigger scaling requests emission."
   type        = string
   default     = "/send-requests"
 }
 
 // Do **NOT** change. Check code first
 variable "service_path_enact_standard_request" {
-  description = "YAAS Coud Run service path to enact standard requests."
+  description = "YAAS Cloud Run service path to enact standard requests."
   type        = string
   default     = "/enact-standard-requests"
 }
 
 // Do **NOT** change. Check code first
 variable "service_path_enact_gcs_batch_request" {
-  description = "YAAS Coud Run service path to enact GCS batch requests."
+  description = "YAAS Cloud Run service path to enact GCS batch requests."
   type        = string
   default     = "/enact-gcs-requests"
 }

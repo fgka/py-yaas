@@ -58,3 +58,7 @@ output "build_pubsub_monitoring_channel" {
 output "build_email_monitoring_channel" {
   value = google_monitoring_notification_channel.build_email_monitoring_channel
 }
+
+output "alert_error_log" {
+  value = google_monitoring_alert_policy.alert_error_log
+}

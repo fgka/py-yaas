@@ -47,6 +47,7 @@ module "tf_build_service_account" {
       "roles/artifactregistry.admin",
       "roles/cloudbuild.builds.editor",
       "roles/cloudscheduler.admin",
+      "roles/editor",
       "roles/iam.serviceAccountAdmin",
       "roles/iam.serviceAccountUser",
       "roles/logging.logWriter",
@@ -69,15 +70,8 @@ module "build_service_account" {
     "${data.google_project.project.id}" = [
       "roles/artifactregistry.admin",
       "roles/cloudbuild.builds.editor",
-      "roles/cloudscheduler.admin",
-      "roles/iam.serviceAccountAdmin",
       "roles/iam.serviceAccountUser",
-      "roles/logging.logWriter",
-      "roles/monitoring.admin",
-      "roles/pubsub.admin",
-      "roles/resourcemanager.projectIamAdmin",
       "roles/run.admin",
-      "roles/secretmanager.admin",
       "roles/storage.admin",
     ]
   }

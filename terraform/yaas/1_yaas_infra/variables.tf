@@ -59,6 +59,12 @@ variable "bucket_name_prefix" {
 // Pub/Sub Topics //
 ////////////////////
 
+variable "pubsub_command_name" {
+  description = "Name of the Pub/Sub topic to send commands to."
+  type        = string
+  default     = "yaas-command"
+}
+
 variable "pubsub_cal_creds_refresh_name" {
   description = "Name of the Pub/Sub topic to send Google Calendar credentials refresh requests."
   type        = string

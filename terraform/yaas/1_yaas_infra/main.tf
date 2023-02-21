@@ -90,6 +90,15 @@ module "bucket" {
 // Pub/Sub Topics //
 ////////////////////
 
+module "pubsub_command" {
+  source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
+  project_id = var.project_id
+  name       = var.pubsub_command_name
+  iam = {
+    "roles/pubsub.publisher" = [local.scheduler_system_sa_iam_member]
+  }
+}
+
 module "pubsub_cal_creds_refresh" {
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/pubsub"
   project_id = var.project_id

@@ -20,37 +20,16 @@ locals {
   pubsub_enact_gcs_url                    = "${local.run_service_url}${var.service_path_enact_gcs_batch_request}"
   // monitoring
   monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
-  monitoring_alert_channel_type_to_name = tomap({
-    email  = var.monitoring_email_channel_name,
-    pubsub = var.monitoring_pubsub_channel_name
-  })
   monitoring_alert_policies_error_log = tomap({
     email = {
       period_in_secs = var.monitoring_notification_email_rate_limit_in_minutes * 60,
-      channel_name   = local.monitoring_alert_channel_type_to_name["email"]
+      channel_name   = var.monitoring_email_channel_name,
     },
     pubsub = {
       period_in_secs = var.monitoring_notification_pubsub_rate_limit_in_minutes * 60,
-      channel_name   = local.monitoring_alert_channel_type_to_name["pubsub"]
+      channel_name   = var.monitoring_pubsub_channel_name,
     },
   })
-  // let at least 1 fail, therefore the '2 *' prefix
-  monitoring_not_executed_align_period_in_seconds = tomap({
-    calendar_credentials_refresh = var.monitoring_not_executed_align_period_in_seconds.calendar_credentials_refresh
-    cache_refresh                = var.monitoring_not_executed_align_period_in_seconds.cache_refresh
-    send_request                 = var.monitoring_not_executed_align_period_in_seconds.send_request
-  })
-  monitoring_alert_policies_not_executed = flatten([
-    for method, period_in_sec in local.monitoring_not_executed_align_period_in_seconds : [
-      for type, channel in local.monitoring_alert_channel_type_to_name : {
-        channel_type         = type
-        channel_name         = channel
-        duration_in_secs     = local.monitoring_alert_policies_error_log[type].period_in_secs
-        invoke_method        = method
-        align_period_in_secs = period_in_sec
-      }
-    ]
-  ])
 }
 
 data "google_project" "project" {
@@ -253,7 +232,6 @@ resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
 // Monitoring and Alerting //
 /////////////////////////////
 
-/*
 resource "google_monitoring_alert_policy" "alert_error_log" {
   for_each     = local.monitoring_alert_policies_error_log
   display_name = "${google_cloud_run_service.yaas.name}-${each.key}-error-monitoring"
@@ -269,40 +247,10 @@ resource "google_monitoring_alert_policy" "alert_error_log" {
   }
   combiner = "OR"
   conditions {
-    display_name = "Log severity >= ${var.monitoring_alert_severity} for function ${google_cloud_run_service.yaas.name}"
+    display_name = "Log severity >= ${var.monitoring_alert_severity} for cloud run service ${google_cloud_run_service.yaas.name}"
     condition_matched_log {
-      filter = "resource.labels.function_name=\"${google_cloud_run_service.yaas.name}\"\nseverity>=\"${var.monitoring_alert_severity}\""
+      filter = "resource.type=\"cloud_run_revision\"\nresource.labels.service_name=\"${google_cloud_run_service.yaas.name}\"\nseverity>=\"${var.monitoring_alert_severity}\""
     }
   }
   notification_channels = [each.value.channel_name]
 }
-
-// TODO
-resource "google_monitoring_alert_policy" "alert_not_executed" {
-  for_each     = { for index, val in local.monitoring_alert_policies_not_executed : index => val }
-  display_name = "${google_cloud_run_service.yaas.name}-${each.value.invoke_method}-${each.value.channel_type}-not-executed-monitoring"
-  documentation {
-    content   = "Alert if Cloud Run service ${google_cloud_run_service.yaas.name} is not executed - ${each.value.invoke_method}-${each.value.channel_type}"
-    mime_type = "text/markdown"
-  }
-  combiner = "OR"
-  conditions {
-    display_name = "Executions for ${google_cloud_run_service.yaas.name} [COUNT]"
-    condition_threshold {
-      filter          = "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\" resource.type=\"cloud_function\" resource.label.\"function_name\"=\"${google_cloud_run_service.yaas.name}\""
-      threshold_value = 1
-      trigger {
-        count = 1
-      }
-      duration   = "${each.value.duration_in_secs}s"
-      comparison = "COMPARISON_LT"
-      aggregations {
-        alignment_period     = "${each.value.align_period_in_secs}s"
-        per_series_aligner   = "ALIGN_RATE"
-        cross_series_reducer = "REDUCE_COUNT"
-      }
-    }
-  }
-  notification_channels = [each.value.channel_name]
-}
-*/

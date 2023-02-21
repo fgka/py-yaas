@@ -93,12 +93,6 @@ module "yaas_app" {
   monitoring_email_channel_name  = module.yaas_infra.monitoring_channel_email.id
   monitoring_pubsub_channel_name = module.yaas_infra.monitoring_channel_pubsub.id
   monitoring_alert_severity      = var.monitoring_alert_severity
-  // monitoring: not executed - let at least 1 fail, therefore the '2 *' prefix
-  monitoring_not_executed_align_period_in_seconds = tomap({
-    calendar_credentials_refresh = 25 * 60 * 60
-    cache_refresh                = 2 * var.scheduler_cache_refresh_rate_in_hours * 60 * 60
-    send_request                 = 2 * var.scheduler_request_rate_in_minutes * 60
-  })
-
+  // dependencies
   depends_on = [module.yaas_infra]
 }

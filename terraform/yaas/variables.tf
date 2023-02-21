@@ -71,6 +71,12 @@ variable "bucket_name_prefix" {
 // Pub/Sub Topics //
 ////////////////////
 
+variable "pubsub_command_name" {
+  description = "Name of the Pub/Sub topic to send commands to."
+  type        = string
+  default     = "yaas-command"
+}
+
 variable "pubsub_cal_creds_refresh_name" {
   description = "Name of the Pub/Sub topic to send Google Calendar credentials refresh requests."
   type        = string
@@ -226,27 +232,6 @@ variable "log_level" {
   description = "YAAS Cloud Run log level."
   type        = string
   default     = "INFO"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_update_calendar_credentials" {
-  description = "YAAS Coud Run service path to trigger calendar credentials OAuth2 refresh."
-  type        = string
-  default     = "/update-calendar-credentials-secret"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_update_cache" {
-  description = "YAAS Coud Run service path to trigger calendar cache update."
-  type        = string
-  default     = "/update-cache"
-}
-
-// Do **NOT** change. Check code first
-variable "service_path_request_emission" {
-  description = "YAAS Coud Run service path to trigger scaling requests emission."
-  type        = string
-  default     = "/send-requests"
 }
 
 ///////////////

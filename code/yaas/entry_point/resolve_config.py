@@ -77,8 +77,7 @@ def consolidate_config(
             )
             if raise_if_failed:
                 raise RuntimeError(msg) from err
-            else:
-                _LOGGER.warning(msg)
+            _LOGGER.warning(msg)
     return result
 
 

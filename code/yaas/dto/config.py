@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, Optional
 import attrs
 
 from yaas.dto import dto_defaults
+from yaas.gcp import gcs
 from yaas import const
 
 
@@ -40,7 +41,7 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
     type: str = attrs.field(validator=attrs.validators.instance_of(str))
 
     @type.validator
-    def _is_type_valid(self, attribute: attrs.Attribute, value: str):
+    def _is_type_valid(self, attribute: attrs.Attribute, value: str) -> None:
         if not CacheType.from_str(value):
             raise ValueError(
                 f"Attribute {attribute.name} does not accept <{value}>. "
@@ -48,7 +49,7 @@ class CacheConfig(  # pylint: disable=too-few-public-methods
             )
         self._is_type_valid_subclass(attribute.name, value)
 
-    def _is_type_valid_subclass(self, name: str, value: str):
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
         pass
 
     @classmethod
@@ -116,7 +117,7 @@ class CalendarCacheConfig(CacheConfig):  # pylint: disable=too-few-public-method
     calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
     secret_name: str = attrs.field(validator=attrs.validators.instance_of(str))
 
-    def _is_type_valid_subclass(self, name: str, value: str):
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
         valid_type = CacheType.CALENDAR
         if CacheType.from_str(value) != valid_type:
             raise ValueError(f"Value for field {name} must be {valid_type}")
@@ -135,7 +136,7 @@ class LocalJsonLineCacheConfig(CacheConfig):  # pylint: disable=too-few-public-m
         validator=attrs.validators.instance_of(str)
     )
 
-    def _is_type_valid_subclass(self, name: str, value: str):
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
         valid_type = CacheType.LOCAL_JSON_LINE
         if CacheType.from_str(value) != valid_type:
             raise ValueError(f"Value for field {name} must be {valid_type}")
@@ -151,7 +152,7 @@ class LocalSqliteCacheConfig(CacheConfig):  # pylint: disable=too-few-public-met
 
     sqlite_file: str = attrs.field(validator=attrs.validators.instance_of(str))
 
-    def _is_type_valid_subclass(self, name: str, value: str):
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
         valid_type = CacheType.LOCAL_SQLITE
         if CacheType.from_str(value) != valid_type:
             raise ValueError(f"Value for field {name} must be {valid_type}")
@@ -172,7 +173,7 @@ class GcsCacheConfig(CacheConfig):  # pylint: disable=too-few-public-methods
         validator=attrs.validators.instance_of(str),
     )
 
-    def _is_type_valid_subclass(self, name: str, value: str):
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
         valid_type = CacheType.GCS_SQLITE
         if CacheType.from_str(value) != valid_type:
             raise ValueError(f"Value for field {name} must be {valid_type}")
@@ -230,6 +231,10 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
             value_validator=attrs.validators.instance_of(str),
         )
     )
+    topic_to_pubsub_gcs: str = attrs.field(
+        default=None,
+        validator=attrs.validators.optional(attrs.validators.instance_of(str)),
+    )
     retention_config: DataRetentionConfig = attrs.field(
         default=None,
         converter=attrs.converters.default_if_none(
@@ -237,3 +242,15 @@ class Config(dto_defaults.HasFromJsonString):  # pylint: disable=too-few-public-
         ),
         validator=attrs.validators.instance_of(DataRetentionConfig),
     )
+
+    @topic_to_pubsub_gcs.validator
+    def _is_topic_to_pubsub_gcs_valid(
+        self, attribute: attrs.Attribute, value: Optional[str]
+    ) -> None:
+        if value is not None:
+            if not isinstance(value, str):
+                raise TypeError(
+                    f"Value for {attribute.name} can be None or a string. "
+                    f"Got: <{value}>({type(value)})"
+                )
+            gcs.get_bucket_and_prefix_from_uri(value)

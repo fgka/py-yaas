@@ -127,3 +127,42 @@ class TestConfig:
         # Then
         assert isinstance(result, config.Config)
         assert obj == result
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            None,
+            "gs://bucket-name",
+            "gs://bucket-name/path/to/object",
+        ],
+    )
+    def test_ctor_ok_topic_to_pubsub_gcs(self, value: str):
+        # Given
+        kwargs = common.TEST_CONFIG_LOCAL_JSON.as_dict()
+        kwargs[config.Config.topic_to_pubsub_gcs.__name__] = value
+        # When
+        result = config.Config.from_dict(kwargs)
+        # Then
+        assert isinstance(result, config.Config)
+        assert result.topic_to_pubsub_gcs == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            123,
+            {},
+            "",
+            "-bucket-name",
+            "_bucket-name",
+            "bucket_name",
+            "gs://",
+            "gs:///",
+        ],
+    )
+    def test_ctor_nok_topic_to_pubsub_gcs(self, value: str):
+        # Given
+        kwargs = common.TEST_CONFIG_LOCAL_JSON.as_dict()
+        kwargs[config.Config.topic_to_pubsub_gcs.__name__] = value
+        # When/Then
+        with pytest.raises(ValueError):
+            config.Config.from_dict(kwargs)

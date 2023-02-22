@@ -4,6 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
+import contextlib
 import json
 from typing import Any, Dict, List, Optional
 
@@ -16,6 +17,32 @@ from tests import common
 
 _ISO_DATE_STR_PREFIX: str = "2022-10-07T11:01:38"
 _ISO_DATE_TO_TS: str = 1665140498
+_TEST_TOPIC_PATH: str = "projects/test-project-123/topics/test-topic-123"
+
+
+def test_validate_topic_id_ok():
+    # Given
+    value = _TEST_TOPIC_PATH
+    # When/Then
+    with contextlib.nullcontext():
+        pubsub.validate_topic_id(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        123,
+        {},
+        None,
+        "",
+        "projects/no-topic",
+        "topics/no-projects",
+    ],
+)
+def test_validate_topic_id_nok(value: str):
+    # Given/When/Then
+    with pytest.raises(ValueError):
+        pubsub.validate_topic_id(value)
 
 
 @pytest.mark.parametrize(
@@ -102,7 +129,6 @@ class _MyClient:
 
 
 _TEST_VALUE: Dict[str, Any] = dict(key="TEST_VALUE")
-_TEST_TOPIC_PATH: str = "TEST_TOPIC_PATH"
 
 
 @pytest.mark.asyncio

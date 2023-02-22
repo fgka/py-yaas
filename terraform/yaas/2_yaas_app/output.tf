@@ -5,6 +5,7 @@
 output "run_yaas" {
   value = google_cloud_run_service.yaas
 }
+
 /////////////////
 // Config JSON //
 /////////////////
@@ -15,6 +16,14 @@ output "local_config_json" {
 
 output "gcs_config_json" {
   value = "gs://${google_storage_bucket_object.config_json.bucket}/${google_storage_bucket_object.config_json.output_name}"
+}
+
+//////////////////////
+// Topic to Pub/Sub //
+//////////////////////
+
+output "gcs_topic_to_pubsub" {
+  value = "gs://${google_storage_bucket_object.topic_to_pubsub_gcs.bucket}/${google_storage_bucket_object.topic_to_pubsub_gcs.output_name}"
 }
 
 /////////////////////////////

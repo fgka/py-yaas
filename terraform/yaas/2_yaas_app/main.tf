@@ -9,7 +9,10 @@ locals {
   // config JSON
   terraform_module_root_dir = path.module
   config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
-  local_config_json         = "${local.terraform_module_root_dir}/${var.config_json_tmpl}.local"
+  local_config_json         = "${local.terraform_module_root_dir}/output/config.json.local"
+  // topic_to_pubsub_gcs
+  batch_topic_to_pubsub_path = "${var.topic_to_pubsub_gcs_path}/gcs"
+  local_batch_topic_to_pubsub = "${local.terraform_module_root_dir}/output/topic_gcs.local"
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url
   // pubsub endpoints
@@ -45,7 +48,7 @@ resource "local_file" "config_json" {
     BUCKET_NAME                 = var.bucket_name,
     SQLITE_OBJECT_PATH          = var.sqlite_cache_path,
     PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_standard_request_id
-    PUBSUB_TOPIC_ENACT_GCS      = var.pubsub_enact_gcs_batch_request_id
+    TOPIC_TO_PUBSUB_PATH        = var.topic_to_pubsub_gcs_path
   })
   filename = local.local_config_json
 }
@@ -53,6 +56,21 @@ resource "local_file" "config_json" {
 resource "google_storage_bucket_object" "config_json" {
   name   = var.config_path
   source = local_file.config_json.filename
+  bucket = var.bucket_name
+}
+
+//////////////////////
+// Topic to Pub/Sub //
+//////////////////////
+
+resource "local_file" "topic_to_pubsub_gcs" {
+  content  = var.pubsub_enact_gcs_batch_request_id
+  filename = local.local_batch_topic_to_pubsub
+}
+
+resource "google_storage_bucket_object" "topic_to_pubsub_gcs" {
+  name   = local.batch_topic_to_pubsub_path
+  source = local_file.topic_to_pubsub_gcs.filename
   bucket = var.bucket_name
 }
 

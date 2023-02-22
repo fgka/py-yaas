@@ -70,7 +70,7 @@ def consolidate_config(
     if value.topic_to_pubsub_gcs:
         try:
             result = _consolidate_config_with_topic_to_pubsub_gcs(value)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-exception-caught
             msg = (
                 f"Could not consolidate Pub/Sub mapping using <{value.topic_to_pubsub_gcs}>."
                 f" Error: {err}"

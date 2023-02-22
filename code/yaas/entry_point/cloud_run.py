@@ -14,7 +14,7 @@ import flask
 
 from yaas import logger
 from yaas.dto import config
-from yaas.entry_point import entry, pubsub_dispatcher
+from yaas.entry_point import entry, pubsub_dispatcher, resolve_config
 from yaas.gcp import gcs
 from yaas.scaler import base, gcs_batch, standard
 
@@ -70,6 +70,14 @@ def _configuration() -> config.Config:
         raise RuntimeError(
             f"Could not extract <{config.Config.__name__}> "
             f"from JSON content: <{config_json}>. "
+            f"Error: {err}"
+        ) from err
+    try:
+        result = resolve_config.consolidate_config(result, raise_if_failed=False)
+    except Exception as err:
+        raise RuntimeError(
+            f"Could not consolidate Pub/Sub topics on <{result}>. "
+            f"Specifically: <{result.topic_to_pubsub_gcs}>. "
             f"Error: {err}"
         ) from err
     return result

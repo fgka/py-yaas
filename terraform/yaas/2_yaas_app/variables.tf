@@ -120,6 +120,12 @@ variable "config_path" {
   default     = "yaas/config.json"
 }
 
+variable "topic_to_pubsub_gcs_path" {
+  description = "YAAS GCS object path to where extra topics will reside."
+  type        = string
+  default     = "yaas/topic_to_pubsub"
+}
+
 // Do **NOT** change. Check code first
 variable "service_path_command" {
   description = "YAAS Cloud Run service path to trigger commands."

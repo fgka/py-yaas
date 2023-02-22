@@ -14,7 +14,7 @@ import calendar
 from concurrent import futures
 from datetime import datetime
 import json
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import cachetools
 import flask
@@ -23,11 +23,27 @@ from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1 import types
 
 from yaas import const, logger
+from yaas.gcp import resource_name
 
+_PUBSUB_NAME_TOKENS: List[str] = ["projects", "topics"]
 _EVENT_MESSAGE_KEY: str = "message"
 _EVENT_MESSAGE_DATA_KEY: str = "data"
 _MESSAGE_PUBLISH_TIME_KEY: str = "publish_time"
 _LOGGER = logger.get(__name__)
+
+
+def validate_topic_id(value: str) -> None:
+    """
+    Verify that the value comply with the pattern: ``projects/my-new-project/topics/my-topic``.
+    Args:
+        value:
+
+    Returns:
+
+    """
+    resource_name.validate_resource_name(
+        value=value, tokens=_PUBSUB_NAME_TOKENS, raise_if_invalid=True
+    )
 
 
 def parse_pubsub(
@@ -180,13 +196,13 @@ def _parse_str_data(value: Union[str, bytes]) -> str:
     return result
 
 
-async def publish(value: Dict[str, Any], topic_path: str) -> None:
+async def publish(value: Dict[str, Any], topic_id: str) -> None:
     """
     Converts argument to a string to be published to a Pub/Sub topic.
 
     Args:
         value:
-        topic_path:
+        topic_id:
 
     Returns:
 
@@ -196,18 +212,15 @@ async def publish(value: Dict[str, Any], topic_path: str) -> None:
         raise TypeError(
             f"Value must be a {dict.__name__}. Got <{value}>({type(value)})"
         )
-    if not isinstance(topic_path, str) or not topic_path.strip():
-        raise TypeError(
-            f"Topic path must be a non-empty string. Got <{topic_path}>({type(topic_path)})"
-        )
+    validate_topic_id(topic_id)
     # logic
-    _LOGGER.debug("Publishing data <%s> into topic <%s>", value, topic_path)
+    _LOGGER.debug("Publishing data <%s> into topic <%s>", value, topic_id)
     json_str = json.dumps(value)
     data = json_str.encode(const.ENCODING_UTF8)
-    publish_future = _client().publish(topic_path, data)
+    publish_future = _client().publish(topic_id, data)
     await asyncio.sleep(0)
     futures.wait([publish_future], return_when=futures.ALL_COMPLETED)
-    _LOGGER.debug("Published data <%s> into topic <%s>", value, topic_path)
+    _LOGGER.debug("Published data <%s> into topic <%s>", value, topic_id)
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))

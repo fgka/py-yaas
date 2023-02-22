@@ -4,7 +4,7 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
-from typing import Any, Optional
+from typing import Any, Iterable, List, Optional
 
 import pytest
 
@@ -14,6 +14,24 @@ from yaas.gcp import gcs
 _TEST_BUCKET_NAME: str = "test_bucket_name"
 _TEST_PATH: str = "path/to/object"
 _TEST_CONTENT: bytes = bytes("EXPECTED", encoding=const.ENCODING_UTF8)
+
+
+@pytest.mark.parametrize(
+    "exp_bucket,exp_prefix",
+    [
+        ("test-bucket", "path/to/object"),
+        ("test-bucket", ""),
+        ("test-bucket", None),
+    ],
+)
+def test_get_bucket_and_prefix_from_uri_ok(exp_bucket: str, exp_prefix: str):
+    # Given
+    value = f"{gcs._GCS_URI_PREFIX}{exp_bucket}{'/' + exp_prefix if exp_prefix else ''}"
+    # When
+    res_bucket, res_prefix = gcs.get_bucket_and_prefix_from_uri(value)
+    # Then
+    assert res_bucket == exp_bucket
+    assert res_prefix == (exp_prefix if exp_prefix else None)
 
 
 @pytest.mark.parametrize(
@@ -85,11 +103,15 @@ class _MyBlobWriter:
 
 class _MyBlob:
     def __init__(
-        self, content: Optional[bytes] = _TEST_CONTENT, exists: Optional[bool] = True
+        self,
+        content: Optional[bytes] = _TEST_CONTENT,
+        exists: Optional[bool] = True,
+        name: Optional[str] = None,
     ):
         self._content = content
         self._exists = exists
         self.called = {}
+        self.name = name
 
     def download_as_bytes(self) -> bytes:
         self.called[_MyBlob.download_as_bytes.__name__] = True
@@ -114,6 +136,48 @@ class _MyBucket:
         result = _MyBlob(self._content, self._content is not None)
         self.called[_MyBucket.blob.__name__] = path, result
         return result
+
+
+class _MyClient:
+    def __init__(self, project: Optional[str] = None, content: List[str] = None):
+        self.project = project
+        self._content = content if content else []
+        self.called = {}
+
+    def list_blobs(  # pylint: disable=unused-argument
+        self, bucket_name: str, *, prefix: Optional[str] = None
+    ) -> Iterable[_MyBlob]:
+        self.called[_MyClient.list_blobs.__name__] = locals()
+        for cont in self._content:
+            yield _MyBlob(content=bytes(cont.encode(encoding=const.ENCODING_UTF8)))
+
+
+def test_list_objects_ok(monkeypatch):
+    # Given
+    bucket_name = "test-bucket"
+    prefix = "path/to/prefix"
+    project = "test-project"
+    content = [f"content_{ndx}" for ndx in range(11)]
+    client = None
+
+    def mocked_client(project: Optional[str] = None) -> _MyClient:
+        nonlocal client
+        client = _MyClient(project=project, content=content)
+        return client
+
+    monkeypatch.setattr(gcs, gcs._client.__name__, mocked_client)
+    # When
+    result = list(
+        gcs.list_objects(bucket_name=bucket_name, prefix=prefix, project=project)
+    )
+    # Then
+    assert isinstance(client, _MyClient)
+    assert len(result) == len(content)
+    assert client.project == project
+    list_called = client.called.get(_MyClient.list_blobs.__name__)
+    assert isinstance(list_called, dict)
+    assert list_called.get("bucket_name") == bucket_name
+    assert list_called.get("prefix") == prefix
 
 
 @pytest.mark.parametrize(

@@ -12,7 +12,7 @@ Reads an object from `Cloud Storage API`_ and `examples`_.
 import logging
 import pathlib
 import re
-from typing import Optional, Tuple, Union
+from typing import Generator, Optional, Tuple, Union
 
 import cachetools
 
@@ -22,7 +22,8 @@ from yaas import logger
 
 _LOGGER = logger.get(__name__)
 
-_GCS_PATH_SEP: str = "/"
+_GCS_URI_PREFIX: str = "gs://"
+GCS_PATH_SEP: str = "/"
 # pylint: disable=anomalous-backslash-in-string
 _BUCKET_NAME_REGEX: re.Pattern = re.compile(
     r"^\s*[a-z\d][a-z\d\_-]{1,61}[a-z\d]\s*$", flags=re.ASCII
@@ -33,6 +34,95 @@ _PATH_SEGMENT_REGEX: re.Pattern = re.compile(r"^[\w\.\_-]+$", flags=re.ASCII)
 
 class CloudStorageError(Exception):
     """To code all GCS related errors"""
+
+
+def get_bucket_and_prefix_from_uri(value: str) -> Tuple[str, Optional[str]]:
+    """
+    Will break down a GCS URI into bucket and prefix.
+    Example::
+        bucket_name, prefix = get_bucket_and_prefix_from_uri("gs://my-bucket/path/to/object")
+        assert bucket_name == "my-bucket"
+        assert prefix == "path/to/object"
+
+    Args:
+        value:
+
+    Returns:
+
+    """
+    # input validation
+    if not isinstance(value, str):
+        raise TypeError(f"Argument must be a string. Got: <{value}>({type(value)})")
+    if not value.startswith(_GCS_URI_PREFIX):
+        raise ValueError(
+            f"Argument must a GCS URI, as in: 'gs://my-bucket/path/to/object'. Got <{value}>"
+        )
+    # logic
+    # value = "gs://my-bucket/path/to/object"
+    value = value[len(_GCS_URI_PREFIX) :]
+    # value = "my-bucket/path/to/object"
+    tokens = value.split(GCS_PATH_SEP)
+    # tokens = ["my-bucket", "path, "to", "object"]
+    if not tokens:
+        raise ValueError(
+            f"Argument does not seem to contain, at least, a bucket name, as in: 'gs://my-bucket'. "
+            f"Got <{value}>"
+        )
+    # bucket
+    bucket_name = validate_and_clean_bucket_name(tokens[0])
+    prefix = None
+    if len(tokens) > 1:
+        prefix = validate_and_clean_object_path(GCS_PATH_SEP.join(tokens[1:]))
+    return bucket_name, prefix
+
+
+def list_objects(
+    *,
+    bucket_name: str,
+    prefix: str,
+    project: Optional[str] = None,
+) -> Generator[storage.Blob, None, None]:
+    """
+    Will list all blobs in the bucket's prefix
+
+    Args:
+        bucket_name:
+        prefix:
+        project:
+
+    Returns:
+
+    """
+    # validate input
+    bucket_name, prefix = validate_and_clean_bucket_and_path(bucket_name, prefix)
+    return _list_objects(bucket_name=bucket_name, prefix=prefix, project=project)
+
+
+def _list_objects(
+    *,
+    bucket_name: str,
+    prefix: str,
+    project: Optional[str] = None,
+) -> Generator[storage.Blob, None, None]:
+    # pylint: disable=line-too-long
+    """
+    Uses ``Client``_ class.
+
+    .. _Bucket: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.client.Client
+    """
+    # pylint: enable=line-too-long
+    gcs_uri = f"gs://{bucket_name}/{prefix}"
+    _LOGGER.debug("Listing <%s>", gcs_uri)
+    try:
+        client = _client(project=project)
+        for blob in client.list_blobs(bucket_name, prefix=prefix):
+            yield blob
+    except Exception as err:
+        raise CloudStorageError(
+            f"Could not list blobs from <{gcs_uri}> in project <{project}> "
+            f"Error: {err}"
+        ) from err
+    _LOGGER.info("Listed blogs in <%s>", gcs_uri)
 
 
 def read_object(
@@ -62,6 +152,7 @@ def read_object(
         Content of the object if no output file is given, else :py:obj:`True` if read.
 
     """
+    # validate input
     bucket_name, object_path = validate_and_clean_bucket_and_path(
         bucket_name, object_path
     )
@@ -70,6 +161,7 @@ def read_object(
             f"If filename is given, it must an instance of {pathlib.Path.__name__}. "
             f"Got <{filename}>({type(filename)})"
         )
+    # logic
     return _read_object(
         bucket_name=bucket_name,
         object_path=object_path,
@@ -135,8 +227,8 @@ def validate_and_clean_object_path(value: str) -> str:
             f"Object path must be a non-empty string. " f"Got: <{value}>({type(value)})"
         )
     # cleaning leading '/' from path
-    value = value.strip().lstrip(_GCS_PATH_SEP).strip()
-    for segment in value.split(_GCS_PATH_SEP):
+    value = value.strip().lstrip(GCS_PATH_SEP).strip()
+    for segment in value.split(GCS_PATH_SEP):
         if not _PATH_SEGMENT_REGEX.match(segment):
             raise ValueError(
                 f"Path part <{segment}> does not comply with {_PATH_SEGMENT_REGEX}. "
@@ -153,6 +245,14 @@ def _read_object(
     filename: Optional[pathlib.Path] = None,
     warn_read_failure: Optional[bool] = True,
 ) -> Union[bytes, bool]:
+    # pylint: disable=line-too-long
+    """
+    Uses ``Bucket``_ and ``Blob``_ classes.
+
+    .. _Bucket: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.bucket.Bucket
+    .. _Blob: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.blob.Blob
+    """
+    # pylint: enable=line-too-long
     result = None
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Reading <%s>", gcs_uri)
@@ -258,6 +358,14 @@ def _write_object(
     content_source: Union[bytes, pathlib.Path],
     project: Optional[str] = None,
 ) -> None:
+    # pylint: disable=line-too-long
+    """
+    Uses ``Bucket``_ and ``Blob``_ classes.
+
+    .. _Bucket: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.bucket.Bucket
+    .. _Blob: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.blob.Blob
+    """
+    # pylint: enable=line-too-long
     gcs_uri = f"gs://{bucket_name}/{object_path}"
     _LOGGER.debug("Writing <%s>", gcs_uri)
     try:

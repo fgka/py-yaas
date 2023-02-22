@@ -23,7 +23,7 @@ from yaas import logger
 _LOGGER = logger.get(__name__)
 
 _GCS_URI_PREFIX: str = "gs://"
-_GCS_PATH_SEP: str = "/"
+GCS_PATH_SEP: str = "/"
 # pylint: disable=anomalous-backslash-in-string
 _BUCKET_NAME_REGEX: re.Pattern = re.compile(
     r"^\s*[a-z\d][a-z\d\_-]{1,61}[a-z\d]\s*$", flags=re.ASCII
@@ -61,7 +61,7 @@ def get_bucket_and_prefix_from_uri(value: str) -> Tuple[str, Optional[str]]:
     # value = "gs://my-bucket/path/to/object"
     value = value[len(_GCS_URI_PREFIX) :]
     # value = "my-bucket/path/to/object"
-    tokens = value.split(_GCS_PATH_SEP)
+    tokens = value.split(GCS_PATH_SEP)
     # tokens = ["my-bucket", "path, "to", "object"]
     if not tokens:
         raise ValueError(
@@ -72,7 +72,7 @@ def get_bucket_and_prefix_from_uri(value: str) -> Tuple[str, Optional[str]]:
     bucket_name = validate_and_clean_bucket_name(tokens[0])
     prefix = None
     if len(tokens) > 1:
-        prefix = validate_and_clean_object_path(_GCS_PATH_SEP.join(tokens[1:]))
+        prefix = validate_and_clean_object_path(GCS_PATH_SEP.join(tokens[1:]))
     return bucket_name, prefix
 
 
@@ -227,8 +227,8 @@ def validate_and_clean_object_path(value: str) -> str:
             f"Object path must be a non-empty string. " f"Got: <{value}>({type(value)})"
         )
     # cleaning leading '/' from path
-    value = value.strip().lstrip(_GCS_PATH_SEP).strip()
-    for segment in value.split(_GCS_PATH_SEP):
+    value = value.strip().lstrip(GCS_PATH_SEP).strip()
+    for segment in value.split(GCS_PATH_SEP):
         if not _PATH_SEGMENT_REGEX.match(segment):
             raise ValueError(
                 f"Path part <{segment}> does not comply with {_PATH_SEGMENT_REGEX}. "

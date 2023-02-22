@@ -87,12 +87,13 @@ def _consolidate_config_with_topic_to_pubsub_gcs(value: config.Config) -> config
     topic_to_pubsub = value.topic_to_pubsub.copy()
     bucket_name, prefix = gcs.get_bucket_and_prefix_from_uri(value.topic_to_pubsub_gcs)
     for blob in gcs.list_objects(bucket_name=bucket_name, prefix=prefix):
-        blob_uri = f"gs://{bucket_name}/{prefix}/{blob.name}"
+        topic = blob.name.split(gcs.GCS_PATH_SEP)[-1]
+        blob_uri = f"gs://{bucket_name}/{blob.name}"
         # topic_to_pubsub has precedence over GCS
-        if blob.name in topic_to_pubsub:
+        if topic in topic_to_pubsub:
             _LOGGER.warning(
                 "Topic <%s> is already present in topic_to_pubsub. Ignoring content in%s",
-                blob.name,
+                topic,
                 blob_uri,
             )
             continue
@@ -100,7 +101,7 @@ def _consolidate_config_with_topic_to_pubsub_gcs(value: config.Config) -> config
         topic_id = blob.download_as_bytes().decode(encoding=const.ENCODING_UTF8)
         try:
             pubsub.validate_topic_id(topic_id)
-            topic_to_pubsub[blob.name] = topic_id
+            topic_to_pubsub[topic] = topic_id
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
                 "Content of %s is not a valid Pub/Sub topic id. Content: <%s>. Error: %s",

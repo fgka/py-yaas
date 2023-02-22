@@ -46,15 +46,16 @@ DEBUG_REQUIRED = [
 ]
 
 CODE_QUALITY_REQUIRED = [
-    "black>=22.6",
-    "deepdiff>=5.8.1",
+    "black>=22.8.0",
+    "deepdiff>=6.2.1",
+    "junit-xml>=1.9",
     "mock>=4.0.3",
     "nose>=1.3.7",
     "pudb>=2022.1.2",
     "pylama>=8.4.1",
     "pylama-pylint>=3.1.1",
-    "pylint>=2.14.5",
-    "pytest>=7.1.2",
+    "pylint>=2.16.2",
+    "pytest>=7.1.3",
     "pytest-asyncio>=0.20.3",
     "pytest-cov>=3.0.0",
     "pytest-lazy-fixture>=0.6.3",
@@ -62,8 +63,7 @@ CODE_QUALITY_REQUIRED = [
     "pytest-pudb>=0.7.0",
     "pytest-pylint>=0.18.0",
     "pytest-xdist>=3.1.0",
-    "junit-xml>=1.9",
-    "vulture>=2.5",
+    "vulture>=2.6",
 ]
 
 SETUP_REQUIRED = [

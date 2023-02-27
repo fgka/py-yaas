@@ -5,7 +5,7 @@
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods,
 # type: ignore
 from yaas_common import const
-from yaas_common.dto import command, request
+from yaas_common import command, request
 
 # update secrets
 # pylint: disable=line-too-long

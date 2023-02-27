@@ -7,7 +7,7 @@ from typing import Any
 import attrs
 
 from yaas_common import const
-from yaas_common.dto import dto_defaults, request
+from yaas_common import dto_defaults, request
 
 
 class CommandType(dto_defaults.EnumWithFromStrIgnoreCase):

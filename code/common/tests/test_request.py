@@ -6,7 +6,7 @@
 # type: ignore
 import pytest
 
-from yaas_common.dto import request
+from yaas_common import request
 
 from tests import common
 

@@ -12,7 +12,7 @@ import attrs
 import deepdiff
 
 from yaas_common import const
-from yaas_common.dto import dto_defaults
+from yaas_common import dto_defaults
 
 
 @attrs.define(**const.ATTRS_DEFAULTS)

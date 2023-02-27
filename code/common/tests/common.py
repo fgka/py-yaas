@@ -4,15 +4,10 @@
 # pylint: disable=protected-access,redefined-outer-name,using-constant-test,redefined-builtin
 # pylint: disable=invalid-name,attribute-defined-outside-init,too-few-public-methods
 # type: ignore
-import base64
-import json
 import pathlib
-import tempfile
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, Type
+from typing import Any, Dict
 
-
-from yaas_common import const
-from yaas_common.dto import request
+from yaas_common import request
 
 #############
 # Test Data #

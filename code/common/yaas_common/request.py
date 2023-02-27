@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union, Tuple
 
 import attrs
 
-from yaas_common.dto import dto_defaults
+from yaas_common import dto_defaults
 from yaas_common import const
 
 

@@ -18,7 +18,7 @@ import cachetools
 
 from google.cloud import storage
 
-from yaas import logger
+from yaas_common import logger
 
 _LOGGER = logger.get(__name__)
 

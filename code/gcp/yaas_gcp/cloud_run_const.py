@@ -4,7 +4,7 @@ Default values related to Cloud Run.
 """
 from typing import List
 
-from yaas import xpath
+from yaas_common import xpath
 
 
 ###################

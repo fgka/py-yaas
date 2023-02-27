@@ -12,7 +12,7 @@ import itertools
 from setuptools import find_packages, setup
 
 # Package meta-data.
-NAME = "py_yaas_playground"
+NAME = "py_yaas_gcp"
 DESCRIPTION = """
 """
 LICENSE = "Proprietary"

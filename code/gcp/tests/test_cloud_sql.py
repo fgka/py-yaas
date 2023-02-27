@@ -8,8 +8,8 @@ from typing import Any, Dict, Optional
 
 import pytest
 
-from yaas.gcp import cloud_sql, cloud_sql_const
-from yaas import xpath
+from yaas_gcp import cloud_sql, cloud_sql_const
+from yaas_common import xpath
 
 _TEST_PROJECT: str = "my-project-123"
 _TEST_INSTANCE_NAME: str = "my-instance-123"

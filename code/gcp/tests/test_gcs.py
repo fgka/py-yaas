@@ -8,8 +8,8 @@ from typing import Any, Iterable, List, Optional
 
 import pytest
 
-from yaas import const
-from yaas.gcp import gcs
+from yaas_common import const
+from yaas_gcp import gcs
 
 _TEST_BUCKET_NAME: str = "test_bucket_name"
 _TEST_PATH: str = "path/to/object"

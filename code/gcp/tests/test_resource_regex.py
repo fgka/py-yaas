@@ -8,7 +8,7 @@ from typing import Any, List
 
 import pytest
 
-from yaas.dto import resource_regex, resource_regex_const
+from yaas_gcp import resource_regex, resource_regex_const
 
 _TEST_INVALID_VALUE_TYPES: List[Any] = [None, 123, {}, []]
 

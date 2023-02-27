@@ -8,8 +8,8 @@ from typing import Any, List, Optional, Tuple
 
 import attrs
 
-from yaas.dto import dto_defaults, resource_regex_const
-from yaas import const
+from yaas_gcp import resource_regex_const
+from yaas_common import dto_defaults, const
 
 
 class ResourceType(dto_defaults.EnumWithFromStrIgnoreCase):

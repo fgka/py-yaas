@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from yaas import const
-from yaas.gcp import pubsub
+from yaas_common import const
+from yaas_gcp import pubsub
 
 from tests import common
 

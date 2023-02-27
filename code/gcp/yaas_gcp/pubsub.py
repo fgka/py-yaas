@@ -22,8 +22,8 @@ import flask
 from google.cloud import pubsub_v1
 from google.cloud.pubsub_v1 import types
 
-from yaas import const, logger
-from yaas.gcp import resource_name
+from yaas_common import const, logger
+from yaas_gcp import resource_name
 
 _PUBSUB_NAME_TOKENS: List[str] = ["projects", "topics"]
 _EVENT_MESSAGE_KEY: str = "message"

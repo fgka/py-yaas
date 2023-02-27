@@ -9,7 +9,7 @@ from typing import List
 
 import pytest
 
-from yaas.gcp import resource_name
+from yaas_gcp import resource_name
 
 
 @pytest.mark.parametrize(

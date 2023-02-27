@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from yaas.gcp import cloud_run, cloud_run_const
-from yaas import xpath
+from yaas_gcp import cloud_run, cloud_run_const
+from yaas_common import xpath
 
 _TEST_SERVICE_NAME: str = (
     "projects/my-project-123/locations/my-location-123/services/my-service-123"

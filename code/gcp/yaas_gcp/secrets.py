@@ -13,8 +13,8 @@ from typing import Callable, List, Optional
 
 from google.cloud import secretmanager
 
-from yaas import const, logger
-from yaas.gcp import resource_name, secrets_const
+from yaas_common import const, logger
+from yaas_gcp import resource_name, secrets_const
 
 _LOGGER = logger.get(__name__)
 

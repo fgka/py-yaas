@@ -15,10 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from googleapiclient import discovery
 
-from yaas import logger
-from yaas.gcp import cloud_sql_const
-from yaas.dto import resource_regex
-from yaas import validation, xpath
+from yaas_gcp import cloud_sql_const, resource_regex
+from yaas_common import logger, validation, xpath
 
 _LOGGER = logger.get(__name__)
 

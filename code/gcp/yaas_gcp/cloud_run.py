@@ -12,9 +12,9 @@ from typing import Any, List, Optional, Tuple
 
 from google.cloud import run_v2
 
-from yaas import logger
-from yaas.gcp import cloud_run_const, resource_name
-from yaas import validation, xpath
+from yaas_common import logger
+from yaas_gcp import cloud_run_const, resource_name
+from yaas_common import validation, xpath
 
 _LOGGER = logger.get(__name__)
 

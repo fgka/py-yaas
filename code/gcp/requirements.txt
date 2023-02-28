@@ -6,4 +6,4 @@ google-cloud-pubsub>=2.14.1
 google-cloud-run>=0.7.0
 google-cloud-secret-manager>=2.15.1
 google-cloud-storage>=2.7.0
-py_yaas_common>=1.0
+py-yaas-common>=1.0

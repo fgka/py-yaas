@@ -31,7 +31,7 @@ _TEST_EVENT: Dict[str, Any] = {
     "updated": "2022-10-17T13:59:25.067Z",
     "summary": "Event repeat daily",
     "description": "",
-    "creator": {"email": "yaas_gcp-scaler-scheduler-common.scaler@gmail.com"},
+    "creator": {"email": "yaas_gcp-scaler-scheduler_service-common.scaler@gmail.com"},
     "organizer": {
         "email": "ajbefo4rt4j8mtd808pi4gi5uc@group.event.google.com",
         "displayName": "YAAS",
@@ -52,7 +52,7 @@ _TEST_EVENT: Dict[str, Any] = {
     "reminders": {"useDefault": False},
     "eventType": "default",
 }
-_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE: str = "Description event repeat daily<br> yaas_gcp-scaler-scheduler-common | projects/src-bq/locations/europe-west3/services/hello | min_instances&nbsp; &nbsp;10.<br> standard | projects/src-bq/locations/europe-west3/services/hello | min_instances 11.<br>yaas_gcp-scaler-scheduler-common. | projects/src-bq/locations/europe-west3/services/hello|min_instances  12  <br>    standard. |. projects/src-bq/locations/europe-west3/services/hello. | min_instances 13. <br>yaas_gcp-scaler-scheduler-common |CloudRun / hello@  src-bq/europe-west3 | min_instances 14<br>standard | CloudRun/hello@src-bq/europe-west3 | min_instances 15    <br><br><br>  yaas_gcp-scaler-scheduler-common|CloudRun hello   @  src-bq europe-west3   | min_instances&nbsp; &nbsp;16<br><br>standard | CloudRun hello   @  src-bq europe-west3    | min_instances 17<br><u></u><u></u>"
+_TEST_FULL_EVENT_DESCRIPTION_EXAMPLE: str = "Description event repeat daily<br> yaas_gcp-scaler-scheduler_service-common | projects/src-bq/locations/europe-west3/services/hello | min_instances&nbsp; &nbsp;10.<br> standard | projects/src-bq/locations/europe-west3/services/hello | min_instances 11.<br>yaas_gcp-scaler-scheduler_service-common. | projects/src-bq/locations/europe-west3/services/hello|min_instances  12  <br>    standard. |. projects/src-bq/locations/europe-west3/services/hello. | min_instances 13. <br>yaas_gcp-scaler-scheduler_service-common |CloudRun / hello@  src-bq/europe-west3 | min_instances 14<br>standard | CloudRun/hello@src-bq/europe-west3 | min_instances 15    <br><br><br>  yaas_gcp-scaler-scheduler_service-common|CloudRun hello   @  src-bq europe-west3   | min_instances&nbsp; &nbsp;16<br><br>standard | CloudRun hello   @  src-bq europe-west3    | min_instances 17<br><u></u><u></u>"
 # pylint: enable=line-too-long
 _TEST_FULL_EVENT_DESCRIPTION_EXAMPLE_AMOUNT: int = 8
 
@@ -188,12 +188,12 @@ def test__parse_start_to_utc_ok(value: str, expected: datetime):
         (
             # this is correct, there are some unconventional unicode spaces after the '|',
             # please do not change
-            "gcs | yaas_gcp-scaler-scheduler-common-app-245814988234 | <span>yaas_gcp-scaler-scheduler-common/batch/test.up</span>",
-            "gcs |yaas_gcp-scaler-scheduler-common-app-245814988234 |yaas_gcp-scaler-scheduler-common/batch/test.up",
+            "gcs | yaas_gcp-scaler-scheduler_service-common-app-245814988234 | <span>yaas_gcp-scaler-scheduler_service-common/batch/test.up</span>",
+            "gcs |yaas_gcp-scaler-scheduler_service-common-app-245814988234 |yaas_gcp-scaler-scheduler_service-common/batch/test.up",
         ),
         (
-            "\ngcs|yaas_gcp-scaler-scheduler-common-app-245814988234|yaas_gcp-scaler-scheduler-common/batch/test.up\n",
-            "gcs|yaas_gcp-scaler-scheduler-common-app-245814988234|yaas_gcp-scaler-scheduler-common/batch/test.up",
+            "\ngcs|yaas_gcp-scaler-scheduler_service-common-app-245814988234|yaas_gcp-scaler-scheduler_service-common/batch/test.up\n",
+            "gcs|yaas_gcp-scaler-scheduler_service-common-app-245814988234|yaas_gcp-scaler-scheduler_service-common/batch/test.up",
         ),
     ],
 )

@@ -24,7 +24,7 @@ _GOOGLE_CALENDAR_EVENT_DESCRIPTION_FIELD: str = "description"
 _GOOGLE_CALENDAR_EVENT_START_FIELD: str = "start"
 _GOOGLE_CALENDAR_EVENT_START_DATE_TIME_FIELD: str = "dateTime"
 # How to identify targets in the description field
-_GOOGLE_CALENDAR_EVENT_DESCRIPTION_STANDARD_TOPIC: str = "yaas_gcp-scaler-scheduler-common"
+_GOOGLE_CALENDAR_EVENT_DESCRIPTION_STANDARD_TOPIC: str = "yaas_gcp-scaler-scheduler_service-common"
 _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SEP: str = "|"
 # The, apparently superfluous, pattern '\.?' is added
 #   to account for Google Calendar behaviour to add a period ('.') after words
@@ -59,9 +59,9 @@ _GOOGLE_CALENDAR_EVENT_DESCRIPTION_SCALING_SPEC_REGEX: re.Pattern = re.compile(
 # pylint: disable=line-too-long
 """
 Example input::
-    value = " yaas_gcp-scaler-scheduler-common.  | projects/my_project/locations/europe-west3/services/my_service |min_instances 10.
+    value = " yaas_gcp-scaler-scheduler_service-common.  | projects/my_project/locations/europe-west3/services/my_service |min_instances 10.
 Parsed as::
-    topic = "yaas_gcp-scaler-scheduler-common"
+    topic = "yaas_gcp-scaler-scheduler_service-common"
     resource = "projects/my_project/locations/europe-west3/services/my_service"
     command = "min_instances 10"
 Groups on matching are::

@@ -16,9 +16,9 @@ _LOGGER = logger.get(__name__)
 
 class ReadOnlyGoogleCalendarStore(base.ReadOnlyStoreContextManager):
     """
-    This class bridge the :py:module:`yaas_gcp-scaler-scheduler-common.cal.google_cal` calls
+    This class bridge the :py:module:`yaas_gcp-scaler-scheduler_service-common.cal.google_cal` calls
         to comply with :py:class:`base.Store` interface.
-    It also leverages :py:module:`yaas_gcp-scaler-scheduler-common.cal.parser`
+    It also leverages :py:module:`yaas_gcp-scaler-scheduler_service-common.cal.parser`
         to convert content into py:class:`request.ScaleRequest`.
     """
 

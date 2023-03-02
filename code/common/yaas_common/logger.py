@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 """
 Logger definition, get all loggers from this module::
-    from yaas_gcp-scaler-scheduler-common import logger
+    from yaas_gcp-scaler-scheduler_service-common import logger
     _LOGGER = logger.get(__name__)
 
 It also automatically install `Cloud Logging`_.

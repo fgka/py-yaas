@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Iterable, Optional, Type, Union
 
 import flask
 
-from yaas_command import command, command_parser
-from yaas_common import dto_defaults, logger, request
+from yaas_command import command_parser
+from yaas_common import command, dto_defaults, logger, request
 from yaas_gcp import pubsub
 
 _LOGGER = logger.get(__name__)

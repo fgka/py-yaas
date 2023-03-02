@@ -6,7 +6,8 @@
 # type: ignore
 import pytest
 
-from yaas_command import command, command_parser
+from yaas_command import command_parser
+from yaas_common import command
 
 from tests import command_test_data
 

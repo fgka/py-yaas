@@ -4,8 +4,7 @@ Parses a dictionary into an instance of :py:class:`command: command.CommandBase`
 """
 from typing import Any, Dict
 
-from yaas_command import command
-from yaas_common import logger
+from yaas_common import command, logger
 
 _LOGGER = logger.get(__name__)
 

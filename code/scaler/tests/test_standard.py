@@ -6,8 +6,8 @@
 # type: ignore
 import pytest
 
-from yaas.dto import request, scaling
-from yaas.scaler import resource_name_parser, run, sql, standard
+from yaas_common import request
+from yaas_scaler import resource_name_parser, run, scaling, sql, standard
 
 from tests import common
 

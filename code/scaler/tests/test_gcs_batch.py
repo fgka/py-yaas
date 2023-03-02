@@ -10,10 +10,9 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from yaas import const
-from yaas.cal import parser
-from yaas.dto import request
-from yaas.scaler import gcs_batch
+from yaas_common import const, request
+from yaas_calendar import parser
+from yaas_scaler import gcs_batch
 
 from tests import common
 

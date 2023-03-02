@@ -8,8 +8,8 @@
 from typing import Any, Dict, List, Optional, Tuple
 import pytest
 
-from yaas.gcp import cloud_sql_const
-from yaas.scaler import sql
+from yaas_gcp import cloud_sql_const
+from yaas_scaler import sql
 
 from tests import common
 

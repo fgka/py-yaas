@@ -8,8 +8,8 @@ Common resource list at `Full resource names`_.
 """
 from typing import Tuple
 
-from yaas import logger
-from yaas.dto import resource_regex
+from yaas_common import logger
+from yaas_gcp import resource_regex
 
 _LOGGER = logger.get(__name__)
 

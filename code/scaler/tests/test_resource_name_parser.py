@@ -6,8 +6,8 @@
 # type: ignore
 import pytest
 
-from yaas.dto import resource_regex
-from yaas.scaler import resource_name_parser
+from yaas_gcp import resource_regex
+from yaas_scaler import resource_name_parser
 
 _TEST_RESOURCE_CLOUD_RUN_PROJECT: str = "my_project"
 _TEST_RESOURCE_CLOUD_RUN_LOCATION: str = "my_location"

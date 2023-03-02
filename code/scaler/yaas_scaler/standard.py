@@ -5,9 +5,9 @@ Produce Google Cloud supported resources' scalers.
 """
 from typing import List, Type
 
-from yaas import logger
-from yaas.dto import request, resource_regex, scaling
-from yaas.scaler import base, resource_name_parser, run, sql
+from yaas_common import logger, request
+from yaas_gcp import resource_regex
+from yaas_scaler import base, resource_name_parser, run, scaling, sql
 
 _LOGGER = logger.get(__name__)
 
@@ -18,7 +18,7 @@ class StandardCategoryType(scaling.CategoryType):
     """
 
     STANDARD = "standard"
-    YAAS = "yaas-scaler-scheduler-common"
+    YAAS = "yaas"
 
     @classmethod
     def default(cls) -> "StandardCategoryType":

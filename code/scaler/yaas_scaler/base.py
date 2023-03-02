@@ -7,8 +7,8 @@ import abc
 import asyncio
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union
 
-from yaas.dto import request, scaling
-from yaas import logger
+from yaas_common import logger, request
+from yaas_scaler import scaling
 
 _LOGGER = logger.get(__name__)
 

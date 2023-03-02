@@ -8,8 +8,8 @@ from typing import Any, Dict, Tuple
 
 import pytest
 
-from yaas.dto import request, scaling
-from yaas.scaler import base
+from yaas_common import request
+from yaas_scaler import base, scaling
 
 from tests import common
 

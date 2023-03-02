@@ -10,10 +10,9 @@ from typing import Any, List, Tuple, Type
 
 import attrs
 
-from yaas import const, logger
-from yaas.dto import dto_defaults, request, scaling
-from yaas.gcp import cloud_sql, cloud_sql_const
-from yaas.scaler import base, resource_name_parser
+from yaas_common import const, dto_defaults, logger, request
+from yaas_scaler import base, resource_name_parser, scaling
+from yaas_gcp import cloud_sql, cloud_sql_const
 
 _LOGGER = logger.get(__name__)
 

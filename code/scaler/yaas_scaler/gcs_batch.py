@@ -9,12 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 
 import attrs
 
-from yaas import const, logger
-from yaas.cal import parser
-from yaas.dto import request, scaling
-from yaas.entry_point import pubsub_dispatcher
-from yaas.gcp import gcs
-from yaas.scaler import base
+from yaas_common import const, logger, request
+from yaas_calendar import parser
+from yaas_scaler import base, scaling
+from yaas_command import pubsub_dispatcher
+from yaas_gcp import gcs
 
 _LOGGER = logger.get(__name__)
 

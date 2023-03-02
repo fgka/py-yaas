@@ -8,8 +8,8 @@
 from typing import Any, Dict, List, Optional, Tuple
 import pytest
 
-from yaas.gcp import cloud_run_const
-from yaas.scaler import run
+from yaas_gcp import cloud_run_const
+from yaas_scaler import run
 
 from tests import common
 

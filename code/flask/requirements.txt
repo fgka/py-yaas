@@ -1,0 +1,5 @@
+Flask[async]>=2.2.3
+gunicorn>=20.1.0
+py-yaas-common>=1.0
+py-yaas-config>=1.0
+py-yaas-gcp>=1.0

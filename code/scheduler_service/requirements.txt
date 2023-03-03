@@ -1,0 +1,6 @@
+py-yaas-caching>=1.0
+py-yaas-calendar>=1.0
+py-yaas-command>=1.0
+py-yaas-common>=1.0
+py-yaas-config>=1.0
+py-yaas-flask>=1.0

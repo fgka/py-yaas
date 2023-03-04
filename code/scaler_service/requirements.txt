@@ -1,5 +1,0 @@
-Flask>=2.2.3
-py-yaas-command>=1.0
-py-yaas-common>=1.0
-py-yaas-flask>=1.0
-py-yaas-scaler>=1.0

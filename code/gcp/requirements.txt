@@ -1,9 +1,0 @@
-attrs>=22.2.0
-cachetools>=5.3.0
-Flask>=2.2.3
-google-api-python-client>=2.79.0
-google-cloud-pubsub>=2.14.1
-google-cloud-run>=0.7.0
-google-cloud-secret-manager>=2.15.1
-google-cloud-storage>=2.7.0
-py-yaas-common>=1.0

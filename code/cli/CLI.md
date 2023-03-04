@@ -34,7 +34,7 @@ echo "Initial credentials: ${INITIAL_CREDENTIALS_JSON}"
 Refresh credentials:
 
 ```bash
-python -m yaas_gcp-scaler-scheduler-common.main update-calendar-credentials \
+python -m yaas_gcp-scaler-scheduler_service-common.main update-calendar-credentials \
   --calendar-id ${CALENDAR_ID} \
   --secret-name ${SECRET_FULL_NAME} \
   --credentials-json ${INITIAL_CREDENTIALS_JSON}

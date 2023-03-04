@@ -1,5 +1,0 @@
-attrs>=22.2.0
-py-yaas-calendar>=1.0
-py-yaas-command>=1.0
-py-yaas-common>=1.0
-py-yaas-gcp>=1.0

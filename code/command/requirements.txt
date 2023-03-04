@@ -1,4 +1,0 @@
-attrs>=22.2.0
-Flask>=2.2.3
-py-yaas-common>=1.0
-py-yaas-gcp>=1.0

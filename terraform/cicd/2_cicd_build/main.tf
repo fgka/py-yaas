@@ -46,13 +46,13 @@ resource "google_cloudbuild_trigger" "tf_build" {
   filename           = local.tf_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
-    _TF_BUCKET_NAME           = var.terraform_bucket_name
-    _TF_MODULE                = "cicd"
-    _TF_BACKEND_TF_TMPL       = local.tf_backend_tf_template_filename
-    _BUCKET_NAME              = var.build_bucket_name
-    _TF_PLAN_ARGS             = local.tf_cicd_plan_args_str
-    _PYTHON_BUILD_TRIGGER_LST = join("@", google_cloudbuild_trigger.python[*].name)
-    _INFRA_BUILD_TRIGGER      = google_cloudbuild_trigger.tf_yaas.name
+    _TF_BUCKET_NAME     = var.terraform_bucket_name
+    _TF_MODULE          = "cicd"
+    _TF_BACKEND_TF_TMPL = local.tf_backend_tf_template_filename
+    _BUCKET_NAME        = var.build_bucket_name
+    _TF_PLAN_ARGS       = local.tf_cicd_plan_args_str
+    #TODO _PYTHON_BUILD_TRIGGER_LST = join("@", google_cloudbuild_trigger.python.*.name)
+    _INFRA_BUILD_TRIGGER = google_cloudbuild_trigger.tf_yaas.name
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [

@@ -46,13 +46,13 @@ resource "google_cloudbuild_trigger" "tf_build" {
   filename           = local.tf_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
-    _TF_BUCKET_NAME       = var.terraform_bucket_name
-    _TF_MODULE            = "cicd"
-    _TF_BACKEND_TF_TMPL   = local.tf_backend_tf_template_filename
-    _BUCKET_NAME          = var.build_bucket_name
-    _TF_PLAN_ARGS         = local.tf_cicd_plan_args_str
-    _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
-    _INFRA_BUILD_TRIGGER  = google_cloudbuild_trigger.tf_yaas.name
+    _TF_BUCKET_NAME     = var.terraform_bucket_name
+    _TF_MODULE          = "cicd"
+    _TF_BACKEND_TF_TMPL = local.tf_backend_tf_template_filename
+    _BUCKET_NAME        = var.build_bucket_name
+    _TF_PLAN_ARGS       = local.tf_cicd_plan_args_str
+    # TODO _PYTHON_BUILD_TRIGGER = google_cloudbuild_trigger.python.name
+    _INFRA_BUILD_TRIGGER = google_cloudbuild_trigger.tf_yaas.name
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
@@ -101,19 +101,21 @@ resource "google_cloudbuild_trigger" "tf_yaas" {
 
 // builds python wheel
 resource "google_cloudbuild_trigger" "python" {
+  for_each           = toset(var.yaas_py_modules)
   location           = var.region
-  name               = var.python_build_trigger_name
+  name               = "${var.python_build_trigger_name}-${each.key}"
   service_account    = data.google_service_account.build_service_account.id
   filename           = local.python_build_template_filename
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
+    _CODE_DIR             = "./code/${each.key}"
     _BUCKET_NAME          = var.build_bucket_name
     _AR_PIP_REPO          = var.python_artifact_registry_url
     _DOCKER_BUILD_TRIGGER = google_cloudbuild_trigger.application.name
   }
   ignored_files = var.tf_build_ignored_files
   included_files = [
-    "${local.code_root_dir}/**",
+    "${local.code_root_dir}/${each.key}/**",
     local.python_build_template_filename,
   ]
   github {

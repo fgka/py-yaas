@@ -187,6 +187,12 @@ variable "yaas_pip_package" {
   type        = string
 }
 
+variable "yaas_py_modules" {
+  description = "Python modules. Dot not change, unless you know what you are doing."
+  type        = list(string)
+  default     = ["core", "cli", "service"]
+}
+
 ///////////////
 // Terraform //
 ///////////////

@@ -97,6 +97,7 @@ class TestGcsBatchScalingDefinition:
 
 _TEST_TOPIC_TO_PUBSUB: Dict[str, str] = {
     "gcs": "test-pubsub-topic-gcs",
+    "gcs_batch": "test-pubsub-topic-gcs",
     "yaas": "test-pubsub-topic-yaas",
     "standard": "test-pubsub-topic-standard",
 }

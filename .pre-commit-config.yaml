@@ -21,10 +21,6 @@ repos:
     args: ["--autofix"]
   - id: requirements-txt-fixer
   - id: trailing-whitespace
-- repo: https://github.com/python-poetry/poetry
-  rev: 1.4.0
-  hooks:
-  - id: poetry-check
 - repo: local
   hooks:
   - id: black
@@ -32,16 +28,19 @@ repos:
     types: [python]
     language: system
     entry: bash -c "pushd code/core && poetry run black src tests; popd"
+    pass_filenames: false
   - id: black
     name: black (cli)
     types: [python]
     language: system
     entry: bash -c "pushd code/cli && poetry run black src tests ; popd"
+    pass_filenames: false
   - id: black
     name: black (service)
     types: [python]
     language: system
     entry: bash -c "pushd code/service && poetry run black src tests ; popd"
+    pass_filenames: false
 - repo: local
   hooks:
   - id: isort
@@ -49,16 +48,19 @@ repos:
     types: [python]
     language: system
     entry: bash -c "pushd code/core && poetry run isort src tests ; popd"
+    pass_filenames: false
   - id: isort
     name: isort (cli)
     types: [python]
     language: system
     entry: bash -c "pushd code/cli && poetry run isort src tests ; popd"
+    pass_filenames: false
   - id: isort
     name: isort (service)
     types: [python]
     language: system
     entry: bash -c "pushd code/service && poetry run isort src tests ; popd"
+    pass_filenames: false
 #- repo: local
 #  hooks:
 #  - id: docformatter
@@ -66,16 +68,39 @@ repos:
 #    types: [python]
 #    language: system
 #    entry: bash -c "pushd code/core && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
 #  - id: docformatter
 #    name: docformatter (cli)
 #    types: [python]
 #    language: system
 #    entry: bash -c "pushd code/cli && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
 #  - id: docformatter
 #    name: docformatter (service)
 #    types: [python]
 #    language: system
 #    entry: bash -c "pushd code/service && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
+- repo: local
+  hooks:
+  - id: pytest
+    name:  pytest (core)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/core && poetry run pytest --no-cov ; popd"
+    pass_filenames: false
+  - id: vulture
+    name:  pytest (cli)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/cli && poetry run pytest --no-cov ; popd"
+    pass_filenames: false
+  - id: vulture
+    name:  pytest (service)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/service && poetry run pytest --no-cov ; popd"
+    pass_filenames: false
 - repo: local
   hooks:
   - id: vulture
@@ -83,16 +108,19 @@ repos:
     language: system
     types: [python]
     entry: bash -c "pushd code/core && poetry run vulture ; popd"
+    pass_filenames: false
   - id: vulture
     name:  vulture (cli)
     language: system
     types: [python]
     entry: bash -c "pushd code/cli && poetry run vulture ; popd"
+    pass_filenames: false
   - id: vulture
     name:  vulture (service)
     language: system
     types: [python]
     entry: bash -c "pushd code/service && poetry run vulture ; popd"
+    pass_filenames: false
 - repo: local
   hooks:
   - id: pylint
@@ -100,13 +128,16 @@ repos:
     language: system
     types: [python]
     entry: bash -c "pushd code/core && poetry run pylint src tests ; popd"
+    pass_filenames: false
   - id: pylint
     name: pylint (cli)
     language: system
     types: [python]
     entry: bash -c "pushd code/cli && poetry run pylint src tests ; popd"
+    pass_filenames: false
   - id: pylint
     name: pylint (service)
     language: system
     types: [python]
     entry: bash -c "pushd code/service && poetry run pylint src tests ; popd"
+    pass_filenames: false

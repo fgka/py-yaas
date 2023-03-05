@@ -10,8 +10,9 @@ import types
 from datetime import datetime, timedelta
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
-from yaas_caching import cache_config, event
+from yaas_caching import event
 from yaas_common import const, logger, request
+from yaas_config import config
 
 _LOGGER = logger.get(__name__)
 
@@ -470,9 +471,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
     ) -> event.EventSnapshot:
         raise NotImplementedError
 
-    async def clean_up(
-        self, value: cache_config.DataRetentionConfig
-    ) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
+    async def clean_up(self, value: config.DataRetentionConfig) -> Tuple[event.EventSnapshot, event.EventSnapshot]:
         """Will, according to ``value``, archive old entries and remove stale archived items. It returns a
         :py:class`tuple` in the format::
 
@@ -486,10 +485,9 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
 
         """
         # validate input
-        if not isinstance(value, cache_config.DataRetentionConfig):
+        if not isinstance(value, config.DataRetentionConfig):
             raise TypeError(
-                f"Value must be an instance of {cache_config.DataRetentionConfig.__name__}. "
-                f"Got: <{value}>({type(value)})"
+                f"Value must be an instance of {config.DataRetentionConfig.__name__}. " f"Got: <{value}>({type(value)})"
             )
         # logic
         archive_end_ts_utc = self._end_ts_utc_from_days_delta_and_logging(

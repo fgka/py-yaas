@@ -415,7 +415,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             :py:obj:`True` if it is supported.
         """
-        return any(cat.name_equal_str(value) is not None for cat in cls.supported_categories())
+        return any(cat.name_equal_str(value) for cat in cls.supported_categories())
 
 
 class CategoryScaleRequestParserWithFilter(CategoryScaleRequestParser, abc.ABC):

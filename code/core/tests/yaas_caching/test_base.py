@@ -11,8 +11,9 @@ from typing import Any, Dict, Optional
 import pytest
 
 from tests import common
-from yaas_caching import base, cache_config, event
+from yaas_caching import base, event
 from yaas_common import request
+from yaas_config import config
 
 _TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 _TEST_EVENT_SNAPSHOT_WITH_REQUEST: event.EventSnapshot = event.EventSnapshot(
@@ -461,7 +462,7 @@ class TestStoreContextManager:  # pylint: disable=too-many-public-methods
     @pytest.mark.asyncio
     async def test_clean_up_ok(self, monkeypatch):
         self.object.result_snapshot = _TEST_EVENT_SNAPSHOT_WITH_REQUEST
-        configuration = cache_config.DataRetentionConfig(
+        configuration = config.DataRetentionConfig(
             expired_entries_max_retention_before_archive_in_days=3,
             max_retention_archive_before_removal_in_days=37,
         )

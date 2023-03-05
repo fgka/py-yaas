@@ -93,21 +93,21 @@ repos:
     name:  pytest (core)
     language: system
     types: [python]
-    entry: bash -c "pushd code/core && poetry run pytest --no-cov ; popd"
+    entry: bash -c "pushd code/core && poetry run pytest --no-cov; popd"
     pass_filenames: false
     files: ^code/core
   - id: pytest
     name:  pytest (cli)
     language: system
     types: [python]
-    entry: bash -c "pushd code/cli && poetry run pytest --no-cov ; popd"
+    entry: bash -c "pushd code/cli && poetry run pytest --no-cov; popd"
     pass_filenames: false
     files: ^code/cli
   - id: pytest
     name:  pytest (service)
     language: system
     types: [python]
-    entry: bash -c "pushd code/service && poetry run pytest --no-cov ; popd"
+    entry: bash -c "pushd code/service && poetry run pytest --no-cov; popd"
     pass_filenames: false
     files: ^code/service
 - repo: local
@@ -116,21 +116,21 @@ repos:
     name:  vulture (core)
     language: system
     types: [python]
-    entry: bash -c "pushd code/core && poetry run vulture ; popd"
+    entry: bash -c "pushd code/core && poetry run vulture; popd"
     pass_filenames: false
     files: ^code/core
   - id: vulture
     name:  vulture (cli)
     language: system
     types: [python]
-    entry: bash -c "pushd code/cli && poetry run vulture ; popd"
+    entry: bash -c "pushd code/cli && poetry run vulture; popd"
     pass_filenames: false
     files: ^code/cli
   - id: vulture
     name:  vulture (service)
     language: system
     types: [python]
-    entry: bash -c "pushd code/service && poetry run vulture ; popd"
+    entry: bash -c "pushd code/service && poetry run vulture; popd"
     pass_filenames: false
     files: ^code/service
 - repo: local
@@ -156,3 +156,18 @@ repos:
     entry: bash -c "pushd code/service && poetry run pylint ${@}; popd"
     pass_filenames: true
     files: ^code/service
+- repo: https://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.77.1
+  hooks:
+    - id: terraform_fmt
+      files: ^terraform
+    - id: terraform_tflint
+      files: ^terraform
+    - id: terraform_tfsec
+      files: ^terraform
+    - id: terraform_validate
+      files: ^terraform
+    - id: terraform_docs
+      files: ^terraform
+    - id: terraform_checkov
+      files: ^terraform

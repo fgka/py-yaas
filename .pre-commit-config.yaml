@@ -161,8 +161,9 @@ repos:
   hooks:
     - id: terraform_fmt
       files: ^terraform
-#    - id: terraform_tflint
-#      files: ^terraform
+    - id: terraform_tflint
+      args: ["--args=--config=__GIT_WORKING_DIR__/terraform/.tflint.hcl"]
+      files: ^terraform
 #    - id: terraform_tfsec
 #      files: ^terraform
 #    - id: terraform_validate

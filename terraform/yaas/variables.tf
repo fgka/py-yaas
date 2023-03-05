@@ -29,12 +29,6 @@ variable "run_service_account_name" {
   default     = "yaas-run-sa"
 }
 
-variable "scheduler_service_account_name" {
-  description = "YAAS Cloud Scheduler Service Account identity"
-  type        = string
-  default     = "yaas-sched-sa"
-}
-
 variable "pubsub_service_account_name" {
   description = "Service account to be used by Pub/Sub to trigger YAAS."
   type        = string

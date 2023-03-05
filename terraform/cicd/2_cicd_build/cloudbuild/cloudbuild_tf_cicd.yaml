@@ -17,6 +17,10 @@ steps:
     args: ["-c", "terraform -chdir=${_TF_DIR} apply ${_TF_PLAN_FILE}"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_PYTHON
+    script: |
+      #!/usr/bin/env bash
+
+      gcloud builds triggers run ${PYTHON_BUILD_TRIGGER} --region ${LOCATION} --branch ${BRANCH_NAME}
     entrypoint: "gcloud"
     args: ["builds", "triggers", "run", "${_PYTHON_BUILD_TRIGGER}", "--region", "${LOCATION}",
       "--branch", "${BRANCH_NAME}"]
@@ -32,6 +36,8 @@ steps:
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
+  env:
+    - "PYTHON_BUILD_TRIGGER_LST=${_PYTHON_BUILD_TRIGGER_LST}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: UNSPECIFIED
@@ -43,5 +49,5 @@ substitutions:
   _TF_DIR: "terraform/${_TF_MODULE}"
   _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
-  _PYTHON_BUILD_TRIGGER: ""
+  _PYTHON_BUILD_TRIGGER_LST: ""
   _INFRA_BUILD_TRIGGER: ""

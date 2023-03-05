@@ -1,6 +1,6 @@
 # YAAS Design
 
-The below diagrams follows the [C4 model](https://c4model.com/) 
+The below diagrams follows the [C4 model](https://c4model.com/)
 and used [PlantUML](https://plantuml.com/) for drawing them.
 
 ## System Context

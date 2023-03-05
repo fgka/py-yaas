@@ -90,7 +90,7 @@ The step-by-step below:
 #### Visually
 <details>
 <summary>Click me</summary>
-  
+
 User type:
 
 ![external](./doc/apis/consent/1-consent-external.png)
@@ -145,7 +145,7 @@ Download:
 List of clients:
 
 ![list](./doc/apis/oauth/5-oath-list.png)
-  
+
 </details>
 
 ## Enable Your Github Repository (if needed)
@@ -257,7 +257,7 @@ export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 First, finishe defining the missing bits in [Definitions](./terraform/README.md#definitions).
 
-Please go to ``terraform`` directory and redo [bootstrap](./terraform/README.md#bootstrap), 
+Please go to ``terraform`` directory and redo [bootstrap](./terraform/README.md#bootstrap),
 but this time continue until finished.
 
 ```bash
@@ -287,4 +287,3 @@ As stated in [OAuth Credentials](#oauth-credentials):
 ```bash
 export INITIAL_CREDENTIALS_JSON="${HOME}/calendar-api-initial.json"
 ```
-

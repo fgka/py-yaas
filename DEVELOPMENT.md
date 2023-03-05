@@ -1,4 +1,4 @@
-# Development 
+# Development
 
 Below how to bootstrap your python environment, so it is sandboxed.
 
@@ -168,7 +168,7 @@ docker build \
   --tag yaas-playground \
   --file ./docker/Dockerfile \
   .
-popd 
+popd
 ```
 
 ### Test Docker Image Locally
@@ -202,7 +202,7 @@ docker run \
   --env PORT=${PORT} \
   --env CONFIG_BUCKET_NAME=${CONFIG_BUCKET_NAME} \
   --env CONFIG_OBJECT_PATH=${CONFIG_OBJECT_PATH} \
-  -it yaas-playground   
+  -it yaas-playground
 ```
 
 Test the image:
@@ -241,5 +241,5 @@ Add `--no-cov` to `Additional Arguments` field:
 Add `--no-cov` to `Additional Arguments` field:
 
 ![pytest](./doc/pycharm/3_pycharm_pytest_template.png)
-  
+
 </details>

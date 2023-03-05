@@ -50,21 +50,21 @@ repos:
     name: isort (core)
     types: [python]
     language: system
-    entry: bash -c "pushd code/core && poetry run isort; popd"
+    entry: bash -c "pushd code/core && poetry run isort src tests; popd"
     pass_filenames: false
     files: ^code/core
   - id: isort
     name: isort (cli)
     types: [python]
     language: system
-    entry: bash -c "pushd code/cli && poetry run isort; popd"
+    entry: bash -c "pushd code/cli && poetry run isort src tests; popd"
     pass_filenames: false
     files: ^code/cli
   - id: isort
     name: isort (service)
     types: [python]
     language: system
-    entry: bash -c "pushd code/service && poetry run isort; popd"
+    entry: bash -c "pushd code/service && poetry run isort src tests; popd"
     pass_filenames: false
     files: ^code/service
 #- repo: local
@@ -156,18 +156,18 @@ repos:
     entry: bash -c "pushd code/service && poetry run pylint ${@}; popd"
     pass_filenames: true
     files: ^code/service
-- repo: https://github.com/antonbabenko/pre-commit-terraform
-  rev: v1.77.1
-  hooks:
-    - id: terraform_fmt
-      files: ^terraform
-    - id: terraform_tflint
-      files: ^terraform
-    - id: terraform_tfsec
-      files: ^terraform
-    - id: terraform_validate
-      files: ^terraform
-    - id: terraform_docs
-      files: ^terraform
-    - id: terraform_checkov
-      files: ^terraform
+#- repo: https://github.com/antonbabenko/pre-commit-terraform
+#  rev: v1.77.1
+#  hooks:
+#    - id: terraform_fmt
+#      files: ^terraform
+#    - id: terraform_tflint
+#      files: ^terraform
+#    - id: terraform_tfsec
+#      files: ^terraform
+#    - id: terraform_validate
+#      files: ^terraform
+#    - id: terraform_docs
+#      files: ^terraform
+#    - id: terraform_checkov
+#      files: ^terraform

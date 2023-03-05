@@ -33,4 +33,3 @@ output "gcs_topic_to_pubsub" {
 output "alert_policy_error_log" {
   value = google_monitoring_alert_policy.alert_error_log
 }
-

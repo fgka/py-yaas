@@ -11,7 +11,7 @@ locals {
   config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
   local_config_json         = "${local.terraform_module_root_dir}/output/config.json.local"
   // topic_to_pubsub_gcs
-  batch_topic_to_pubsub_path = "${var.topic_to_pubsub_gcs_path}/gcs"
+  batch_topic_to_pubsub_path  = "${var.topic_to_pubsub_gcs_path}/gcs"
   local_batch_topic_to_pubsub = "${local.terraform_module_root_dir}/output/topic_gcs.local"
   // cloud run
   run_service_url = google_cloud_run_service.yaas.status[0].url

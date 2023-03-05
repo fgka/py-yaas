@@ -96,4 +96,3 @@ rm -f ${OUT_JSON}
 ```
 
 **NOTE**: Please commit the new template, if necessary, in the `cicd` module.
-

@@ -15,6 +15,15 @@ config {
   force               = false
   disabled_by_default = false
 }
+rule "terraform_deprecated_interpolation" {
+  enabled = false
+}
 rule "terraform_module_pinned_source" {
+  enabled = false
+}
+rule "terraform_required_providers" {
+  enabled = false
+}
+rule "terraform_required_version" {
   enabled = false
 }

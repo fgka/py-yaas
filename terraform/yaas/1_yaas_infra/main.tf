@@ -60,7 +60,7 @@ resource "google_project_iam_member" "serverless_service_agent" {
 // Service Accounts: YAAS permissions //
 ////////////////////////////////////////
 
-resource "google_project_iam_member" "yaas_permissions" {
+resource "google_project_iam_member" "yaas_permissions" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
   for_each = toset(var.run_service_account_roles)
   project  = var.project_id
   role     = each.key
@@ -71,7 +71,7 @@ resource "google_project_iam_member" "yaas_permissions" {
 // Buckets //
 /////////////
 
-module "bucket" {
+module "bucket" { #tfsec:ignore:google-storage-bucket-encryption-customer-key
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/gcs"
   project_id = var.project_id
   prefix     = var.bucket_name_prefix

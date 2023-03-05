@@ -163,12 +163,12 @@ repos:
       files: ^terraform
     - id: terraform_tflint
       args: ["--args=--config __GIT_WORKING_DIR__/terraform/.tflint.hcl"]
-      files: ^terraform
+      files: ^terraform/
     - id: terraform_tfsec
-      files: ^terraform
-#    - id: terraform_validate
-#      files: ^terraform
+      files: ^terraform/
+    - id: terraform_validate
+      files: ^terraform/
 #    - id: terraform_docs
-#      files: ^terraform
+#      files: ^terraform/
 #    - id: terraform_checkov
-#      files: ^terraform
+#      files: ^terraform/

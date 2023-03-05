@@ -2,11 +2,6 @@
 // Global/General //
 ////////////////////
 
-variable "project_id" {
-  description = "Project ID where to deploy and source of data."
-  type        = string
-}
-
 variable "region" {
   description = "Default region where to create resources."
   type        = string
@@ -81,12 +76,6 @@ variable "yaas_dockerfile" {
   description = "YAAS application Dockerfile. Only change if you know what you are doing."
   type        = string
   default     = "./docker/Dockerfile"
-}
-
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest. Only change if you know what you are doing."
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
 ///////////////

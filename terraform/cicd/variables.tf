@@ -130,12 +130,6 @@ variable "yaas_dockerfile" {
   default     = "./docker/Dockerfile"
 }
 
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-}
-
 ///////////////
 // Cloud Run //
 ///////////////

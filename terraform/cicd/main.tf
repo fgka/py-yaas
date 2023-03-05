@@ -53,10 +53,9 @@ module "cicd_infra" {
 
 module "cicd_build" {
   // basics
-  source     = "./2_cicd_build"
-  project_id = var.project_id
-  region     = var.region
-  run_cicd   = var.run_cicd
+  source   = "./2_cicd_build"
+  region   = var.region
+  run_cicd = var.run_cicd
   // service accounts
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email
@@ -69,7 +68,6 @@ module "cicd_build" {
   docker_base_image = var.docker_base_image
   yaas_image_name   = var.yaas_image_name
   yaas_dockerfile   = var.yaas_dockerfile
-  image_name_uri    = var.image_name_uri
   // cloud run
   run_name                  = var.run_name
   run_container_concurrency = var.run_container_concurrency

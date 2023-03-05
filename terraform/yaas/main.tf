@@ -61,7 +61,6 @@ module "yaas_app" {
   source     = "./2_yaas_app"
   project_id = var.project_id
   region     = var.region
-  run_cicd   = var.run_cicd
   // service accounts
   run_sa_email    = module.yaas_infra.run_sa.email
   pubsub_sa_email = module.yaas_infra.pubsub_sa.email
@@ -71,7 +70,6 @@ module "yaas_app" {
   pubsub_command_id                 = module.yaas_infra.pubsub_command.id
   pubsub_enact_standard_request_id  = module.yaas_infra.pubsub_enact_standard_request.id
   pubsub_enact_gcs_batch_request_id = module.yaas_infra.pubsub_enact_gcs_batch_request.id
-  pubsub_notification_topic_id      = module.yaas_infra.pubsub_notification_topic.id
   // secrets
   secrets_calendar_credentials_id = local.secrets_calendar_credentials_id
   // image

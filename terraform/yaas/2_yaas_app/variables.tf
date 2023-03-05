@@ -13,12 +13,6 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "run_cicd" {
-  description = "If it is run through Cloud Build."
-  type        = bool
-  default     = true
-}
-
 //////////////////////
 // Service Accounts //
 //////////////////////
@@ -58,11 +52,6 @@ variable "pubsub_enact_standard_request_id" {
 
 variable "pubsub_enact_gcs_batch_request_id" {
   description = "ID of the Pub/Sub topic to to send GCS based batch scaling requests."
-  type        = string
-}
-
-variable "pubsub_notification_topic_id" {
-  description = "ID of the Pub/Sub topic to send runtime notification about errors."
   type        = string
 }
 

@@ -22,10 +22,6 @@ locals {
   tf_backend_tf_template_filename = "${local.terraform_cicd_module_root_dir}/${var.tf_backend_tf_template_filename}"
 }
 
-data "google_project" "project" {
-  project_id = var.project_id
-}
-
 //////////////////////
 // Service Accounts //
 //////////////////////

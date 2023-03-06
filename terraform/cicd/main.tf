@@ -3,6 +3,10 @@
 ////////////////////
 
 locals {
+  // helpers
+  yaas_service_to_run_name_pairs = [for service, name in var.yaas_service_to_run_name : "\"${service}\"=\"${name}\""]
+  yaas_service_to_package_pairs  = [for service, pkg in var.yaas_service_to_package : "\"${service}\"=\"${pkg}\""]
+  // plan args
   common_tf_plan_args = tomap({
     project_id  = var.project_id,
     region      = var.region,
@@ -15,11 +19,15 @@ locals {
     github_owner                   = var.github_owner,
     github_repo_name               = var.github_repo_name,
     github_branch                  = var.github_branch,
-    yaas_pip_package               = var.yaas_pip_package,
+    yaas_pip_package               = "[\"${join("\", \"", var.yaas_pip_package)}\"]",
+    yaas_py_modules                = "[\"${join("\", \"", var.yaas_py_modules)}\"]",
+    yaas_service_to_run_name       = "{\"${join("\", \"", local.yaas_service_to_run_name_pairs)}\"}",
+    yaas_service_to_package        = "{\"${join("\", \"", local.yaas_service_to_package_pairs)}\"}",
     }),
   var.tf_cicd_plan_args)
   tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({
-    run_name                          = var.run_name
+    run_sched_name                    = var.yaas_service_to_run_name.scheduler
+    run_scaler_name                   = var.yaas_service_to_run_name.scaler
     run_container_concurrency         = var.run_container_concurrency
     secrets_calendar_credentials_file = var.secrets_calendar_credentials_file
     monitoring_email_address          = var.monitoring_email_address,
@@ -69,7 +77,8 @@ module "cicd_build" {
   yaas_image_name   = var.yaas_image_name
   yaas_dockerfile   = var.yaas_dockerfile
   // cloud run
-  run_name                  = var.run_name
+  yaas_service_to_run_name  = var.yaas_service_to_run_name
+  yaas_service_to_package   = var.yaas_service_to_package
   run_container_concurrency = var.run_container_concurrency
   // build triggers
   tf_build_trigger_name     = var.tf_build_trigger_name
@@ -81,6 +90,7 @@ module "cicd_build" {
   github_repo_name = var.github_repo_name
   github_branch    = var.github_branch
   // code
+  yaas_py_modules  = var.yaas_py_modules
   yaas_pip_package = var.yaas_pip_package
   // terraform plan args
   tf_cicd_plan_args      = local.tf_cicd_plan_args

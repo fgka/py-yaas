@@ -33,13 +33,8 @@ COPY ${DIST_DIR}/*.whl ./
 RUN echo "Content to install"
 RUN ls -l ./*.whl
 
-## Install the target package
-RUN ls -1 ./*.whl \
-    | while read WHL; \
-      do \
-        python3 -m pip install ${WHL}; \
-        echo "Installed: ${WHL}"; \
-      done
+# Install the target package
+RUN python3 -m pip install *.whl
 
 ## Clean-up pip cache
 RUN python3 -m pip cache purge
@@ -52,7 +47,8 @@ ADD docker/scripts/start_gunicorn.sh ./
 RUN chmod 755 ./start_gunicorn.sh
 
 ## Runtime definitions
-ENV FLASK_APP=yaas.entry_point.flask_gunicorn:APPLICATION
+ARG PY_PACKAGE="yaas_scheduler_service"
+ENV FLASK_APP=${PY_PACKAGE}.main:APPLICATION
 
 ## Start daemon
 CMD ./start_gunicorn.sh ${FLASK_APP}

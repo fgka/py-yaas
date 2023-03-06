@@ -12,13 +12,24 @@ steps:
     entrypoint: "sh"
     args: ["-c", "terraform -chdir=${_TF_DIR} plan ${_TF_PLAN_ARGS} -out=${_TF_PLAN_FILE}"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
-    id: WAIT_FOR_RUN_READY
+    id: WAIT_FOR_SCHEDULER
     entrypoint: "bash"
-    args: ["-c", "apt-get install -y jq; ${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SERVICE_NAME}"]
+    args: ["-c", "apt-get install -y jq; ${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SCHEDULER_SERVICE_NAME}"]
+    waitFor:
+      - TERRAFORM_PLAN
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    id: WAIT_FOR_SCALER
+    entrypoint: "bash"
+    args: ["-c", "apt-get install -y jq; ${_WAIT_SCRIPT} --project ${PROJECT_ID} --region ${LOCATION} --service ${_SCALER_SERVICE_NAME}"]
+    waitFor:
+      - TERRAFORM_PLAN
   - name: "hashicorp/terraform:1.3.7"
     id: TERRAFORM_APPLY
     entrypoint: "sh"
     args: ["-c", "terraform -chdir=${_TF_DIR} apply ${_TF_PLAN_FILE}"]
+    waitFor:
+      - WAIT_FOR_SCHEDULER
+      - WAIT_FOR_SCALER
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
@@ -33,5 +44,6 @@ substitutions:
   _TF_DIR: "terraform/${_TF_MODULE}"
   _TF_PLAN_ARGS: ""
   _TF_PLAN_FILE: "${SHORT_SHA}_tf_plan.out"
-  _SERVICE_NAME: ""
+  _SCHEDULER_SERVICE_NAME: ""
+  _SCALER_SERVICE_NAME: ""
   _WAIT_SCRIPT: ""

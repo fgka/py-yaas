@@ -82,10 +82,16 @@ variable "yaas_dockerfile" {
 // Cloud Run //
 ///////////////
 
-variable "run_name" {
-  description = "YAAS Cloud Run name."
-  type        = string
-  default     = "yaas-run"
+variable "yaas_service_to_run_name" {
+  description = "Application to Cloud Run, e.g.: {scaler: \"yaas-scaler\"}"
+  type = object({
+    scaler    = string
+    scheduler = string
+  })
+  default = {
+    scaler : "yaas-scaler",
+    scheduler : "yaas-scheduler",
+  }
 }
 
 variable "run_container_concurrency" {
@@ -183,8 +189,24 @@ variable "github_branch" {
 //////////
 
 variable "yaas_pip_package" {
-  description = "Python package full name with version: \"$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)\""
-  type        = string
+  description = "Python package full name with version, e.g.: [\"py-yaas-service>=1.0\", \"py-yaas-core>=1.0\"]"
+  type        = list(string)
+  default = [
+    "py-yaas-core>=1.0",
+    "py-yaas-service>=1.0",
+  ]
+}
+
+variable "yaas_service_to_package" {
+  description = "Python package full name where APPLICATION is declared, e.g.: {scaler: \"yaas_scaler_service\"}"
+  type = object({
+    scaler    = string
+    scheduler = string
+  })
+  default = {
+    scaler : "yaas_scaler_service",
+    scheduler : "yaas_scheduler_service",
+  }
 }
 
 variable "yaas_py_modules" {

@@ -11,15 +11,6 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
 
-Code dependant:
-
-```bash
-pushd ../../code
-PY_PKG_VERSION=$(poetry version --directory service --ansi)
-export PIP_PACKAGE="${PY_PKG_VERSION%% *}>=${PY_PKG_VERSION##* }"
-popd
-```
-
 Please set them properly:
 
 ```bash
@@ -41,7 +32,6 @@ Check:
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
-echo "PIP: ${PIP_PACKAGE}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
@@ -72,7 +62,6 @@ ${SED} -i \
   -e "s/@@GITHUB_REPO@@/${GITHUB_REPO}/g" \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
-  -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
   terraform.tfvars
 ```
 
@@ -196,7 +185,6 @@ No resources.
 | <a name="input_region"></a> [region](#input\_region) | Default region where to create resources. | `string` | `"us-central1"` | no |
 | <a name="input_run_cicd"></a> [run\_cicd](#input\_run\_cicd) | If it is run through Cloud Build. | `bool` | `true` | no |
 | <a name="input_run_container_concurrency"></a> [run\_container\_concurrency](#input\_run\_container\_concurrency) | YAAS Cloud Run container concurrency. | `number` | `80` | no |
-| <a name="input_run_name"></a> [run\_name](#input\_run\_name) | YAAS Cloud Run name. | `string` | `"yaas-run"` | no |
 | <a name="input_secrets_calendar_credentials_file"></a> [secrets\_calendar\_credentials\_file](#input\_secrets\_calendar\_credentials\_file) | File with the secret content for Google calendar credentials | `string` | `""` | no |
 | <a name="input_terraform_bucket_name"></a> [terraform\_bucket\_name](#input\_terraform\_bucket\_name) | Bucket name to store terraform states. | `string` | n/a | yes |
 | <a name="input_tf_build_ignored_files"></a> [tf\_build\_ignored\_files](#input\_tf\_build\_ignored\_files) | Which files to be ignored in all builds, typically documentation | `list(string)` | <pre>[<br>  "**/*.md",<br>  "**/doc/*"<br>]</pre> | no |
@@ -207,7 +195,10 @@ No resources.
 | <a name="input_tf_yaas_trigger_name"></a> [tf\_yaas\_trigger\_name](#input\_tf\_yaas\_trigger\_name) | Cloud Build trigger for YAAS infrastructure Terraform code. | `string` | `"yaas-tf-infra"` | no |
 | <a name="input_yaas_dockerfile"></a> [yaas\_dockerfile](#input\_yaas\_dockerfile) | YAAS application Dockerfile | `string` | `"./docker/Dockerfile"` | no |
 | <a name="input_yaas_image_name"></a> [yaas\_image\_name](#input\_yaas\_image\_name) | YAAS docker application image | `string` | `"yaas"` | no |
-| <a name="input_yaas_pip_package"></a> [yaas\_pip\_package](#input\_yaas\_pip\_package) | Python package full name with version: "$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)" | `string` | n/a | yes |
+| <a name="input_yaas_pip_package"></a> [yaas\_pip\_package](#input\_yaas\_pip\_package) | Python package full name with version, e.g.: ["py-yaas-service>=1.0", "py-yaas-core>=1.0"] | `list(string)` | <pre>[<br>  "py-yaas-core>=1.0",<br>  "py-yaas-service>=1.0"<br>]</pre> | no |
+| <a name="input_yaas_py_modules"></a> [yaas\_py\_modules](#input\_yaas\_py\_modules) | Python modules. Dot not change, unless you know what you are doing. | `list(string)` | <pre>[<br>  "core",<br>  "cli",<br>  "service"<br>]</pre> | no |
+| <a name="input_yaas_service_to_package"></a> [yaas\_service\_to\_package](#input\_yaas\_service\_to\_package) | Python package full name where APPLICATION is declared, e.g.: {"scaler" = "yaas\_scaler\_service"} | <pre>object({<br>    scaler    = string<br>    scheduler = string<br>  })</pre> | <pre>{<br>  "scaler": "yaas_scaler_service",<br>  "scheduler": "yaas_scheduler_service"<br>}</pre> | no |
+| <a name="input_yaas_service_to_run_name"></a> [yaas\_service\_to\_run\_name](#input\_yaas\_service\_to\_run\_name) | Application to Cloud Run, e.g.: {"scaler" = "yaas-scaler"} | <pre>object({<br>    scaler    = string<br>    scheduler = string<br>  })</pre> | <pre>{<br>  "scaler": "yaas-scaler",<br>  "scheduler": "yaas-scheduler"<br>}</pre> | no |
 
 ## Outputs
 

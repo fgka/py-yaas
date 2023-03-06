@@ -12,8 +12,16 @@ cd code
 
 Install:
 
-* (optional) [pyenv](https://github.com/pyenv/pyenv);
-* [virtualenv](https://virtualenv.pypa.io/en/latest/).
+* (optional) [pyenv](https://github.com/pyenv/pyenv)
+* [virtualenv](https://virtualenv.pypa.io/en/latest/)
+* [poetry](https://python-poetry.org/)
+* [jq](https://stedolan.github.io/jq/)
+* [pre-commit](https://pre-commit.com/)
+* [terraform](https://www.terraform.io/)
+* [TFLint](https://github.com/terraform-linters/tflint)
+* [tfsec](https://github.com/aquasecurity/tfsec)
+* [terraform-docs](https://github.com/terraform-docs/terraform-docs)
+* [checkov](https://www.checkov.io/)
 
 ### macOS
 
@@ -55,7 +63,7 @@ pyenv local 3.10.6
 Install Virtualenv and update `pip`:
 
 ```bash
-pip3 install -U pip virtualenv
+pip3 install -U pip virtualenv poetry pre-commit checkov
 ```
 
 Create virtualenv:
@@ -87,88 +95,122 @@ Python 3.10.6
 Install packages:
 
 ```bash
-pip3 install -U pip wheel setuptools
+pip3 install -U pip wheel setuptools poetry pre-commit checkov
 ```
 
-## Install all dependencies
-
-Install packages:
-
-```bash
-pip3 install ".[all]" \
-  &&  pip3 uninstall --yes $(python3 ./setup.py --name)
-```
-
-## Auto-formatting with black
-
-In this project black was chosen for the auto-formatter.
-
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
-
-### Install black with vim
+## Install ``pre-commit`` (only once)
 
 <details>
 <summary>Click me</summary>
 
-After following the instructions I have in my ``~/.vimrc`` the following:
+```bash
+pre-commit install
+```
 
-```vimrc
-" black formatter
-let g:black_linelength=100
-let g:black_skip_string_normalization=1
-autocmd BufWritePre *.py execute ':Black'
+### ``pre-commit`` Basics
+
+Check all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Only check ``code``:
+
+```bash
+git ls-files -- code | xargs pre-commit run --files
+```
+
+Only check ``terraform``:
+
+```bash
+git ls-files -- terraform | xargs pre-commit run --files
+```
+
+</details>
+
+## Poetry Basics
+
+<details>
+<summary>Click me</summary>
+
+In each of the folders in ``code``:
+
+Install dependencies:
+
+```bash
+poetry install
+```
+
+Run tests:
+
+```bash
+poetry run pytest
+```
+
+Run linter:
+
+```bash
+poetry run pylint src tests
+```
+
+Run formatter:
+
+```bash
+poetry run black src tests
+```
+
+Build wheel file:
+
+```bash
+poetry build
 ```
 
 </details>
 
 # Building Assets
 
-## Install Wheel File
-
-<details>
-<summary>Click me</summary>
-
-Will add the library to your local python environment (if you are using virtualenv, it will be added to it only).
-
-```bash
-python3 ./setup.py install
-```
-
-## Generate Wheel file
-
-For advanced usage of Wheel files see, for instance, [Python on Wheels](https://lucumr.pocoo.org/2014/1/27/python-on-wheels/).
-
-```bash
-python3 ./setup.py bdist_wheel --universal
-```
-
-Check the files:
-
-```bash
-ls dist
-```
-
-Expected:
-
-```text
-py_yaas_playground-1.0-py2.py3-none-any.whl
-```
-
-</details>
-
 ## Build Docker Image
 
 <details>
 <summary>Click me</summary>
 
+Create main ``dist`` folder:
+
 ```bash
-pushd ../
+mkdir -p ./code/dist
+
+unset PKGS
+PKGS=("core" "cli" "service")
+for P in ${PKGS[@]}; do
+  echo "Creating wheel for <${P}>"
+  pushd ./code/${P}
+  poetry build
+  cp ./dist/*.whl ../dist/
+  popd
+done
+```
+
+Scheduler:
+
+```bash
 docker build \
   --build-arg DIST_DIR="./code/dist" \
-  --tag yaas-playground \
+  --build-arg PY_PACKAGE="yaas_scheduler_service" \
+  --tag yaas-scheduler \
   --file ./docker/Dockerfile \
   .
-popd
+```
+
+Scaler:
+
+```bash
+docker build \
+  --build-arg DIST_DIR="./code/dist" \
+  --build-arg PY_PACKAGE="yaas_scaler_service" \
+  --tag yaas-scaler \
+  --file ./docker/Dockerfile \
+  .
 ```
 
 ### Test Docker Image Locally
@@ -179,15 +221,15 @@ If you follow standard terraform code:
 PROJECT_ID=$(gcloud config get-value core/project)
 PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectNumber)")
 
-CONFIG_BUCKET_NAME="yaas-app-${PROJECT_NUMBER}"
-CONFIG_OBJECT_PATH="yaas/config.json"
+export CONFIG_BUCKET_NAME="yaas-app-${PROJECT_NUMBER}"
+export CONFIG_OBJECT_PATH="yaas/config.json"
 ```
 
 Or set it manually:
 
 ```bash
-CONFIG_BUCKET_NAME="BUCKET_NAME"
-CONFIG_OBJECT_PATH="path/to/config.json"
+export CONFIG_BUCKET_NAME="BUCKET_NAME"
+export CONFIG_OBJECT_PATH="path/to/config.json"
 ```
 
 Start image:
@@ -198,11 +240,12 @@ PORT=8080
 docker run \
   --publish 127.0.0.1:${PORT}:${PORT} \
   --volume "${HOME}/.config/gcloud/application_default_credentials.json":/gcp/creds.json:ro \
+  --env GOOGLE_CLOUD_PROJECT=${PROJECT_ID} \
   --env GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json \
   --env PORT=${PORT} \
   --env CONFIG_BUCKET_NAME=${CONFIG_BUCKET_NAME} \
   --env CONFIG_OBJECT_PATH=${CONFIG_OBJECT_PATH} \
-  -it yaas-playground
+  -it yaas-scaler
 ```
 
 Test the image:
@@ -217,6 +260,8 @@ curl http://localhost:8080/config
 
 <details>
 <summary>Click me</summary>
+
+Setup your [Poetry](https://www.jetbrains.com/help/pycharm/poetry.html) environment.
 
 You need to add ``--no-cov`` to your `Run/Debug` settings.
 Below are the instructions on how to do it.

@@ -18,6 +18,7 @@ steps:
       "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
       "--build-arg", "DIST_DIR=${_DIST_DIR}",
       "--build-arg", "CR_CONCURRENCY=${_CR_CONCURRENCY}",
+      "--build-arg", "PY_PACKAGE=${_PY_PACKAGE}",
       "--tag", "${_IMAGE_NAME}",
       "--tag", "${_REMOTE_IMAGE_LATEST}",
       "--tag", "${_REMOTE_IMAGE_SHA}",
@@ -62,6 +63,7 @@ substitutions:
   _SERVICE_NAME: ""
   _WAIT_SCRIPT: ""
   _CR_CONCURRENCY: ""
+  _PY_PACKAGE: ""
 images:
   - "${_REMOTE_IMAGE_LATEST}"
   - "${_REMOTE_IMAGE_SHA}"

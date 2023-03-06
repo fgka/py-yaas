@@ -13,12 +13,12 @@ locals {
   batch_topic_to_pubsub_path  = "${var.topic_to_pubsub_gcs_path}/gcs"
   local_batch_topic_to_pubsub = "${local.terraform_module_root_dir}/output/topic_gcs.local"
   // scheduler
-  run_sched_service_url     = module.yaas_sched.service_url
-  pubsub_enact_standard_url = "${local.run_sched_service_url}${var.service_path_enact_standard_request}"
-  pubsub_enact_gcs_url      = "${local.run_sched_service_url}${var.service_path_enact_gcs_batch_request}"
+  run_sched_service_url = module.yaas_sched.service_url
+  pubsub_command_url    = "${local.run_sched_service_url}${var.service_path_command}"
   // scaler
-  run_scaler_service_url = module.yaas_scaler.service_url
-  pubsub_command_url     = "${local.run_scaler_service_url}${var.service_path_command}"
+  run_scaler_service_url    = module.yaas_scaler.service_url
+  pubsub_enact_standard_url = "${local.run_scaler_service_url}${var.service_path_enact_standard_request}"
+  pubsub_enact_gcs_url      = "${local.run_scaler_service_url}${var.service_path_enact_gcs_batch_request}"
 }
 
 /////////////////

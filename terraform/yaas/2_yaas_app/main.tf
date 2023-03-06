@@ -62,7 +62,7 @@ resource "google_storage_bucket_object" "topic_to_pubsub_gcs" {
 // Pub/Sub Subscriptions //
 ///////////////////////////
 
-// Scaler
+// Scheduler
 
 resource "google_pubsub_subscription" "command" {
   name                       = "${module.yaas_scaler.service.name}_command_http_push_subscription"
@@ -72,8 +72,8 @@ resource "google_pubsub_subscription" "command" {
   push_config {
     push_endpoint = local.pubsub_command_url
     oidc_token {
-      service_account_email = var.run_scaler_sa_email
-      audience              = local.run_scaler_service_url
+      service_account_email = var.run_sched_sa_email
+      audience              = local.run_sched_service_url
     }
   }
   retry_policy {
@@ -81,7 +81,7 @@ resource "google_pubsub_subscription" "command" {
   }
 }
 
-// Scheduler
+// Scaler
 
 resource "google_pubsub_subscription" "enact_standard_request" {
   name                       = "${module.yaas_sched.service.name}_enact_standard_http_push_subscription"
@@ -91,8 +91,8 @@ resource "google_pubsub_subscription" "enact_standard_request" {
   push_config {
     push_endpoint = local.pubsub_enact_standard_url
     oidc_token {
-      service_account_email = var.run_sched_sa_email
-      audience              = local.run_sched_service_url
+      service_account_email = var.run_scaler_sa_email
+      audience              = local.run_scaler_service_url
     }
   }
   retry_policy {
@@ -108,8 +108,8 @@ resource "google_pubsub_subscription" "enact_gcs_request" {
   push_config {
     push_endpoint = local.pubsub_enact_gcs_url
     oidc_token {
-      service_account_email = var.run_sched_sa_email
-      audience              = local.run_sched_service_url
+      service_account_email = var.run_scaler_sa_email
+      audience              = local.run_scaler_service_url
     }
   }
   retry_policy {

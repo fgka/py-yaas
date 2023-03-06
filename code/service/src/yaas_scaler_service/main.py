@@ -5,7 +5,6 @@
 
 **NOTE on ``async`` client**: It does not work well with threads, see: https://github.com/grpc/grpc/issues/25364
 """
-import os
 from typing import Any, Dict
 
 import flask

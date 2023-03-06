@@ -37,9 +37,10 @@ def create_app(  # pylint: disable=unused-argument,keyword-arg-before-vararg
     """As in https://flask.palletsprojects.com/en/2.2.x/tutorial/factory/
 
     Args:
-        test_config:
-        *args:
-        **kwargs:
+        blueprint: what to register
+        test_config: if to overwrite config in app
+        *args: to ignore
+        **kwargs: to ignore
 
     Returns:
     """

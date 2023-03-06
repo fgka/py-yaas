@@ -1,5 +1,5 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
-# pylint: disable=missing-module-docstring,protected-access,invalid-name
+# pylint: disable=missing-module-docstring,protected-access,invalid-name,duplicate-code
 # type: ignore
 import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union

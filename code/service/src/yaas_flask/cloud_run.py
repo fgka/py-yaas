@@ -184,14 +184,3 @@ async def _call_and_respond(
         )
         _LOGGER.exception(err_msg)
     return result, err_msg
-
-
-def main():
-    """To test::
-
-    export CONFIG_BUCKET_NAME=yaas_cache
-    export CONFIG_OBJECT_PATH=yaas_gcp-scaler-scheduler_service-common.cfg
-    python -m yaas_flask.cloud_run
-    """
-    port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
-    create_app().run(host="127.0.0.1", port=port, debug=True)

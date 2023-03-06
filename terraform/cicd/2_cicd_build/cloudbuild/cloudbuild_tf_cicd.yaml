@@ -25,7 +25,7 @@ steps:
       for TRIGGER in ${PY_TRIGGERS[@]}
       do
         echo "Triggering <${TRIGGER}>"
-        gcloud builds triggers run ${TRIGGER} --region ${LOCATION} --branch ${BRANCH_NAME}
+        gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH_NAME}
       done
     waitFor:
       - TERRAFORM_APPLY
@@ -41,6 +41,7 @@ options:
   dynamic_substitutions: true
   env:
     - "PYTHON_BUILD_TRIGGER_LST=${_PYTHON_BUILD_TRIGGER_LST}"
+    - "REGION=${LOCATION}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: UNSPECIFIED

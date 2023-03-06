@@ -149,7 +149,7 @@ variable "tf_yaas_trigger_name" {
 variable "tf_yaas_template_filename" {
   description = "Cloud Build template for YAAS infrastructure Terraform code. Only change if you know what you are doing."
   type        = string
-  default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
+  default     = "cloudbuild/cloudbuild_tf_infra.yaml"
 }
 
 variable "tf_backend_tf_template_filename" {

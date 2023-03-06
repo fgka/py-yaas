@@ -18,10 +18,7 @@ steps:
     script: |
       #!/usr/bin/env bash
 
-      echo "
-      [[tool.poetry.source]]
-      name = \"google\"
-      url = \"${AR_PIP_REPO}\"" >> pyproject.toml
+      python3 -m poetry source add --secondary google ${AR_PIP_REPO}/simple/
     dir: "${_CODE_DIR}"
   - name: "python"
     id: POETRY_INSTALL

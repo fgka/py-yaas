@@ -6,6 +6,8 @@ locals {
   // helpers
   yaas_service_to_run_name_pairs = [for service, name in var.yaas_service_to_run_name : "\"${service}\"=\"${name}\""]
   yaas_service_to_package_pairs  = [for service, pkg in var.yaas_service_to_package : "\"${service}\"=\"${pkg}\""]
+  yaas_pip_package_lst           = [for pkg in var.yaas_pip_package : "\"${pkg}\""]
+  yaas_py_modules_lst            = [for pkg in var.yaas_py_modules : "\"${pkg}\""]
   // plan args
   common_tf_plan_args = tomap({
     project_id  = var.project_id,
@@ -19,10 +21,10 @@ locals {
     github_owner                   = var.github_owner,
     github_repo_name               = var.github_repo_name,
     github_branch                  = var.github_branch,
-    yaas_pip_package               = "[\"${join("\", \"", var.yaas_pip_package)}\"]",
-    yaas_py_modules                = "[\"${join("\", \"", var.yaas_py_modules)}\"]",
-    yaas_service_to_run_name       = "{\"${join("\", \"", local.yaas_service_to_run_name_pairs)}\"}",
-    yaas_service_to_package        = "{\"${join("\", \"", local.yaas_service_to_package_pairs)}\"}",
+    yaas_pip_package               = "[${join(",", local.yaas_pip_package_lst)}]",
+    yaas_py_modules                = "[${join(",", local.yaas_py_modules_lst)}]",
+    yaas_service_to_run_name       = "{${join(",", local.yaas_service_to_run_name_pairs)}}",
+    yaas_service_to_package        = "{${join(",", local.yaas_service_to_package_pairs)}}",
     }),
   var.tf_cicd_plan_args)
   tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({

@@ -2,7 +2,7 @@
 
 It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
 
-## Definitions
+## Definitions (only once)
 
 Manually set:
 
@@ -15,7 +15,8 @@ Code dependant:
 
 ```bash
 pushd ../../code
-export PIP_PACKAGE="$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)"
+PY_PKG_VERSION=$(poetry version --directory service --ansi)
+export PIP_PACKAGE="${PY_PKG_VERSION%% *}>=${PY_PKG_VERSION##* }"
 popd
 ```
 
@@ -45,6 +46,42 @@ echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
+## Create ``terraform.tfvars`` (only once)
+
+Because macOS does not adopt gnu-sed:
+
+```bash
+export SED="sed"
+if [[ "Darwin" == $(uname -s) ]]; then
+  export SED="gsed"
+fi
+echo "sed = <${SED}>"
+```
+
+Create:
+
+```bash
+cp -f terraform.tfvars.tmpl terraform.tfvars
+
+${SED} -i \
+  -e "s/@@PROJECT_ID@@/${PROJECT_ID}/g" \
+  -e "s/@@REGION@@/${REGION}/g" \
+  -e "s/@@TF_STATE_BUCKET@@/${TF_STATE_BUCKET}/g" \
+  -e "s/@@NOTIFICATION_EMAIL@@/${NOTIFICATION_EMAIL}/g" \
+  -e "s/@@GITHUB_OWNER@@/${GITHUB_OWNER}/g" \
+  -e "s/@@GITHUB_REPO@@/${GITHUB_REPO}/g" \
+  -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
+  -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
+  -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
+  terraform.tfvars
+```
+
+Check:
+
+```bash
+cat terraform.tfvars
+```
+
 ## Init
 
 ```bash
@@ -57,16 +94,7 @@ terraform init -upgrade
 TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
-  -var "project_id=${PROJECT_ID}" \
-  -var "region=${REGION}" \
-  -var "terraform_bucket_name=${TF_STATE_BUCKET}" \
-  -var "build_monitoring_email_address=${NOTIFICATION_EMAIL}" \
-  -var "monitoring_email_address=${NOTIFICATION_EMAIL}" \
-  -var "github_owner=${GITHUB_OWNER}" \
-  -var "github_repo_name=${GITHUB_REPO}" \
-  -var "github_branch=${GIT_BRANCH}" \
-  -var "calendar_id=${CALENDAR_ID}" \
-  -var "yaas_pip_package=${PIP_PACKAGE}"
+  -var-file=terraform.tfvars
 ```
 
 ## Apply

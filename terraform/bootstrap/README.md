@@ -12,7 +12,7 @@ gcloud auth application-default login
 gcloud init
 ```
 
-## Definitions
+## Definitions (only once)
 
 Manually set:
 
@@ -25,6 +25,35 @@ Check:
 
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
+```
+
+## Create ``terraform.tfvars`` (only once)
+
+Because macOS does not adopt gnu-sed:
+
+```bash
+export SED="sed"
+if [[ "Darwin" == $(uname -s) ]]; then
+  export SED="gsed"
+fi
+echo "sed = <${SED}>"
+```
+
+Create:
+
+```bash
+cp -f terraform.tfvars.tmpl terraform.tfvars
+
+${SED} -i \
+  -e "s/@@PROJECT_ID@@/${PROJECT_ID}/g" \
+  -e "s/@@REGION@@/${REGION}/g" \
+  terraform.tfvars
+```
+
+Check:
+
+```bash
+cat terraform.tfvars
 ```
 
 ## Init
@@ -40,9 +69,8 @@ Without integration test data:
 ```bash
 TMP=$(mktemp)
 terraform plan \
-  -out ${TMP} \
-  -var "project_id=${PROJECT_ID}" \
-  -var "region=${REGION}"
+  -out=${TMP} \
+  -var-file=terraform.tfvars
 ```
 
 ## Apply
@@ -51,7 +79,7 @@ terraform plan \
 terraform apply ${TMP} && rm -f ${TMP}
 ```
 
-## Export bucket name
+## Export bucket name (only once)
 
 ```bash
 OUT_JSON=$(mktemp)
@@ -63,7 +91,7 @@ echo "Terraform state bucket name: <${TF_STATE_BUCKET}>"
 rm -f ${OUT_JSON}
 ```
 
-## Copy generated `backend.tf` over to each module
+## Copy generated `backend.tf` over to each module (only once)
 
 ```bash
 TARGET_FILENAME="backend.tf"
@@ -82,7 +110,7 @@ jq -c -r ".backend_tf.value[]" ${OUT_JSON} \
 rm -f ${OUT_JSON}
 ```
 
-## Copy generated `backend.tf.tmpl` over CI/CD template directory
+## Copy generated `backend.tf.tmpl` over CI/CD template directory (only once)
 
 ```bash
 TARGET="../cicd/2_cicd_build/templates/backend.tf.tmpl"

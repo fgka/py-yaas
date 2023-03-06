@@ -2,7 +2,7 @@
 
 It is assumed you ran the [bootstrap](../bootstrap/README.md) instructions first.
 
-## Definitions
+## Definitions (only once)
 
 Manually set:
 
@@ -26,6 +26,37 @@ echo "Email: ${NOTIFICATION_EMAIL}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
+## Create ``terraform.tfvars`` (only once)
+
+Because macOS does not adopt gnu-sed:
+
+```bash
+export SED="sed"
+if [[ "Darwin" == $(uname -s) ]]; then
+  export SED="gsed"
+fi
+echo "sed = <${SED}>"
+```
+
+Create:
+
+```bash
+cp -f terraform.tfvars.tmpl terraform.tfvars
+
+${SED} -i \
+  -e "s/@@PROJECT_ID@@/${PROJECT_ID}/g" \
+  -e "s/@@REGION@@/${REGION}/g" \
+  -e "s/@@NOTIFICATION_EMAIL@@/${NOTIFICATION_EMAIL}/g" \
+  -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
+  terraform.tfvars
+```
+
+Check:
+
+```bash
+cat terraform.tfvars
+```
+
 ## Init
 
 ```bash
@@ -38,11 +69,7 @@ terraform init -upgrade
 TMP=$(mktemp)
 terraform plan \
   -out ${TMP} \
-  -var "run_cicd=false" \
-  -var "project_id=${PROJECT_ID}" \
-  -var "calendar_id=${CALENDAR_ID}" \
-  -var "region=${REGION}" \
-  -var "monitoring_email_address=${NOTIFICATION_EMAIL}"
+  -var-file=terraform.tfvars
 ```
 
 ## Apply

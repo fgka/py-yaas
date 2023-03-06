@@ -141,7 +141,7 @@ resource "google_cloudbuild_trigger" "application" {
   substitutions = {
     _BUCKET_NAME    = var.build_bucket_name
     _DOCKERFILE     = var.yaas_dockerfile
-    _PIP_PKG_ARG    = "${join(" ", var.yaas_pip_package)}"
+    _PIP_PKG_LST    = "${join("@", var.yaas_pip_package)}"
     _BASE_IMAGE     = var.docker_base_image
     _IMAGE_NAME     = "${var.yaas_image_name}-${each.key}"
     _AR_DOCKER_REPO = var.docker_artifact_registry_url

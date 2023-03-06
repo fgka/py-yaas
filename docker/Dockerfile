@@ -55,4 +55,4 @@ ARG PY_PACKAGE="yaas_scheduler_service"
 ENV FLASK_APP=${PY_PACKAGE}.main:APPLICATION
 
 ## Start daemon
-CMD ["./start_gunicorn.sh", "${FLASK_APP}"]
+CMD ["sh", "-c", "./start_gunicorn.sh ${FLASK_APP}"]

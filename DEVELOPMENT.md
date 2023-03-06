@@ -198,26 +198,23 @@ for P in ${PKGS[@]}; do
 done
 ```
 
-Scheduler:
+Build:
 
 ```bash
-docker build \
-  --build-arg DIST_DIR="./code/dist" \
-  --build-arg PY_PACKAGE="yaas_scheduler_service" \
-  --tag yaas-scheduler \
-  --file ./docker/Dockerfile \
-  .
-```
+unset TAG_PY_PKG_LST
+TAG_PY_PKG_LST=("yaas-scheduler yaas_scheduler_service" "yaas-scaler yaas_scaler_service")
 
-Scaler:
-
-```bash
-docker build \
-  --build-arg DIST_DIR="./code/dist" \
-  --build-arg PY_PACKAGE="yaas_scaler_service" \
-  --tag yaas-scaler \
-  --file ./docker/Dockerfile \
-  .
+for TAG_PY_PKG in ${TAG_PY_PKG_LST[@]}; do
+  TAG=${TAG_PY_PKG%% *}
+  PY_PKG=${TAG_PY_PKG##* }
+  echo "Building <${TAG}> using <${PY_PKG}>"
+  docker build \
+    --build-arg DIST_DIR="./code/dist" \
+    --build-arg PY_PACKAGE="${PY_PKG}" \
+    --tag ${TAG} \
+    --file ./docker/Dockerfile \
+    .
+done
 ```
 
 ### Test Docker Image Locally
@@ -239,7 +236,21 @@ export CONFIG_BUCKET_NAME="BUCKET_NAME"
 export CONFIG_OBJECT_PATH="path/to/config.json"
 ```
 
-Start image:
+Check:
+
+```bash
+echo "Main project: ${PROJECT_ID}=${PROJECT_NUMBER}"
+echo "Config: gs://${CONFIG_BUCKET_NAME}/${CONFIG_OBJECT_PATH}"
+```
+
+Pick a service:
+
+```bash
+WHICH_SERVICE="yaas-scaler"
+WHICH_SERVICE="yaas-scheduler"
+```
+
+Run locally:
 
 ```bash
 PORT=8080
@@ -252,7 +263,7 @@ docker run \
   --env PORT=${PORT} \
   --env CONFIG_BUCKET_NAME=${CONFIG_BUCKET_NAME} \
   --env CONFIG_OBJECT_PATH=${CONFIG_OBJECT_PATH} \
-  -it yaas-scaler
+  -it ${WHICH_SERVICE}
 ```
 
 Test the image:

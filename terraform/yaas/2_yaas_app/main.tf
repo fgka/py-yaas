@@ -65,7 +65,7 @@ resource "google_storage_bucket_object" "topic_to_pubsub_gcs" {
 // Scheduler
 
 resource "google_pubsub_subscription" "command" {
-  name                       = "${module.yaas_scaler.service.name}_command_http_push_subscription"
+  name                       = "${module.yaas_sched.service.name}_command_http_push_subscription"
   topic                      = var.pubsub_command_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
@@ -84,7 +84,7 @@ resource "google_pubsub_subscription" "command" {
 // Scaler
 
 resource "google_pubsub_subscription" "enact_standard_request" {
-  name                       = "${module.yaas_sched.service.name}_enact_standard_http_push_subscription"
+  name                       = "${module.yaas_scaler.service.name}_enact_standard_http_push_subscription"
   topic                      = var.pubsub_enact_standard_request_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
@@ -101,7 +101,7 @@ resource "google_pubsub_subscription" "enact_standard_request" {
 }
 
 resource "google_pubsub_subscription" "enact_gcs_request" {
-  name                       = "${module.yaas_sched.service.name}_enact_gcs_batch_http_push_subscription"
+  name                       = "${module.yaas_scaler.service.name}_enact_gcs_batch_http_push_subscription"
   topic                      = var.pubsub_enact_gcs_batch_request_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"

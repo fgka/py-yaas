@@ -1,12 +1,12 @@
 # Using Terraform to deploy all
 
-## Authenticate
+## Authenticate (only once)
 
 ```bash
 gcloud auth application-default login
 ```
 
-### Set default project
+### Set default project (only once)
 
 ```bash
 gcloud init

@@ -96,9 +96,10 @@ async def enact_gcs_requests() -> str:
     """
 
     # pylint: enable=line-too-long
-    async def async_kwargs_fn(_: flask.Request) -> Dict[str, Any]:
+    async def async_kwargs_fn(event: flask.Request) -> Dict[str, Any]:
         return dict(
-            parser=gcs_batch.GcsBatchCommandParser(topic_to_pubsub=cloud_run.read_configuration().topic_to_pubsub)
+            parser=gcs_batch.GcsBatchCommandParser(topic_to_pubsub=cloud_run.read_configuration().topic_to_pubsub),
+            pubsub_event=event,
         )
 
     async_fn = entry.enact_requests

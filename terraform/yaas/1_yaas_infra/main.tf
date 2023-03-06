@@ -118,7 +118,10 @@ module "pubsub_enact_standard_request" {
   project_id = var.project_id
   name       = var.pubsub_enact_standard_request_name
   iam = {
-    "roles/pubsub.publisher" = [google_service_account.run_sched_sa.member]
+    "roles/pubsub.publisher" = [
+      google_service_account.run_sched_sa.member,
+      google_service_account.run_scaler_sa.member,
+    ]
   }
 }
 

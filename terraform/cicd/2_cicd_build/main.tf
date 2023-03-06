@@ -4,8 +4,10 @@
 
 locals {
   # terraform args
-  tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var \"${key}=${val}\""])
-  tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var \"${key}=${val}\""])
+  # YES there is a <'> wrapping the "-var" argument.
+  # To know why: https://github.com/hashicorp/terraform/issues/17032#issuecomment-365703492
+  tf_cicd_plan_args_str = join(" ", [for key, val in var.tf_cicd_plan_args : "-var '${key}=${val}'"])
+  tf_yaas_plan_args_str = join(" ", [for key, val in var.tf_yaas_plan_args : "-var '${key}=${val}'"])
   # absolute paths
   root_dir                       = var.run_cicd ? "" : "../../"
   code_root_dir                  = "${local.root_dir}code"

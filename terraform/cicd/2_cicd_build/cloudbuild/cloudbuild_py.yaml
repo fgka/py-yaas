@@ -71,9 +71,6 @@ steps:
         echo "Triggering <${TRIGGER}>@<${REGION}> for branch <${BRANCH}>"
         gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH_NAME}
       done
-    entrypoint: "gcloud"
-    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
-      "--branch", "${BRANCH_NAME}"]
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true

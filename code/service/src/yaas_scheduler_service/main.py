@@ -12,17 +12,25 @@ import flask
 from yaas_command import pubsub_dispatcher
 from yaas_common import logger
 
-from yaas_flask import cloud_run
+from yaas_flask import cloud_run, flask_gunicorn
 from yaas_scheduler_service import entry
 
 _LOGGER = logger.get(__name__)
-MAIN_BP = flask.Blueprint("main", __name__, url_prefix="/")
 
-CONFIG_BUCKET_NAME_ENV_VAR: str = "CONFIG_BUCKET_NAME"
-CONFIG_OBJECT_PATH_ENV_VAR: str = "CONFIG_OBJECT_PATH"
+BLUEPRINT = flask.Blueprint("main", __name__, url_prefix="/")
 
 
-@cloud_run.MAIN_BP.route("/command", methods=["POST"])
+@BLUEPRINT.route("/config", methods=["GET"])
+def configuration() -> str:
+    """Just return the current :py:class:`config.Config` as JSON.
+
+    `curl`::
+        curl http://localhost:8080/config
+    """
+    return cloud_run.configuration()
+
+
+@BLUEPRINT.route("/command", methods=["POST"])
 async def command() -> str:
     # pylint: disable=anomalous-backslash-in-string,line-too-long
     """Wrapper to :py:func:`entry.command`.
@@ -50,7 +58,7 @@ async def command() -> str:
     return await cloud_run.handle_request(what="command", async_kwargs_fn=async_kwargs_fn, async_fn=async_fn)
 
 
-@cloud_run.MAIN_BP.route("/update-calendar-credentials-secret", methods=["POST"])
+@BLUEPRINT.route("/update-calendar-credentials-secret", methods=["POST"])
 async def update_calendar_credentials() -> str:
     """Wrapper to :py:func:`entry.update_calendar_credentials`.
 
@@ -71,7 +79,7 @@ async def update_calendar_credentials() -> str:
     )
 
 
-@cloud_run.MAIN_BP.route("/update-cache", methods=["POST"])
+@BLUEPRINT.route("/update-cache", methods=["POST"])
 async def update_cache() -> str:
     # pylint: disable=anomalous-backslash-in-string
     """Wrapper to :py:func:`entry.update_cache`.
@@ -102,7 +110,7 @@ async def update_cache() -> str:
     return await cloud_run.handle_request(what="update_cache", async_kwargs_fn=async_kwargs_fn, async_fn=async_fn)
 
 
-@cloud_run.MAIN_BP.route("/send-requests", methods=["POST"])
+@BLUEPRINT.route("/send-requests", methods=["POST"])
 async def send_requests() -> str:
     """Wrapper to :py:func:`entry.send_requests`.
 
@@ -131,16 +139,19 @@ async def send_requests() -> str:
     return await cloud_run.handle_request(what="send_requests", async_kwargs_fn=async_kwargs_fn, async_fn=async_fn)
 
 
-def _main():
+# YES, it needs to be defined here, after all @BLUEPRINT
+APPLICATION = cloud_run.create_app(BLUEPRINT)
+
+
+def main():
     """To test::
 
     export CONFIG_BUCKET_NAME=yaas_cache
-    export CONFIG_OBJECT_PATH=yaas_gcp-scaler-scheduler_service-common.cfg
-    python -m yaas_gcp-scaler-scheduler_service-common.entry_point.cloud_run
+    export CONFIG_OBJECT_PATH=yaas/config.json
+    poetry run scheduler
     """
-    port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
-    cloud_run.create_app().run(host="127.0.0.1", port=port, debug=True)
+    flask_gunicorn.run(APPLICATION)
 
 
 if __name__ == "__main__":
-    _main()
+    main()

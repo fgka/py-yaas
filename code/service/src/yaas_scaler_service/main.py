@@ -12,13 +12,25 @@ import flask
 from yaas_common import logger
 from yaas_scaler import gcs_batch, standard
 
-from yaas_flask import cloud_run
+from yaas_flask import cloud_run, flask_gunicorn
 from yaas_scaler_service import entry
 
 _LOGGER = logger.get(__name__)
 
+BLUEPRINT = flask.Blueprint("main", __name__, url_prefix="/")
 
-@cloud_run.MAIN_BP.route("/enact-standard-requests", methods=["POST"])
+
+@BLUEPRINT.route("/config", methods=["GET"])
+def configuration() -> str:
+    """Just return the current :py:class:`config.Config` as JSON.
+
+    `curl`::
+        curl http://localhost:8080/config
+    """
+    return cloud_run.configuration()
+
+
+@BLUEPRINT.route("/enact-standard-requests", methods=["POST"])
 async def enact_standard_requests() -> str:
     # pylint: disable=line-too-long
     """Wrapper to :py:func:`entry.enact_requests`.
@@ -49,7 +61,7 @@ async def enact_standard_requests() -> str:
     return await cloud_run.handle_request(what="enact-standard", async_kwargs_fn=async_kwargs_fn, async_fn=async_fn)
 
 
-@cloud_run.MAIN_BP.route("/enact-gcs-requests", methods=["POST"])
+@BLUEPRINT.route("/enact-gcs-requests", methods=["POST"])
 async def enact_gcs_requests() -> str:
     # pylint: disable=line-too-long
     """Wrapper to :py:func:`entry.enact_requests`.
@@ -94,16 +106,19 @@ async def enact_gcs_requests() -> str:
     return await cloud_run.handle_request(what="enact-gcs", async_kwargs_fn=async_kwargs_fn, async_fn=async_fn)
 
 
-def _main():
+# YES, it needs to be defined here, after all @BLUEPRINT
+APPLICATION = cloud_run.create_app(BLUEPRINT)
+
+
+def main():
     """To test::
 
     export CONFIG_BUCKET_NAME=yaas_cache
-    export CONFIG_OBJECT_PATH=yaas_gcp-scaler-scheduler_service-common.cfg
-    python -m yaas_gcp-scaler-scheduler_service-common.entry_point.cloud_run
+    export CONFIG_OBJECT_PATH=yaas/config.json
+    poetry run scaler
     """
-    port = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
-    cloud_run.create_app().run(host="127.0.0.1", port=port, debug=True)
+    flask_gunicorn.run(APPLICATION)
 
 
 if __name__ == "__main__":
-    _main()
+    main()

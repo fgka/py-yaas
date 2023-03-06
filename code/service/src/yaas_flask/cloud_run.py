@@ -14,7 +14,6 @@ from yaas_config import config, resolve_config
 from yaas_gcp import gcs
 
 _LOGGER = logger.get(__name__)
-MAIN_BP = flask.Blueprint("main", __name__, url_prefix="/")
 
 CONFIG_BUCKET_NAME_ENV_VAR: str = "CONFIG_BUCKET_NAME"
 """
@@ -33,7 +32,7 @@ inside the bucket defined by :py:data:`CONFIG_BUCKET_NAME_ENV_VAR`.
 
 
 def create_app(  # pylint: disable=unused-argument,keyword-arg-before-vararg
-    test_config=None, *args, **kwargs
+    blueprint: flask.Blueprint, test_config: Optional[Dict[str, Any]] = None, *args, **kwargs
 ) -> flask.Flask:
     """As in https://flask.palletsprojects.com/en/2.2.x/tutorial/factory/
 
@@ -47,7 +46,7 @@ def create_app(  # pylint: disable=unused-argument,keyword-arg-before-vararg
     app = flask.Flask(__name__, instance_relative_config=False)
     if test_config:
         app.config.from_mapping(test_config)
-    app.register_blueprint(MAIN_BP)
+    app.register_blueprint(blueprint)
     return app
 
 
@@ -89,12 +88,12 @@ def read_configuration() -> config.Config:
 #############
 
 
-@MAIN_BP.route("/config", methods=["GET"])
 def configuration() -> str:
-    """Just return the current :py:class:`config.Config` as JSON.
-
-    `curl`::
-        curl http://localhost:8080/config
+    """To be declared as an API entry point for configuration.
+    E.g.::
+        @MAIN_BP.route("/config", methods=["GET"])
+        def configuration() -> str:
+            return cloud_run.configuration()
     """
     _LOGGER.debug("Request data: <%s>(%s)", flask.request.data, type(flask.request.data))
     _LOGGER.info("Calling %s", configuration.__name__)

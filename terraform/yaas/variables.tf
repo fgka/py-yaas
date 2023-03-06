@@ -240,6 +240,12 @@ variable "run_scaler_name" {
   default     = "yaas-scaler"
 }
 
+variable "run_container_concurrency" {
+  description = "Cloud Run request concurrency per container, mind thread-safety."
+  type        = number
+  default     = 80
+}
+
 /////////////////////////////
 // Monitoring and Alerting //
 /////////////////////////////

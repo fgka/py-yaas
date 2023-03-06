@@ -179,6 +179,12 @@ variable "run_timeout" {
   default     = 540
 }
 
+variable "run_container_concurrency" {
+  description = "Cloud Run request concurrency per container, mind thread-safety."
+  type        = number
+  default     = 80
+}
+
 /////////////////////////////
 // Monitoring and Alerting //
 /////////////////////////////

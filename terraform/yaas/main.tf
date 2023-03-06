@@ -78,6 +78,8 @@ module "yaas_app" {
   // code
   calendar_id = var.calendar_id
   log_level   = var.log_level
+  // cloud run
+  run_container_concurrency = var.run_container_concurrency
   // scheduler
   run_sched_name       = var.run_sched_name
   sched_image_name_uri = var.sched_image_name_uri

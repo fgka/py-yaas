@@ -69,7 +69,7 @@ steps:
       for TRIGGER in ${DOCKER_TRIGGERS[@]}
       do
         echo "Triggering <${TRIGGER}>@<${REGION}> for branch <${BRANCH}>"
-        gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH_NAME}
+        gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH}
       done
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:

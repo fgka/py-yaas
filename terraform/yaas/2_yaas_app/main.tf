@@ -128,9 +128,10 @@ module "yaas_sched" {
   project_id = var.project_id
   region     = var.region
   # cloud run
-  run_name     = var.run_sched_name
-  run_sa_email = var.run_sched_sa_email
-  run_timeout  = var.run_timeout
+  run_name                  = var.run_sched_name
+  run_sa_email              = var.run_sched_sa_email
+  run_timeout               = var.run_timeout
+  run_container_concurrency = var.run_container_concurrency
   # code
   log_level      = var.log_level
   bucket_name    = var.bucket_name
@@ -149,9 +150,10 @@ module "yaas_scaler" {
   project_id = var.project_id
   region     = var.region
   # cloud run
-  run_name     = var.run_scaler_name
-  run_sa_email = var.run_scaler_sa_email
-  run_timeout  = var.run_timeout
+  run_name                  = var.run_scaler_name
+  run_sa_email              = var.run_scaler_sa_email
+  run_timeout               = var.run_timeout
+  run_container_concurrency = var.run_container_concurrency
   # code
   log_level      = var.log_level
   bucket_name    = var.bucket_name

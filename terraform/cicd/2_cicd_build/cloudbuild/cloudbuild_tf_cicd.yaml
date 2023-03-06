@@ -20,15 +20,13 @@ steps:
     script: |
       #!/usr/bin/env bash
 
-      read -a PY_TRIGGERS <<< ${PYTHON_BUILD_TRIGGER//@/ }
+      echo "Processing triggers in <${PYTHON_BUILD_TRIGGER_LST}>"
+      read -a PY_TRIGGERS <<< ${PYTHON_BUILD_TRIGGER_LST//@/ }
       for TRIGGER in ${PY_TRIGGERS[@]}
       do
         echo "Triggering <${TRIGGER}>"
         gcloud builds triggers run ${TRIGGER} --region ${LOCATION} --branch ${BRANCH_NAME}
       done
-    entrypoint: "gcloud"
-    args: ["builds", "triggers", "run", "${_PYTHON_BUILD_TRIGGER}", "--region", "${LOCATION}",
-      "--branch", "${BRANCH_NAME}"]
     waitFor:
       - TERRAFORM_APPLY
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"

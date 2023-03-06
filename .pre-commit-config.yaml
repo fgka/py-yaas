@@ -156,6 +156,10 @@ repos:
     entry: bash -c "pushd code/service && poetry run pylint ${@}; popd"
     pass_filenames: true
     files: ^code/service/
+- repo: https://github.com/hadolint/hadolint
+  rev: v2.12.0
+  hooks:
+  - id: hadolint
 - repo: https://github.com/antonbabenko/pre-commit-terraform
   rev: v1.77.1
   hooks:

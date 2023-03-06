@@ -22,6 +22,7 @@ Install:
 * [tfsec](https://github.com/aquasecurity/tfsec)
 * [terraform-docs](https://github.com/terraform-docs/terraform-docs)
 * [checkov](https://www.checkov.io/)
+* [hadolint](https://github.com/hadolint/hadolint)
 
 ### macOS
 
@@ -32,6 +33,12 @@ You need `Xcode`:
 
 ```bash
 xcode-select --install
+```
+
+And add ``/usr/local/bin`` to your ``PATH`` env var (add to your ``.bashrc`` or ``.zshrc``):
+
+```bash
+export PATH=${PATH}:/usr/local/bin
 ```
 
 </details>

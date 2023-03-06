@@ -33,7 +33,7 @@ activate cache
 cache->>yaas_cache:
 deactivate cache
 deactivate yaas_cache
-end 
+end
 
 group Scale Routing
 note over sched: Executed every minute
@@ -65,7 +65,7 @@ activate cache
 cache->>yaas_scale:
 deactivate cache
 deactivate yaas_scale
-end 
+end
 
 group Scale Default
 pubsub_default-->yaas_default: scale_request

@@ -1,96 +1,95 @@
 steps:
   - name: "bash"
     id: PY_DIST_DIR
-    script: |
-      #!/usr/bin/env bash
-      mkdir -p ${DIST_DIR}
+    entrypoint: "bash"
+    args: ["-c", "mkdir -p ${_DIST_DIR}"]
     dir: "${_CODE_DIR}"
   - name: "python"
     id: PY_MINIMUM
     entrypoint: "python3"
-    args: ["-m", "pip", "install", "--user", "--upgrade", "pip", "wheel", "setuptools"]
-    waitFor:
-      - PY_DIST_DIR
+    args: ["-m", "pip", "install", "--user", "--upgrade", "--no-warn-script-location",
+           "pip",
+           "wheel",
+           "setuptools",
+           "poetry",
+           "keyrings.google-artifactregistry-auth"]
   - name: "python"
-    id: PY_BUILD_DEPENDENCIES
-    entrypoint: "python3"
-    args: ["-m", "pip", "install", "--no-warn-script-location", "--user", ".[all]"]
-    dir: "${_CODE_DIR}"
-  - name: "python"
-    id: PY_BUILD
-    entrypoint: "python3"
-    args: ["./setup.py", "build", "--force"]
-    dir: "${_CODE_DIR}"
-  - name: "python"
-    id: PY_LINT
-    entrypoint: "python3"
-    args: ["-m", "pylint", "--output-format=json:./${_DIST_DIR}/${_PYTHON_PYLINT_FILE},colorized",
-           "setup.py", "tests", "yaas"]
-    dir: "${_CODE_DIR}"
-    waitFor:
-      - PY_BUILD
-  - name: "python"
-    id: PY_TESTS
-    entrypoint: "python3"
-    args: ["-m", "pytest", "-m", "not doesnt_work_cloudbuild", "--junitxml=./${_DIST_DIR}/${_PYTHON_PYTEST_FILE}"]
-    dir: "${_CODE_DIR}"
-    waitFor:
-      - PY_BUILD
-  - name: "python"
-    id: PY_WHEEL
+    id: POETRY_AR_REPO
     script: |
       #!/usr/bin/env bash
+
+      python3 -m poetry source add --secondary google ${AR_PIP_REPO}/simple/
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: POETRY_INSTALL
+    entrypoint: "python3"
+    args: ["-m", "poetry", "install"]
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: POETRY_LINT
+    entrypoint: "python3"
+    args: ["-m", "poetry", "run", "pylint",
+           "--output-format=json:./${_DIST_DIR}/${_PYTHON_PYLINT_FILE},colorized",
+           "src", "tests"]
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: POETRY_TESTS
+    entrypoint: "python3"
+    args: ["-m", "poetry", "run", "pytest",
+           "-m", "not doesnt_work_cloudbuild",
+           "--junitxml=./${_DIST_DIR}/${_PYTHON_PYTEST_FILE}"]
+    dir: "${_CODE_DIR}"
+  - name: "python"
+    id: POETRY_PUBLISH
+    script: |
+      #!/usr/bin/env bash
+
+      # Remove '/simple' if present
+      AR_PIP_REPO=${AR_PIP_REPO%/simple*}
+
+      # Add Artifact Registry
+      python3 -m poetry self add keyrings.google-artifactregistry-auth
+      python3 -m poetry config repositories.google ${AR_PIP_REPO}
+
+      # Version with build number
+      VERSION=$(python3 -m poetry version --no-ansi --short)
       BUILD_NUMBER=$(date -u +%s)
-      python3 ./setup.py bdist_wheel \
-        --universal \
-        --build-number ${BUILD_NUMBER} \
-        --dist-dir ${DIST_DIR}
-    dir: "${_CODE_DIR}"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
-    id: TWINE
-    script: |
-      #!/usr/bin/env bash
-      
-      # add curl to download pip
-      apt-get install curl
-      
-      # install pip
-      curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
-      python3 get-pip.py
-      
-      # install twine
-      python3 -m pip install --upgrade \
-        pip \
-        twine \
-        keyrings.google-artifactregistry-auth
-      
-      # upload package
-      python3 -m twine upload \
-        --repository-url ${AR_PIP_REPO} \
-        ${DIST_DIR}/*.whl
+      python3 -m poetry version "${VERSION}.${BUILD_NUMBER}"
+
+      # Push to Artifact Registry
+      python3 -m poetry publish --build -r google
     dir: "${_CODE_DIR}"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     id: BUILD_DOCKER
-    entrypoint: "gcloud"
-    args: ["builds", "triggers", "run", "${_DOCKER_BUILD_TRIGGER}", "--region", "${LOCATION}",
-      "--branch", "${BRANCH_NAME}"]
+    script: |
+      #!/usr/bin/env bash
+
+      echo "Processing triggers in <${DOCKER_BUILD_TRIGGER_LST}>"
+      read -a DOCKER_TRIGGERS <<< ${DOCKER_BUILD_TRIGGER_LST//@/ }
+      for TRIGGER in ${DOCKER_TRIGGERS[@]}
+      do
+        echo "Triggering <${TRIGGER}>@<${REGION}> for branch <${BRANCH}>"
+        gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH}
+      done
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"
 options:
   dynamic_substitutions: true
   env:
-    - "DIST_DIR=${_DIST_DIR}"
     - "AR_PIP_REPO=${_AR_PIP_REPO}"
+    - "DOCKER_BUILD_TRIGGER_LST=${_DOCKER_BUILD_TRIGGER_LST}"
+    - "BRANCH=${BRANCH_NAME}"
+    - "REGION=${LOCATION}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: E2_HIGHCPU_8
 substitutions:
-  _CODE_DIR: "./code"
+  _CODE_DIR: "" # eg.: ./code/core
   _DIST_DIR: "dist"
   _PYTHON_PYTEST_FILE: "${SHORT_SHA}_test_log.xml"
   _PYTHON_PYLINT_FILE: "${SHORT_SHA}_lint_log.json"
   _PYTHON_REPO_NAME: ""
   _AR_PIP_REPO: ""
-  _DOCKER_BUILD_TRIGGER: ""
+  _DOCKER_BUILD_TRIGGER_LST: ""
 artifacts:
   objects:
     location: "gs://${_BUCKET_NAME}/${REPO_NAME}-${BRANCH_NAME}/${TRIGGER_NAME}/${BUILD_ID}"

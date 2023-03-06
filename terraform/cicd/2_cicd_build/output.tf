@@ -4,11 +4,11 @@
 //////////////////////
 
 output "tf_build_trigger" {
-  value = google_cloudbuild_trigger.tf_build
+  value = google_cloudbuild_trigger.tf_cicd
 }
 
 output "tf_yaas_trigger" {
-  value = google_cloudbuild_trigger.tf_yaas
+  value = google_cloudbuild_trigger.tf_infra
 }
 
 output "python_build_trigger" {

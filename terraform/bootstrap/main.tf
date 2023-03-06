@@ -44,7 +44,7 @@ resource "google_project_service" "project" {
 // Service Accounts //
 //////////////////////
 
-resource "google_project_iam_member" "cloud_build" {
+resource "google_project_iam_member" "cloud_build" { #tfsec:ignore:google-iam-no-privileged-service-accounts
   for_each = toset([
     "roles/storage.admin",
   ])
@@ -58,7 +58,7 @@ resource "google_project_iam_member" "cloud_build" {
 // Buckets //
 /////////////
 
-module "tf_state_bucket" {
+module "tf_state_bucket" { #tfsec:ignore:google-storage-bucket-encryption-customer-key
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/gcs"
   project_id = var.project_id
   prefix     = var.tf_state_bucket_name_prefix

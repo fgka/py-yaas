@@ -3,5 +3,6 @@ init.tf
 **/backend.tf
 **/dist
 **/terraform.tfstate*
+**/terraform.tfvars
 **/output
 **/*.tmpl.local

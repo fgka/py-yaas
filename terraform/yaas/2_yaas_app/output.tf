@@ -2,8 +2,12 @@
 // Cloud Run //
 ///////////////
 
-output "run_yaas" {
-  value = google_cloud_run_service.yaas
+output "yaas_sched" {
+  value = module.yaas_sched
+}
+
+output "yaas_scaler" {
+  value = module.yaas_scaler
 }
 
 /////////////////
@@ -25,12 +29,3 @@ output "gcs_config_json" {
 output "gcs_topic_to_pubsub" {
   value = "gs://${google_storage_bucket_object.topic_to_pubsub_gcs.bucket}/${google_storage_bucket_object.topic_to_pubsub_gcs.output_name}"
 }
-
-/////////////////////////////
-// Monitoring and Alerting //
-/////////////////////////////
-
-output "alert_policy_error_log" {
-  value = google_monitoring_alert_policy.alert_error_log
-}
-

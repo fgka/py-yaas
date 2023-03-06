@@ -1,0 +1,183 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-ast
+  - id: check-case-conflict
+  - id: check-executables-have-shebangs
+  - id: check-merge-conflict
+  - id: check-shebang-scripts-are-executable
+  - id: check-toml
+  - id: check-xml
+  - id: check-yaml
+  - id: destroyed-symlinks
+  - id: detect-private-key
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: pretty-format-json
+    args: ["--autofix"]
+  - id: requirements-txt-fixer
+  - id: trailing-whitespace
+- repo: local
+  hooks:
+  - id: black
+    name: black (core)
+    types: [file, python]
+    language: system
+    entry: bash -c "pushd code/core && poetry run black src tests; popd"
+    pass_filenames: false
+    files: ^code/core/
+  - id: black
+    name: black (cli)
+    types: [file, python]
+    language: system
+    entry: bash -c "pushd code/cli && poetry run black src tests; popd"
+    pass_filenames: false
+    files: ^code/cli/
+  - id: black
+    name: black (service)
+    types: [file, python]
+    language: system
+    entry: bash -c "pushd code/service && poetry run black src tests; popd"
+    pass_filenames: false
+    files: ^code/service/
+- repo: local
+  hooks:
+  - id: isort
+    name: isort (core)
+    types: [python]
+    language: system
+    entry: bash -c "pushd code/core && poetry run isort src tests; popd"
+    pass_filenames: false
+    files: ^code/core/
+  - id: isort
+    name: isort (cli)
+    types: [python]
+    language: system
+    entry: bash -c "pushd code/cli && poetry run isort src tests; popd"
+    pass_filenames: false
+    files: ^code/cli/
+  - id: isort
+    name: isort (service)
+    types: [python]
+    language: system
+    entry: bash -c "pushd code/service && poetry run isort src tests; popd"
+    pass_filenames: false
+    files: ^code/service/
+#- repo: local
+#  hooks:
+#  - id: docformatter
+#    name: docformatter (core)
+#    types: [python]
+#    language: system
+#    entry: bash -c "pushd code/core && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
+#  - id: docformatter
+#    name: docformatter (cli)
+#    types: [python]
+#    language: system
+#    entry: bash -c "pushd code/cli && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
+#  - id: docformatter
+#    name: docformatter (service)
+#    types: [python]
+#    language: system
+#    entry: bash -c "pushd code/service && poetry run docformatter src tests ; popd"
+#    pass_filenames: false
+- repo: local
+  hooks:
+  - id: pytest
+    name:  pytest (core)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/core && poetry run pytest --no-cov; popd"
+    pass_filenames: false
+    files: ^code/core/
+  - id: pytest
+    name:  pytest (cli)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/cli && poetry run pytest --no-cov; popd"
+    pass_filenames: false
+    files: ^code/cli/
+  - id: pytest
+    name:  pytest (service)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/service && poetry run pytest --no-cov; popd"
+    pass_filenames: false
+    files: ^code/service/
+- repo: local
+  hooks:
+  - id: vulture
+    name:  vulture (core)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/core && poetry run vulture; popd"
+    pass_filenames: false
+    files: ^code/core/
+  - id: vulture
+    name:  vulture (cli)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/cli && poetry run vulture; popd"
+    pass_filenames: false
+    files: ^code/cli/
+  - id: vulture
+    name:  vulture (service)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/service && poetry run vulture; popd"
+    pass_filenames: false
+    files: ^code/service/
+- repo: local
+  hooks:
+  - id: pylint
+    name: pylint (core)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/core && poetry run pylint ${@}; popd"
+    pass_filenames: true
+    files: ^code/core/
+  - id: pylint
+    name: pylint (cli)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/cli && poetry run pylint ${@}; popd"
+    pass_filenames: true
+    files: ^code/cli/
+  - id: pylint
+    name: pylint (service)
+    language: system
+    types: [python]
+    entry: bash -c "pushd code/service && poetry run pylint ${@}; popd"
+    pass_filenames: true
+    files: ^code/service/
+- repo: https://github.com/hadolint/hadolint
+  rev: v2.12.0
+  hooks:
+  - id: hadolint
+- repo: https://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.77.1
+  hooks:
+    - id: terraform_fmt
+      files: ^terraform
+    - id: terraform_tflint
+      args: ["--args=--config __GIT_WORKING_DIR__/terraform/.tflint.hcl"]
+      files: ^terraform/
+    - id: terraform_tfsec
+      files: ^terraform/
+    - id: terraform_validate
+      files: ^terraform/
+    - id: terraform_docs
+      files: ^terraform/
+    - id: terraform_checkov
+      args: ["--args=--quiet",
+             "--args=--skip-check CKV_GCP_49", # "Ensure roles do not impersonate or manage Service Accounts used at project level"
+             "--args=--skip-check CKV_GCP_117", # "Ensure basic roles are not used at project level."
+             "--args=--skip-check CKV_GCP_84", # "Ensure Artifact Registry Repositories are encrypted with Customer Supplied Encryption Keys (CSEK)"
+             ]
+      files: ^terraform/

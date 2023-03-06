@@ -3,6 +3,12 @@
 ////////////////////
 
 locals {
+  // helpers
+  yaas_service_to_run_name_pairs = [for service, name in var.yaas_service_to_run_name : "\"${service}\"=\"${name}\""]
+  yaas_service_to_package_pairs  = [for service, pkg in var.yaas_service_to_package : "\"${service}\"=\"${pkg}\""]
+  yaas_pip_package_lst           = [for pkg in var.yaas_pip_package : "\"${pkg}\""]
+  yaas_py_modules_lst            = [for pkg in var.yaas_py_modules : "\"${pkg}\""]
+  // plan args
   common_tf_plan_args = tomap({
     project_id  = var.project_id,
     region      = var.region,
@@ -15,11 +21,15 @@ locals {
     github_owner                   = var.github_owner,
     github_repo_name               = var.github_repo_name,
     github_branch                  = var.github_branch,
-    yaas_pip_package               = var.yaas_pip_package,
+    yaas_pip_package               = "[${join(",", local.yaas_pip_package_lst)}]",
+    yaas_py_modules                = "[${join(",", local.yaas_py_modules_lst)}]",
+    yaas_service_to_run_name       = "{${join(",", local.yaas_service_to_run_name_pairs)}}",
+    yaas_service_to_package        = "{${join(",", local.yaas_service_to_package_pairs)}}",
     }),
   var.tf_cicd_plan_args)
   tf_infra_plan_args = merge(local.common_tf_plan_args, tomap({
-    run_name                          = var.run_name
+    run_sched_name                    = var.yaas_service_to_run_name.scheduler
+    run_scaler_name                   = var.yaas_service_to_run_name.scaler
     run_container_concurrency         = var.run_container_concurrency
     secrets_calendar_credentials_file = var.secrets_calendar_credentials_file
     monitoring_email_address          = var.monitoring_email_address,
@@ -53,10 +63,9 @@ module "cicd_infra" {
 
 module "cicd_build" {
   // basics
-  source     = "./2_cicd_build"
-  project_id = var.project_id
-  region     = var.region
-  run_cicd   = var.run_cicd
+  source   = "./2_cicd_build"
+  region   = var.region
+  run_cicd = var.run_cicd
   // service accounts
   tf_build_service_account_email = module.cicd_infra.tf_build_service_account.email
   build_service_account_email    = module.cicd_infra.build_service_account.email
@@ -69,9 +78,9 @@ module "cicd_build" {
   docker_base_image = var.docker_base_image
   yaas_image_name   = var.yaas_image_name
   yaas_dockerfile   = var.yaas_dockerfile
-  image_name_uri    = var.image_name_uri
   // cloud run
-  run_name                  = var.run_name
+  yaas_service_to_run_name  = var.yaas_service_to_run_name
+  yaas_service_to_package   = var.yaas_service_to_package
   run_container_concurrency = var.run_container_concurrency
   // build triggers
   tf_build_trigger_name     = var.tf_build_trigger_name
@@ -83,6 +92,7 @@ module "cicd_build" {
   github_repo_name = var.github_repo_name
   github_branch    = var.github_branch
   // code
+  yaas_py_modules  = var.yaas_py_modules
   yaas_pip_package = var.yaas_pip_package
   // terraform plan args
   tf_cicd_plan_args      = local.tf_cicd_plan_args

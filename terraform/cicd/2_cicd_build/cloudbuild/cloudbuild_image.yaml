@@ -7,17 +7,27 @@ steps:
       echo "Created ${DIST_DIR}"
   - name: "python"
     id: PY_PIP_DOWNLOAD
-    entrypoint: "python3"
-    args: ["-m", "pip", "download", "--no-deps",
-      "--dest", "${_DIST_DIR}",
-      "--extra-index-url", "${_AR_PIP_REPO}/simple/",
-      "${_PIP_PKG_ARG}"]
+    script: |
+      #!/usr/bin/env bash
+
+      echo "Downloading packages in <${PIP_PKG_LST}>"
+      read -a PKG_LST <<< ${PIP_PKG_LST//@/ }
+      for PKG in ${PKG_LST[@]}
+      do
+        echo "Downloading <${PKG}> from <${PIP_EXTRA_INDEX_URL}> into <${DIST_DIR}>"
+        python3 -m pip download \
+          --no-deps \
+          --dest ${DIST_DIR} \
+          --extra-index-url ${PIP_EXTRA_INDEX_URL} \
+          ${PKG}
+      done
   - name: "gcr.io/cloud-builders/docker"
     id: DOCKER_BUILD
     args: ["build", "--pull", "--no-cache", "--progress", "plain",
       "--build-arg", "BASE_IMAGE=${_BASE_IMAGE}",
       "--build-arg", "DIST_DIR=${_DIST_DIR}",
       "--build-arg", "CR_CONCURRENCY=${_CR_CONCURRENCY}",
+      "--build-arg", "PY_PACKAGE=${_PY_PACKAGE}",
       "--tag", "${_IMAGE_NAME}",
       "--tag", "${_REMOTE_IMAGE_LATEST}",
       "--tag", "${_REMOTE_IMAGE_SHA}",
@@ -44,6 +54,8 @@ options:
   dynamic_substitutions: true
   env:
     - "DIST_DIR=${_DIST_DIR}"
+    - "PIP_PKG_LST=${_PIP_PKG_LST}"
+    - "PIP_EXTRA_INDEX_URL=${_PIP_EXTRA_INDEX_URL}"
   logging: LEGACY
   logStreamingOption: STREAM_DEFAULT
   machineType: UNSPECIFIED
@@ -51,7 +63,7 @@ options:
 substitutions:
   _DIST_DIR: "dist"
   _DOCKERFILE: ""
-  _PIP_PKG_ARG: ""
+  _PIP_PKG_LST: ""
   _BASE_IMAGE: ""
   _IMAGE_NAME: ""
   _AR_DOCKER_REPO: ""
@@ -62,6 +74,7 @@ substitutions:
   _SERVICE_NAME: ""
   _WAIT_SCRIPT: ""
   _CR_CONCURRENCY: ""
+  _PY_PACKAGE: ""
 images:
   - "${_REMOTE_IMAGE_LATEST}"
   - "${_REMOTE_IMAGE_SHA}"

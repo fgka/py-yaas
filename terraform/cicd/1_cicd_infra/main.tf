@@ -37,7 +37,7 @@ data "google_project" "project" {
 // Service Accounts //
 //////////////////////
 
-module "tf_build_service_account" {
+module "tf_build_service_account" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
   project_id   = var.project_id
   name         = var.tf_build_service_account_name
@@ -61,7 +61,7 @@ module "tf_build_service_account" {
   }
 }
 
-module "build_service_account" {
+module "build_service_account" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
   source       = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
   project_id   = var.project_id
   name         = var.build_service_account_name
@@ -87,7 +87,7 @@ resource "google_artifact_registry_repository_iam_member" "iam_members" {
   member     = module.build_service_account.iam_email
 }
 
-resource "google_project_iam_member" "cloud_build_roles" {
+resource "google_project_iam_member" "cloud_build_roles" { #tfsec:ignore:google-iam-no-privileged-service-accounts
   project = var.project_id
   role    = "roles/editor"
   member  = local.cloud_build_sa_member
@@ -97,7 +97,7 @@ resource "google_project_iam_member" "cloud_build_roles" {
 // Buckets //
 /////////////
 
-module "build_bucket" {
+module "build_bucket" { #tfsec:ignore:google-storage-bucket-encryption-customer-key
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/gcs"
   project_id = var.project_id
   prefix     = var.build_bucket_name_prefix

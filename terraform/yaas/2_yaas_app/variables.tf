@@ -13,18 +13,17 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "run_cicd" {
-  description = "If it is run through Cloud Build."
-  type        = bool
-  default     = true
-}
-
 //////////////////////
 // Service Accounts //
 //////////////////////
 
-variable "run_sa_email" {
-  description = "YAAS Cloud Run Service Account identity email"
+variable "run_sched_sa_email" {
+  description = "YAAS Scheduler Cloud Run Service Account identity email"
+  type        = string
+}
+
+variable "run_scaler_sa_email" {
+  description = "YAAS Scaler Cloud Run Service Account identity email"
   type        = string
 }
 
@@ -58,11 +57,6 @@ variable "pubsub_enact_standard_request_id" {
 
 variable "pubsub_enact_gcs_batch_request_id" {
   description = "ID of the Pub/Sub topic to to send GCS based batch scaling requests."
-  type        = string
-}
-
-variable "pubsub_notification_topic_id" {
-  description = "ID of the Pub/Sub topic to send runtime notification about errors."
   type        = string
 }
 
@@ -151,8 +145,14 @@ variable "service_path_enact_gcs_batch_request" {
 // Docker image //
 //////////////////
 
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
+variable "sched_image_name_uri" {
+  description = "YAAS Scheduler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas_sched:latest"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "scaler_image_name_uri" {
+  description = "YAAS Scaler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas_sched:latest"
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
@@ -161,28 +161,16 @@ variable "image_name_uri" {
 // Cloud Run //
 ///////////////
 
-variable "run_name" {
-  description = "YAAS Cloud Run name."
+variable "run_sched_name" {
+  description = "YAAS Scheduler Cloud Run name."
   type        = string
-  default     = "yaas-run"
+  default     = "yaas-sched"
 }
 
-variable "run_cpu" {
-  description = "Cloud Run CPU request/limit."
+variable "run_scaler_name" {
+  description = "YAAS Scaler Cloud Run name."
   type        = string
-  default     = "1000m"
-}
-
-variable "run_mem" {
-  description = "Cloud Run Memory request/limit."
-  type        = string
-  default     = "512Mi"
-}
-
-variable "run_container_concurrency" {
-  description = "Cloud Run request concurrency per container, mind thread-safety."
-  type        = number
-  default     = 80
+  default     = "yaas-scaler"
 }
 
 variable "run_timeout" {
@@ -191,16 +179,10 @@ variable "run_timeout" {
   default     = 540
 }
 
-variable "run_min_instances" {
-  description = "Cloud Run minimum instances."
+variable "run_container_concurrency" {
+  description = "Cloud Run request concurrency per container, mind thread-safety."
   type        = number
-  default     = 0
-}
-
-variable "run_max_instances" {
-  description = "Cloud Run yaas maximum instances."
-  type        = number
-  default     = 10
+  default     = 80
 }
 
 /////////////////////////////
@@ -221,22 +203,4 @@ variable "monitoring_alert_severity" {
   description = "Severity, included, above which it should generate an alert."
   type        = string
   default     = "ERROR"
-}
-
-variable "monitoring_notification_email_rate_limit_in_minutes" {
-  description = "For how many minutes to wait for until sending the next email notification."
-  type        = number
-  default     = 60
-}
-
-variable "monitoring_notification_pubsub_rate_limit_in_minutes" {
-  description = "For how many minutes to wait for until sending the next Pub/Sub notification."
-  type        = number
-  default     = 5
-}
-
-variable "monitoring_notification_auto_close_in_days" {
-  description = "For how many days to keep an alert alive before closing due to lack of reaction to it."
-  type        = number
-  default     = 7
 }

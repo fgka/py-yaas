@@ -2,11 +2,6 @@
 // Global/General //
 ////////////////////
 
-variable "project_id" {
-  description = "Project ID where to deploy and source of data."
-  type        = string
-}
-
 variable "region" {
   description = "Default region where to create resources."
   type        = string
@@ -83,20 +78,20 @@ variable "yaas_dockerfile" {
   default     = "./docker/Dockerfile"
 }
 
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest. Only change if you know what you are doing."
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-}
-
 ///////////////
 // Cloud Run //
 ///////////////
 
-variable "run_name" {
-  description = "YAAS Cloud Run name."
-  type        = string
-  default     = "yaas-run"
+variable "yaas_service_to_run_name" {
+  description = "Application to Cloud Run, e.g.: {scaler: \"yaas-scaler\"}"
+  type = object({
+    scaler    = string
+    scheduler = string
+  })
+  default = {
+    scaler : "yaas-scaler",
+    scheduler : "yaas-scheduler",
+  }
 }
 
 variable "run_container_concurrency" {
@@ -160,7 +155,7 @@ variable "tf_yaas_trigger_name" {
 variable "tf_yaas_template_filename" {
   description = "Cloud Build template for YAAS infrastructure Terraform code. Only change if you know what you are doing."
   type        = string
-  default     = "cloudbuild/cloudbuild_tf_yaas.yaml"
+  default     = "cloudbuild/cloudbuild_tf_infra.yaml"
 }
 
 variable "tf_backend_tf_template_filename" {
@@ -194,8 +189,30 @@ variable "github_branch" {
 //////////
 
 variable "yaas_pip_package" {
-  description = "Python package full name with version: \"$(python3 ./setup.py --name)>=$(python3 ./setup.py --version)\""
-  type        = string
+  description = "Python package full name with version, e.g.: [\"py-yaas-service>=1.0\", \"py-yaas-core>=1.0\"]"
+  type        = list(string)
+  default = [
+    "py-yaas-core>=1.0",
+    "py-yaas-service>=1.0",
+  ]
+}
+
+variable "yaas_service_to_package" {
+  description = "Python package full name where APPLICATION is declared, e.g.: {scaler: \"yaas_scaler_service\"}"
+  type = object({
+    scaler    = string
+    scheduler = string
+  })
+  default = {
+    scaler : "yaas_scaler_service",
+    scheduler : "yaas_scheduler_service",
+  }
+}
+
+variable "yaas_py_modules" {
+  description = "Python modules. Dot not change, unless you know what you are doing."
+  type        = list(string)
+  default     = ["core", "cli", "service"]
 }
 
 ///////////////

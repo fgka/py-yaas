@@ -1,0 +1,304 @@
+[tool.poetry]
+name = "py_yaas_cli"
+version = "1.0"
+description = ""
+license = "Proprietary"
+authors = ["Gustavo Kuhn Andriotti <gkandriotti@google.com>"]
+readme = "README.md"
+classifiers = [
+    # Trove classifiers
+    # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    "License :: Other/Proprietary License",
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+]
+packages = [
+    { include = "yaas_cli", from = "src" },
+]
+
+[tool.poetry.scripts]
+cli = "yaas_cli.main:main"
+
+[tool.isort]
+profile = "black"
+py_version = 310
+known_first_party = "docformatter"
+known_third_party = ["toml"]
+skip = [".gitignore", ".dockerignore", ".venv", "build", "dist"]
+extend_skip = [".md", ".json"]
+line_length = 120
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+strict = true
+testpaths = "tests"
+log_cli = true
+log_cli_level = "ERROR"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+markers = [
+    "doesnt_work_cloudbuild: These tests make cloudbuild pytest hang.",
+]
+addopts = """
+  --verbose
+  --durations=0
+  --cache-clear
+  --cov=src
+  --cov-report=term
+  --cov-report=html
+  --cov-report=xml
+  --numprocesses=0
+"""
+
+[tool.coverage.run]
+branch = true
+cover_pylib = false
+omit = [
+    "*/site-packages/*",
+    "*/*pypy/*",
+    "*/tests/*",
+    "__init__.py",
+    "setup.py",
+]
+relative_files = true
+
+[tool.coverage.report]
+omit = [
+    "*/site-packages/*",
+    "*/*pypy/*",
+    "*/tests/*",
+    "__init__.py",
+    "setup.py",
+]
+exclude_lines = [
+    "pragma: no cover",
+    "import",
+]
+show_missing = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.black]
+target-version = ["py310"]
+line-length = 120
+include = ".pyi?$"
+exclude = """
+/(
+    .eggs
+  | .git
+  | .hg
+  | .mypy_cache
+  | .tox
+  | .venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+"""
+skip_glob = [".venv/*", "build/*", "dist/*"]
+line_length = 120
+
+[tool.docformatter]
+recursive = true
+wrap-summaries = 120
+blank = true
+
+[tool.vulture]
+ignore_decorators = ["@app.route", "@require_*"]
+make_whitelist = false
+min_confidence = 80
+paths = ["src", "tests"]
+sort_by_size = true
+verbose = false
+
+[tool.poetry.dependencies]
+# https://devguide.python.org/versions/#branchstatus
+python = "^3.10.0"  # End-of-life: 2026-10 (checked on 2022-09-01)
+py-yaas-core = "^1.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+deepdiff = "^6.2.3"
+junit-xml = "^1.9"
+mock = "^5.0.1"
+nose = "^1.3.7"
+pudb = "^2022.1.3"
+pylama = "^8.4.1"
+pylama-pylint = "^3.1.1"
+pylint = "^2.16.3"
+pytest = "^7.2.1"
+pytest-asyncio = "^0.20.3"
+pytest-cov = "^4.0.0"
+pytest-lazy-fixture = "^0.6.3"
+pytest-mock = "^3.10.0"
+pytest-pudb = "^0.7.0"
+pytest-pylint = "^0.19.0"
+pytest-xdist = "^3.2.0"
+vulture = "^2.7"
+ipython = "^8.11.0"
+pytest-runner = "^6.0.0"
+diagrams = "^0.23.3"
+sphinx = "^6.1.3"
+isort = "^5.12.0"
+pre-commit = "^3.1.1"
+py-yaas-core = {path="../core", develop=true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pylint.main]
+fail-under = 10.0
+ignore = ["CVS"]
+ignore-patterns = ["^\\.#"]
+jobs = 0
+limit-inference-results = 100
+load-plugins = ["pylint.extensions.check_elif", "pylint.extensions.bad_builtin", "pylint.extensions.docparams", "pylint.extensions.for_any_all", "pylint.extensions.set_membership", "pylint.extensions.code_style", "pylint.extensions.overlapping_exceptions", "pylint.extensions.typing", "pylint.extensions.redefined_variable_type", "pylint.extensions.comparison_placement", "pylint.extensions.mccabe"]
+persistent = true
+py-version = "3.10.0"
+suggestion-mode = true
+
+[tool.pylint.basic]
+argument-naming-style = "snake_case"
+argument-rgx = "[a-z_][a-z0-9_]{2,30}$"
+attr-naming-style = "snake_case"
+attr-rgx = "[a-z_][a-z0-9_]{2,}$"
+bad-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+class-attribute-naming-style = "any"
+class-attribute-rgx = "([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$"
+class-const-naming-style = "UPPER_CASE"
+class-naming-style = "PascalCase"
+class-rgx = "[A-Z_][a-zA-Z0-9]+$"
+const-naming-style = "UPPER_CASE"
+const-rgx = "(([A-Z_][A-Z0-9_]*)|(__.*__))$"
+docstring-min-length = -1
+function-naming-style = "snake_case"
+function-rgx = "[a-z_][a-z0-9_]{2,30}$"
+good-names = ["i", "j", "k", "ex", "Run", "_"]
+inlinevar-naming-style = "any"
+inlinevar-rgx = "[A-Za-z_][A-Za-z0-9_]*$"
+method-naming-style = "snake_case"
+method-rgx = "[a-z_][a-z0-9_]{2,}$"
+module-naming-style = "snake_case"
+module-rgx = "(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$"
+no-docstring-rgx = "__.*__"
+property-classes = ["abc.abstractproperty"]
+variable-naming-style = "snake_case"
+variable-rgx = "[a-z_][a-z0-9_]{2,30}$"
+
+[tool.pylint.classes]
+defining-attr-methods = ["__init__", "__new__", "setUp", "__post_init__"]
+exclude-protected = ["_asdict", "_fields", "_replace", "_source", "_make"]
+valid-classmethod-first-arg = ["cls"]
+valid-metaclass-classmethod-first-arg = ["mcs"]
+
+[tool.pylint.deprecated_builtins]
+bad-functions = ["map", "input"]
+
+[tool.pylint.design]
+max-args = 10
+max-attributes = 11
+max-bool-expr = 5
+max-branches = 27
+max-complexity = 10
+max-locals = 25
+max-parents = 7
+max-public-methods = 25
+max-returns = 11
+max-statements = 100
+min-public-methods = 2
+
+[tool.pylint.exceptions]
+overgeneral-exceptions = [
+    "builtins.BaseException",
+    "builtins.Exception"
+]
+
+[tool.pylint.format]
+ignore-long-lines = "^\\s*(# )?<?https?://\\S+>?$"
+indent-after-paren = 4
+indent-string = "    "
+max-line-length = 120
+max-module-lines = 1000
+
+[tool.pylint.imports]
+deprecated-modules = ["regsub", "TERMIOS", "Bastion", "rexec"]
+known-third-party = ["enchant"]
+
+[tool.pylint.logging]
+logging-format-style = "old"
+logging-modules = ["logging"]
+
+[tool.pylint."messages control"]
+confidence = ["HIGH", "CONTROL_FLOW", "INFERENCE", "INFERENCE_FAILURE", "UNDEFINED"]
+disable = [
+    "raw-checker-failed",
+    "bad-inline-option",
+    "consider-using-assignment-expr",
+    "consider-alternative-union-syntax",
+    "deprecated-typing-alias",
+    "locally-disabled",
+    "missing-function-docstring",
+    "file-ignored",
+    "suppressed-message",
+    "use-dict-literal",
+]
+enable = ["useless-suppression", "use-symbolic-message-instead", "c-extension-no-member"]
+
+[tool.pylint.method_args]
+timeout-methods = ["requests.api.delete", "requests.api.get", "requests.api.head", "requests.api.options", "requests.api.patch", "requests.api.post", "requests.api.put", "requests.api.request"]
+
+[tool.pylint.miscellaneous]
+notes = ["FIXME", "XXX", "TODO"]
+
+[tool.pylint.parameter_documentation]
+accept-no-param-doc = true
+accept-no-raise-doc = true
+accept-no-return-doc = true
+accept-no-yields-doc = true
+default-docstring-type = "default"
+
+[tool.pylint.refactoring]
+max-nested-blocks = 5
+never-returning-functions = ["sys.exit", "argparse.parse_error"]
+
+[tool.pylint.reports]
+evaluation = "max(0, 0 if fatal else 10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10))"
+score = true
+
+[tool.pylint.similarities]
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+ignore-signatures = true
+min-similarity-lines = 6
+
+[tool.pylint.spelling]
+max-spelling-suggestions = 2
+spelling-ignore-comment-directives = "fmt: on,fmt: off,noqa:,noqa,nosec,isort:skip,mypy:,pragma:,# noinspection"
+spelling-private-dict-file = ".pyenchant_pylint_custom_dict.txt"
+
+[tool.pylint.typecheck]
+contextmanager-decorators = ["contextlib.contextmanager"]
+generated-members = "REQUEST,acl_users,aq_parent,argparse.Namespace"
+ignore-none = true
+ignore-on-opaque-inference = true
+ignored-checks-for-mixins = ["no-member", "not-async-context-manager", "not-context-manager", "attribute-defined-outside-init"]
+ignored-classes = ["SQLObject", "optparse.Values", "thread._local", "_thread._local"]
+missing-member-hint = true
+missing-member-hint-distance = 1
+missing-member-max-choices = 1
+mixin-class-rgx = ".*MixIn"
+
+[tool.pylint.variables]
+allow-global-unused-variables = true
+callbacks = ["cb_", "_cb"]
+dummy-variables-rgx = "_$|dummy"
+ignored-argument-names = "_.*"
+redefining-builtins-modules = ["six.moves", "past.builtins", "future.builtins", "builtins", "io"]

@@ -2,8 +2,12 @@
 // Service Accounts //
 //////////////////////
 
-output "run_sa" {
-  value = google_service_account.run_sa
+output "run_sched_sa" {
+  value = google_service_account.run_sched_sa
+}
+
+output "run_scaler_sa" {
+  value = google_service_account.run_scaler_sa
 }
 
 output "pubsub_sa" {

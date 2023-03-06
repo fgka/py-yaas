@@ -8,7 +8,7 @@ How to install YAAS, end-to-end, documentation. If you just landed here, this is
 
 ## [Code](./code)
 
-Inside `code` you have all pointer to the code and how to navigate all the branches. 
+Inside `code` you have all pointer to the code and how to navigate all the branches.
 
 ### [Development](./DEVELOPMENT.md)
 

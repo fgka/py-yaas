@@ -4,8 +4,7 @@
 
 locals {
   // service accounts
-  pubsub_sa_member    = "serviceAccount:${var.pubsub_sa_email}"
-  run_sa_email_member = "serviceAccount:${var.run_sa_email}"
+  pubsub_sa_member = "serviceAccount:${var.pubsub_sa_email}"
   // config JSON
   terraform_module_root_dir = path.module
   config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
@@ -13,24 +12,13 @@ locals {
   // topic_to_pubsub_gcs
   batch_topic_to_pubsub_path  = "${var.topic_to_pubsub_gcs_path}/gcs"
   local_batch_topic_to_pubsub = "${local.terraform_module_root_dir}/output/topic_gcs.local"
-  // cloud run
-  run_service_url = google_cloud_run_service.yaas.status[0].url
-  // pubsub endpoints
-  pubsub_command_url        = "${local.run_service_url}${var.service_path_command}"
-  pubsub_enact_standard_url = "${local.run_service_url}${var.service_path_enact_standard_request}"
-  pubsub_enact_gcs_url      = "${local.run_service_url}${var.service_path_enact_gcs_batch_request}"
-  // monitoring
-  monitoring_auto_close_in_seconds = var.monitoring_notification_auto_close_in_days * 24 * 60
-  monitoring_alert_policies_error_log = tomap({
-    email = {
-      period_in_secs = var.monitoring_notification_email_rate_limit_in_minutes * 60,
-      channel_name   = var.monitoring_email_channel_name,
-    },
-    pubsub = {
-      period_in_secs = var.monitoring_notification_pubsub_rate_limit_in_minutes * 60,
-      channel_name   = var.monitoring_pubsub_channel_name,
-    },
-  })
+  // scheduler
+  run_sched_service_url     = module.yaas_sched.service_url
+  pubsub_enact_standard_url = "${local.run_sched_service_url}${var.service_path_enact_standard_request}"
+  pubsub_enact_gcs_url      = "${local.run_sched_service_url}${var.service_path_enact_gcs_batch_request}"
+  // scaler
+  run_scaler_service_url = module.yaas_scaler.service_url
+  pubsub_command_url     = "${local.run_scaler_service_url}${var.service_path_command}"
 }
 
 /////////////////
@@ -74,16 +62,18 @@ resource "google_storage_bucket_object" "topic_to_pubsub_gcs" {
 // Pub/Sub Subscriptions //
 ///////////////////////////
 
+// Scaler
+
 resource "google_pubsub_subscription" "command" {
-  name                       = "${google_cloud_run_service.yaas.name}_command_http_push_subscription"
+  name                       = "${module.yaas_scaler.service.name}_command_http_push_subscription"
   topic                      = var.pubsub_command_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
     push_endpoint = local.pubsub_command_url
     oidc_token {
-      service_account_email = var.run_sa_email
-      audience              = local.run_service_url
+      service_account_email = var.run_scaler_sa_email
+      audience              = local.run_scaler_service_url
     }
   }
   retry_policy {
@@ -91,16 +81,18 @@ resource "google_pubsub_subscription" "command" {
   }
 }
 
+// Scheduler
+
 resource "google_pubsub_subscription" "enact_standard_request" {
-  name                       = "${google_cloud_run_service.yaas.name}_enact_standard_http_push_subscription"
+  name                       = "${module.yaas_sched.service.name}_enact_standard_http_push_subscription"
   topic                      = var.pubsub_enact_standard_request_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
     push_endpoint = local.pubsub_enact_standard_url
     oidc_token {
-      service_account_email = var.run_sa_email
-      audience              = local.run_service_url
+      service_account_email = var.run_sched_sa_email
+      audience              = local.run_sched_service_url
     }
   }
   retry_policy {
@@ -109,15 +101,15 @@ resource "google_pubsub_subscription" "enact_standard_request" {
 }
 
 resource "google_pubsub_subscription" "enact_gcs_request" {
-  name                       = "${google_cloud_run_service.yaas.name}_enact_gcs_batch_http_push_subscription"
+  name                       = "${module.yaas_sched.service.name}_enact_gcs_batch_http_push_subscription"
   topic                      = var.pubsub_enact_gcs_batch_request_id
   ack_deadline_seconds       = var.run_timeout
   message_retention_duration = "${var.pubsub_subscription_retention_in_sec}s"
   push_config {
     push_endpoint = local.pubsub_enact_gcs_url
     oidc_token {
-      service_account_email = var.run_sa_email
-      audience              = local.run_service_url
+      service_account_email = var.run_sched_sa_email
+      audience              = local.run_sched_service_url
     }
   }
   retry_policy {
@@ -129,106 +121,57 @@ resource "google_pubsub_subscription" "enact_gcs_request" {
 // Cloud Run //
 ///////////////
 
-resource "google_cloud_run_service" "yaas" {
-  project                    = var.project_id
-  location                   = var.region
-  name                       = var.run_name
-  autogenerate_revision_name = true
-  template {
-    spec {
-      container_concurrency = var.run_container_concurrency
-      timeout_seconds       = var.run_timeout
-      service_account_name  = var.run_sa_email
-      containers {
-        image = var.image_name_uri
-        env {
-          name  = "LOG_LEVEL"
-          value = var.log_level
-        }
-        env {
-          name  = "CONFIG_BUCKET_NAME"
-          value = var.bucket_name
-        }
-        env {
-          name  = "CONFIG_OBJECT_PATH"
-          value = var.config_path
-        }
-        resources {
-          limits = {
-            cpu    = var.run_cpu
-            memory = var.run_mem
-          }
-          requests = {
-            cpu    = var.run_cpu
-            memory = var.run_mem
-          }
-        }
-      }
-    }
-    metadata {
-      annotations = {
-        "autoscaling.knative.dev/minScale" = var.run_min_instances
-        "autoscaling.knative.dev/maxScale" = var.run_max_instances
-      }
-    }
-  }
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-  metadata {
-    annotations = {
-      "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
-    }
-  }
-  lifecycle {
-    ignore_changes = [
-      template[0].spec[0].containers[0].image,
-    ]
-  }
+// Scheduler
+
+module "yaas_sched" {
+  source     = "./modules/cr_service"
+  project_id = var.project_id
+  region     = var.region
+  # cloud run
+  run_name     = var.run_sched_name
+  run_sa_email = var.run_sched_sa_email
+  run_timeout  = var.run_timeout
+  # code
+  log_level      = var.log_level
+  bucket_name    = var.bucket_name
+  config_path    = var.config_path
+  image_name_uri = var.sched_image_name_uri
+  # monitoring
+  monitoring_alert_severity      = var.monitoring_alert_severity
+  monitoring_email_channel_name  = var.monitoring_email_channel_name
+  monitoring_pubsub_channel_name = var.monitoring_pubsub_channel_name
 }
 
-// service SA
+// Scaler
 
-resource "google_cloud_run_service_iam_member" "run_agent" {
-  service  = google_cloud_run_service.yaas.name
-  location = var.region
-  role     = "roles/run.serviceAgent"
-  member   = local.run_sa_email_member
+module "yaas_scaler" {
+  source     = "./modules/cr_service"
+  project_id = var.project_id
+  region     = var.region
+  # cloud run
+  run_name     = var.run_scaler_name
+  run_sa_email = var.run_scaler_sa_email
+  run_timeout  = var.run_timeout
+  # code
+  log_level      = var.log_level
+  bucket_name    = var.bucket_name
+  config_path    = var.config_path
+  image_name_uri = var.scaler_image_name_uri
+  # monitoring
+  monitoring_alert_severity      = var.monitoring_alert_severity
+  monitoring_email_channel_name  = var.monitoring_email_channel_name
+  monitoring_pubsub_channel_name = var.monitoring_pubsub_channel_name
 }
 
 // pubsub SA
 
 resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
-  service  = google_cloud_run_service.yaas.name
+  for_each = toset([
+    module.yaas_sched.service.name,
+    module.yaas_scaler.service.name,
+  ])
+  service  = each.key
   location = var.region
   role     = "roles/run.invoker"
   member   = local.pubsub_sa_member
-}
-
-/////////////////////////////
-// Monitoring and Alerting //
-/////////////////////////////
-
-resource "google_monitoring_alert_policy" "alert_error_log" {
-  for_each     = local.monitoring_alert_policies_error_log
-  display_name = "${google_cloud_run_service.yaas.name}-${each.key}-error-monitoring"
-  documentation {
-    content   = "Alerts for ${google_cloud_run_service.yaas.name} execution errors - ${each.key}"
-    mime_type = "text/markdown"
-  }
-  alert_strategy {
-    notification_rate_limit {
-      period = "${each.value.period_in_secs}s"
-    }
-    auto_close = "${local.monitoring_auto_close_in_seconds}s"
-  }
-  combiner = "OR"
-  conditions {
-    display_name = "Log severity >= ${var.monitoring_alert_severity} for cloud run service ${google_cloud_run_service.yaas.name}"
-    condition_matched_log {
-      filter = "resource.type=\"cloud_run_revision\"\nresource.labels.service_name=\"${google_cloud_run_service.yaas.name}\"\nseverity>=\"${var.monitoring_alert_severity}\""
-    }
-  }
-  notification_channels = [each.value.channel_name]
 }

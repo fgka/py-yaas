@@ -22,9 +22,11 @@ module "yaas_infra" {
   project_id = var.project_id
   region     = var.region
   // service accounts
-  run_service_account_name    = var.run_service_account_name
-  pubsub_service_account_name = var.pubsub_service_account_name
-  run_service_account_roles   = var.run_service_account_roles
+  run_sched_service_account_name   = var.run_sched_service_account_name
+  run_sched_service_account_roles  = var.run_sched_service_account_roles
+  run_scaler_service_account_name  = var.run_scaler_service_account_name
+  run_scaler_service_account_roles = var.run_scaler_service_account_roles
+  pubsub_service_account_name      = var.pubsub_service_account_name
   // bucket
   bucket_name_prefix = var.bucket_name_prefix
   // pubsub
@@ -62,8 +64,9 @@ module "yaas_app" {
   project_id = var.project_id
   region     = var.region
   // service accounts
-  run_sa_email    = module.yaas_infra.run_sa.email
-  pubsub_sa_email = module.yaas_infra.pubsub_sa.email
+  run_sched_sa_email  = module.yaas_infra.run_sched_sa.email
+  run_scaler_sa_email = module.yaas_infra.run_scaler_sa.email
+  pubsub_sa_email     = module.yaas_infra.pubsub_sa.email
   // bucket
   bucket_name = module.yaas_infra.bucket.name
   // pubsub
@@ -72,14 +75,15 @@ module "yaas_app" {
   pubsub_enact_gcs_batch_request_id = module.yaas_infra.pubsub_enact_gcs_batch_request.id
   // secrets
   secrets_calendar_credentials_id = local.secrets_calendar_credentials_id
-  // image
-  image_name_uri = var.image_name_uri
   // code
   calendar_id = var.calendar_id
   log_level   = var.log_level
-  // cloud run
-  run_name                  = var.run_name
-  run_container_concurrency = var.run_container_concurrency
+  // scheduler
+  run_sched_name       = var.run_sched_name
+  sched_image_name_uri = var.sched_image_name_uri
+  // scaler
+  run_scaler_name       = var.run_scaler_name
+  scaler_image_name_uri = var.scaler_image_name_uri
   // monitoring
   monitoring_email_channel_name  = module.yaas_infra.monitoring_channel_email.id
   monitoring_pubsub_channel_name = module.yaas_infra.monitoring_channel_pubsub.id

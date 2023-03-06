@@ -17,10 +17,16 @@ variable "region" {
 // Service Accounts //
 //////////////////////
 
-variable "run_service_account_name" {
-  description = "YAAS Cloud Run Service Account identity"
+variable "run_sched_service_account_name" {
+  description = "YAAS Cloud Run Service Account identity for Scheduler"
   type        = string
-  default     = "yaas-run-sa"
+  default     = "yaas-run-sched-sa"
+}
+
+variable "run_scaler_service_account_name" {
+  description = "YAAS Cloud Run Service Account identity for Scaler"
+  type        = string
+  default     = "yaas-run-scaler-sa"
 }
 
 variable "pubsub_service_account_name" {
@@ -33,7 +39,15 @@ variable "pubsub_service_account_name" {
 // Service Accounts: YAAS permissions //
 ////////////////////////////////////////
 
-variable "run_service_account_roles" {
+variable "run_sched_service_account_roles" {
+  description = "All roles required by YAAS Scheduler"
+  type        = list(string)
+  default = [
+    "roles/iam.serviceAccountUser", // for impersonation
+  ]
+}
+
+variable "run_scaler_service_account_roles" {
   description = "All admin roles required to let YAAS manage resources"
   type        = list(string)
   default = [

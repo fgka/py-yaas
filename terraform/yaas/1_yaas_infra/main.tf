@@ -35,9 +35,14 @@ data "google_project" "project" {
 // Service Accounts //
 //////////////////////
 
-resource "google_service_account" "run_sa" {
-  account_id   = var.run_service_account_name
-  display_name = "Cloud Run Service Account Identity"
+resource "google_service_account" "run_sched_sa" {
+  account_id   = var.run_sched_service_account_name
+  display_name = "Cloud Run Service Account Identity for Scheduler"
+}
+
+resource "google_service_account" "run_scaler_sa" {
+  account_id   = var.run_scaler_service_account_name
+  display_name = "Cloud Run Service Account Identity for Scaler"
 }
 
 resource "google_service_account" "pubsub_sa" {
@@ -60,11 +65,18 @@ resource "google_project_iam_member" "serverless_service_agent" {
 // Service Accounts: YAAS permissions //
 ////////////////////////////////////////
 
-resource "google_project_iam_member" "yaas_permissions" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
-  for_each = toset(var.run_service_account_roles)
+resource "google_project_iam_member" "yaas_sched_permissions" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
+  for_each = toset(var.run_sched_service_account_roles)
   project  = var.project_id
   role     = each.key
-  member   = google_service_account.run_sa.member
+  member   = google_service_account.run_sched_sa.member
+}
+
+resource "google_project_iam_member" "yaas_scaler_permissions" { #tfsec:ignore:google-iam-no-project-level-service-account-impersonation
+  for_each = toset(var.run_scaler_service_account_roles)
+  project  = var.project_id
+  role     = each.key
+  member   = google_service_account.run_scaler_sa.member
 }
 
 /////////////
@@ -78,10 +90,12 @@ module "bucket" { #tfsec:ignore:google-storage-bucket-encryption-customer-key
   name       = data.google_project.project.number
   iam = {
     "roles/storage.legacyBucketReader" = [
-      google_service_account.run_sa.member,
+      google_service_account.run_sched_sa.member,
+      google_service_account.run_scaler_sa.member,
     ]
     "roles/storage.objectAdmin" = [
-      google_service_account.run_sa.member,
+      google_service_account.run_sched_sa.member,
+      google_service_account.run_scaler_sa.member,
     ]
   }
 }
@@ -104,7 +118,7 @@ module "pubsub_enact_standard_request" {
   project_id = var.project_id
   name       = var.pubsub_enact_standard_request_name
   iam = {
-    "roles/pubsub.publisher" = [google_service_account.run_sa.member]
+    "roles/pubsub.publisher" = [google_service_account.run_sched_sa.member]
   }
 }
 
@@ -113,7 +127,7 @@ module "pubsub_enact_gcs_batch_request" {
   project_id = var.project_id
   name       = var.pubsub_enact_gcs_batch_request_name
   iam = {
-    "roles/pubsub.publisher" = [google_service_account.run_sa.member]
+    "roles/pubsub.publisher" = [google_service_account.run_sched_sa.member]
   }
 }
 
@@ -122,7 +136,10 @@ module "pubsub_notification_topic" {
   project_id = var.project_id
   name       = var.pubsub_notification_topic_name
   iam = {
-    "roles/pubsub.publisher" = [google_service_account.run_sa.member]
+    "roles/pubsub.publisher" = [
+      google_service_account.run_sched_sa.member,
+      google_service_account.run_scaler_sa.member,
+    ]
   }
 }
 
@@ -179,8 +196,8 @@ module "secrets_calendar_credentials" {
   versions = local.secrets_calendar_credentials_content
   iam = {
     "${var.secrets_calendar_credentials_name}" = {
-      "roles/secretmanager.secretVersionManager" = [google_service_account.run_sa.member],
-      "roles/secretmanager.secretAccessor"       = [google_service_account.run_sa.member],
+      "roles/secretmanager.secretVersionManager" = [google_service_account.run_sched_sa.member],
+      "roles/secretmanager.secretAccessor"       = [google_service_account.run_sched_sa.member],
     }
   }
 }

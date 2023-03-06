@@ -17,10 +17,16 @@ variable "region" {
 // Service Accounts //
 //////////////////////
 
-variable "run_service_account_name" {
-  description = "YAAS Cloud Run Service Account identity"
+variable "run_sched_service_account_name" {
+  description = "YAAS Cloud Run Service Account identity for Scheduler"
   type        = string
-  default     = "yaas-run-sa"
+  default     = "yaas-run-sched-sa"
+}
+
+variable "run_scaler_service_account_name" {
+  description = "YAAS Cloud Run Service Account identity for Scaler"
+  type        = string
+  default     = "yaas-run-scaler-sa"
 }
 
 variable "pubsub_service_account_name" {
@@ -33,7 +39,15 @@ variable "pubsub_service_account_name" {
 // Service Accounts: YAAS permissions //
 ////////////////////////////////////////
 
-variable "run_service_account_roles" {
+variable "run_sched_service_account_roles" {
+  description = "All roles required by YAAS Scheduler"
+  type        = list(string)
+  default = [
+    "roles/iam.serviceAccountUser", // for impersonation
+  ]
+}
+
+variable "run_scaler_service_account_roles" {
   description = "All admin roles required to let YAAS manage resources"
   type        = list(string)
   default = [
@@ -183,8 +197,14 @@ variable "secrets_calendar_credentials_name" {
 // Docker image //
 //////////////////
 
-variable "image_name_uri" {
-  description = "YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas:latest"
+variable "sched_image_name_uri" {
+  description = "YAAS Scheduler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas_sched:latest"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "scaler_image_name_uri" {
+  description = "YAAS Scaler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT_ID/yaas-docker/yaas_sched:latest"
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
@@ -208,16 +228,16 @@ variable "log_level" {
 // Cloud Run //
 ///////////////
 
-variable "run_name" {
-  description = "YAAS Cloud Run name."
+variable "run_sched_name" {
+  description = "YAAS Scheduler Cloud Run name."
   type        = string
-  default     = "yaas-run"
+  default     = "yaas-sched"
 }
 
-variable "run_container_concurrency" {
-  description = "YAAS Cloud Run container concurrency."
-  type        = number
-  default     = 80
+variable "run_scaler_name" {
+  description = "YAAS Scaler Cloud Run name."
+  type        = string
+  default     = "yaas-scaler"
 }
 
 /////////////////////////////

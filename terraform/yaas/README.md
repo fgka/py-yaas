@@ -64,7 +64,7 @@ terraform apply ${TMP} && rm -f ${TMP}
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 4.53.1 |
+| <a name="provider_google"></a> [google](#provider\_google) | 4.55.0 |
 
 ## Modules
 
@@ -86,7 +86,6 @@ terraform apply ${TMP} && rm -f ${TMP}
 | <a name="input_bucket_name_prefix"></a> [bucket\_name\_prefix](#input\_bucket\_name\_prefix) | Prefix to name the YAAS artefacts bucket, the suffix is the project numerical ID. | `string` | `"yaas-app"` | no |
 | <a name="input_cache_refresh_range_in_days"></a> [cache\_refresh\_range\_in\_days](#input\_cache\_refresh\_range\_in\_days) | How many days, in the future, to cache events for. | `number` | `3` | no |
 | <a name="input_calendar_id"></a> [calendar\_id](#input\_calendar\_id) | YAAS Google Calendar ID to use | `string` | n/a | yes |
-| <a name="input_image_name_uri"></a> [image\_name\_uri](#input\_image\_name\_uri) | YAAS docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT\_ID/yaas-docker/yaas:latest | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | YAAS Cloud Run log level. | `string` | `"INFO"` | no |
 | <a name="input_monitoring_alert_severity"></a> [monitoring\_alert\_severity](#input\_monitoring\_alert\_severity) | Severity, included, above which it should generate an alert. | `string` | `"ERROR"` | no |
 | <a name="input_monitoring_email_address"></a> [monitoring\_email\_address](#input\_monitoring\_email\_address) | When there is a failure, it needs to send the alert to a specific email. | `string` | n/a | yes |
@@ -99,10 +98,14 @@ terraform apply ${TMP} && rm -f ${TMP}
 | <a name="input_pubsub_notification_topic_name"></a> [pubsub\_notification\_topic\_name](#input\_pubsub\_notification\_topic\_name) | Name of the Pub/Sub topic to send runtime notification about errors. | `string` | `"yaas-notifications"` | no |
 | <a name="input_pubsub_service_account_name"></a> [pubsub\_service\_account\_name](#input\_pubsub\_service\_account\_name) | Service account to be used by Pub/Sub to trigger YAAS. | `string` | `"yaas-pubsub-sa"` | no |
 | <a name="input_region"></a> [region](#input\_region) | Default region where to create resources. | `string` | `"us-central1"` | no |
-| <a name="input_run_container_concurrency"></a> [run\_container\_concurrency](#input\_run\_container\_concurrency) | YAAS Cloud Run container concurrency. | `number` | `80` | no |
-| <a name="input_run_name"></a> [run\_name](#input\_run\_name) | YAAS Cloud Run name. | `string` | `"yaas-run"` | no |
-| <a name="input_run_service_account_name"></a> [run\_service\_account\_name](#input\_run\_service\_account\_name) | YAAS Cloud Run Service Account identity | `string` | `"yaas-run-sa"` | no |
-| <a name="input_run_service_account_roles"></a> [run\_service\_account\_roles](#input\_run\_service\_account\_roles) | All admin roles required to let YAAS manage resources | `list(string)` | <pre>[<br>  "roles/compute.instanceAdmin.v1",<br>  "roles/cloudfunctions.admin",<br>  "roles/cloudsql.admin",<br>  "roles/run.admin",<br>  "roles/iam.serviceAccountUser"<br>]</pre> | no |
+| <a name="input_run_scaler_name"></a> [run\_scaler\_name](#input\_run\_scaler\_name) | YAAS Scaler Cloud Run name. | `string` | `"yaas-scaler"` | no |
+| <a name="input_run_scaler_service_account_name"></a> [run\_scaler\_service\_account\_name](#input\_run\_scaler\_service\_account\_name) | YAAS Cloud Run Service Account identity for Scaler | `string` | `"yaas-run-scaler-sa"` | no |
+| <a name="input_run_scaler_service_account_roles"></a> [run\_scaler\_service\_account\_roles](#input\_run\_scaler\_service\_account\_roles) | All admin roles required to let YAAS manage resources | `list(string)` | <pre>[<br>  "roles/compute.instanceAdmin.v1",<br>  "roles/cloudfunctions.admin",<br>  "roles/cloudsql.admin",<br>  "roles/run.admin",<br>  "roles/iam.serviceAccountUser"<br>]</pre> | no |
+| <a name="input_run_sched_name"></a> [run\_sched\_name](#input\_run\_sched\_name) | YAAS Scheduler Cloud Run name. | `string` | `"yaas-sched"` | no |
+| <a name="input_run_sched_service_account_name"></a> [run\_sched\_service\_account\_name](#input\_run\_sched\_service\_account\_name) | YAAS Cloud Run Service Account identity for Scheduler | `string` | `"yaas-run-sched-sa"` | no |
+| <a name="input_run_sched_service_account_roles"></a> [run\_sched\_service\_account\_roles](#input\_run\_sched\_service\_account\_roles) | All roles required by YAAS Scheduler | `list(string)` | <pre>[<br>  "roles/iam.serviceAccountUser"<br>]</pre> | no |
+| <a name="input_scaler_image_name_uri"></a> [scaler\_image\_name\_uri](#input\_scaler\_image\_name\_uri) | YAAS Scaler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT\_ID/yaas-docker/yaas\_sched:latest | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
+| <a name="input_sched_image_name_uri"></a> [sched\_image\_name\_uri](#input\_sched\_image\_name\_uri) | YAAS Scheduler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT\_ID/yaas-docker/yaas\_sched:latest | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |
 | <a name="input_scheduler_cache_refresh_cron_entry_triggering_minute"></a> [scheduler\_cache\_refresh\_cron\_entry\_triggering\_minute](#input\_scheduler\_cache\_refresh\_cron\_entry\_triggering\_minute) | YAAS calendar cache refresh triggering minute. Please only change if you know what you are doing. | `number` | `17` | no |
 | <a name="input_scheduler_cache_refresh_name"></a> [scheduler\_cache\_refresh\_name](#input\_scheduler\_cache\_refresh\_name) | Name of the Cloud Scheduler that triggers YAAS calendar cache refresh | `string` | `"yaas-cache-refresh"` | no |
 | <a name="input_scheduler_cache_refresh_rate_in_hours"></a> [scheduler\_cache\_refresh\_rate\_in\_hours](#input\_scheduler\_cache\_refresh\_rate\_in\_hours) | YAAS calendar cache refresh rate in hours, i.e., how many hours after a refresh to repeat it. | `number` | `6` | no |

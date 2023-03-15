@@ -97,7 +97,7 @@ terraform -chdir=${TF_DIR} init -upgrade
 TMP=$(mktemp)
 terraform -chdir=${TF_DIR} plan \
   -out ${TMP} \
-  -var-file=${TF_DIR}/terraform.tfvars
+  -var-file=terraform.tfvars
 ```
 
 ### Apply
@@ -189,7 +189,7 @@ terraform -chdir=${TF_DIR} init -upgrade
 TMP=$(mktemp)
 terraform -chdir=${TF_DIR} plan \
   -out ${TMP} \
-  -var-file=${TF_DIR}/terraform.tfvars
+  -var-file=terraform.tfvars
 ```
 
 ### Apply

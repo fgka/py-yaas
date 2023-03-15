@@ -432,7 +432,8 @@ def _json_credentials(
     if value.exists():
         if _is_initial_credentials(value):
             app_flow = flow.InstalledAppFlow.from_client_secrets_file(value, _CALENDAR_SCOPES)
-            result = app_flow.run_local_server(port=0)
+            # https://developers.google.com/identity/protocols/oauth2/web-server#incrementalAuth
+            result = app_flow.run_local_server(port=0, access_type="offline", include_granted_scopes="true")
         else:
             result = credentials.Credentials.from_authorized_user_file(value)
         _LOGGER.info("Retrieved cal credentials from JSON file %s", value)

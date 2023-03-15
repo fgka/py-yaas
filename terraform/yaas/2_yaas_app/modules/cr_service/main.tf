@@ -23,61 +23,48 @@ locals {
 // Cloud Run //
 ///////////////
 
-resource "google_cloud_run_service" "default" {
-  project                    = var.project_id
-  location                   = var.region
-  name                       = var.run_name
-  autogenerate_revision_name = true
+resource "google_cloud_run_v2_service" "default" {
+  project  = var.project_id
+  location = var.region
+  name     = var.run_name
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   template {
-    spec {
-      container_concurrency = var.run_container_concurrency
-      timeout_seconds       = var.run_timeout
-      service_account_name  = var.run_sa_email
-      containers {
-        image = var.image_name_uri
-        env {
-          name  = "LOG_LEVEL"
-          value = var.log_level
-        }
-        env {
-          name  = "CONFIG_BUCKET_NAME"
-          value = var.bucket_name
-        }
-        env {
-          name  = "CONFIG_OBJECT_PATH"
-          value = var.config_path
-        }
-        resources {
-          limits = {
-            cpu    = var.run_cpu
-            memory = var.run_mem
-          }
-          requests = {
-            cpu    = var.run_cpu
-            memory = var.run_mem
-          }
-        }
-      }
+    timeout                          = "${var.run_timeout}s"
+    service_account                  = var.run_sa_email
+    max_instance_request_concurrency = var.run_container_concurrency
+    scaling {
+      min_instance_count = var.run_min_instances
+      max_instance_count = var.run_max_instances
     }
-    metadata {
-      annotations = {
-        "autoscaling.knative.dev/minScale" = var.run_min_instances
-        "autoscaling.knative.dev/maxScale" = var.run_max_instances
+    containers {
+      image = var.image_name_uri
+      env {
+        name  = "LOG_LEVEL"
+        value = var.log_level
+      }
+      env {
+        name  = "CONFIG_BUCKET_NAME"
+        value = var.bucket_name
+      }
+      env {
+        name  = "CONFIG_OBJECT_PATH"
+        value = var.config_path
+      }
+      resources {
+        limits = {
+          "cpu"    = var.run_cpu
+          "memory" = var.run_mem
+        }
       }
     }
   }
   traffic {
-    percent         = 100
-    latest_revision = true
-  }
-  metadata {
-    annotations = {
-      "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
-    }
+    percent = 100
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
   lifecycle {
     ignore_changes = [
-      template[0].spec[0].containers[0].image,
+      template[0].containers[0].image,
     ]
   }
 }
@@ -85,9 +72,10 @@ resource "google_cloud_run_service" "default" {
 
 // service SA
 
-resource "google_cloud_run_service_iam_member" "run_agent" {
-  service  = google_cloud_run_service.default.name
+resource "google_cloud_run_v2_service_iam_member" "run_agent" {
+  project  = var.project_id
   location = var.region
+  name     = google_cloud_run_v2_service.default.name
   role     = "roles/run.serviceAgent"
   member   = local.run_sa_email_member
 }
@@ -98,9 +86,9 @@ resource "google_cloud_run_service_iam_member" "run_agent" {
 
 resource "google_monitoring_alert_policy" "alert_error_log" {
   for_each     = local.monitoring_alert_policies_error_log
-  display_name = "${google_cloud_run_service.default.name}-${each.key}-error-monitoring"
+  display_name = "${google_cloud_run_v2_service.default.name}-${each.key}-error-monitoring"
   documentation {
-    content   = "Alerts for ${google_cloud_run_service.default.name} execution errors - ${each.key}"
+    content   = "Alerts for ${google_cloud_run_v2_service.default.name} execution errors - ${each.key}"
     mime_type = "text/markdown"
   }
   alert_strategy {
@@ -111,9 +99,9 @@ resource "google_monitoring_alert_policy" "alert_error_log" {
   }
   combiner = "OR"
   conditions {
-    display_name = "Log severity >= ${var.monitoring_alert_severity} for cloud run service ${google_cloud_run_service.default.name}"
+    display_name = "Log severity >= ${var.monitoring_alert_severity} for cloud run service ${google_cloud_run_v2_service.default.name}"
     condition_matched_log {
-      filter = "resource.type=\"cloud_run_revision\"\nresource.labels.service_name=\"${google_cloud_run_service.default.name}\"\nseverity>=\"${var.monitoring_alert_severity}\""
+      filter = "resource.type=\"cloud_run_revision\"\nresource.labels.service_name=\"${google_cloud_run_v2_service.default.name}\"\nseverity>=\"${var.monitoring_alert_severity}\""
     }
   }
   notification_channels = [each.value.channel_name]

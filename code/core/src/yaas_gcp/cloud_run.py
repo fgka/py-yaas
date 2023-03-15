@@ -106,7 +106,7 @@ def _run_client() -> run_v2.ServicesClient:
 async def update_service(*, name: str, path_value_lst: List[Tuple[str, Optional[Any]]]) -> run_v2.Service:
     # pylint: disable=line-too-long
     """Wrapper for :py:meth:`run_v2.ServicesClient.update_service`
-    (`documentation`_). The `path_value_lst` is a list of :py:class:`tuple` and
+    (`documentation`_ and `API`_). The `path_value_lst` is a list of :py:class:`tuple` and
     has the following format: ``[(<path>,<value>,)]`` where:
 
         - ``path`` follows a simple `x-path`_ like path to the value
@@ -122,6 +122,7 @@ async def update_service(*, name: str, path_value_lst: List[Tuple[str, Optional[
         Updated Cloud Run service.
 
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_update_service
+    .. _API: https://cloud.google.com/run/docs/reference/rpc/google.cloud.run.v2#google.cloud.run.v2.Services.UpdateService
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long

@@ -231,7 +231,7 @@ variable "log_level" {
 variable "run_sched_name" {
   description = "YAAS Scheduler Cloud Run name."
   type        = string
-  default     = "yaas-sched"
+  default     = "yaas-scheduler"
 }
 
 variable "run_scaler_name" {

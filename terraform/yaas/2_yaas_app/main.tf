@@ -167,13 +167,14 @@ module "yaas_scaler" {
 
 // pubsub SA
 
-resource "google_cloud_run_service_iam_member" "run_pubsub_invoker" {
+resource "google_cloud_run_v2_service_iam_member" "run_pubsub_invoker" {
   for_each = toset([
     module.yaas_sched.service.name,
     module.yaas_scaler.service.name,
   ])
-  service  = each.key
+  project  = var.project_id
   location = var.region
+  name     = each.key
   role     = "roles/run.invoker"
   member   = local.pubsub_sa_member
 }

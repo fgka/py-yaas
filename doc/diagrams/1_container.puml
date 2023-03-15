@@ -45,19 +45,19 @@ System_Boundary(extension, "Extension:\nsupported, but not implemented") {
 Rel(devOps, googleCal, "Scaling Requests", "Scaling requests as\ncalendar appointments")
 'Calendar caching
 Rel(eventCache, secretCache, "Get Credentials")
-Rel(eventCache, googleCal, "Get Requests", "Constantly refresh\nappointments' cache\nfor changes: pulling")
-Rel(eventCache, storageCache, "Store SQLite file", "It has all upcoming events, old events are archived")
+Rel(eventCache, googleCal, "Get Requests", "Constantly refreshes\nappointments' cache\nfor changes: pulling")
+Rel(eventCache, storageCache, "Store SQLite file", "It has all upcoming events and old events are archived")
 'Credentials caching
 Rel(credentialsCache, secretCache, "Google Calendar Credentials as JSON", "On a regular basis, refreshes the Google Calendar access credentials")
 'Requests: Google Cloud
 Rel(requestSender, enactQueue, "Publish Upcoming Scaling Requests", "All upcoming scaling requests that need to be immediately enacted")
 Rel(requestSender, eventCache, "Get Upcoming Requests", "Reads all upcoming events to be applied, usually with a short window like 30min.")
-Rel(enactQueue, requestEnacter, "PUSH: request", "Calls the scaler to immediately apply scaling request")
-Rel(requestEnacter, googleResource, "Apply scaling request", "Applies the specific scaling request to the specific resource")
+Rel(enactQueue, requestEnacter, "PUSH: request", "Calls the scaler to immediately enact scaling request")
+Rel(requestEnacter, googleResource, "Enact scaling request", "Enacts the specific scaling request to the specific resource")
 'Requests: Custom
 Rel(requestSender, nonGoogleEnactQueue, "Publish Upcoming Scaling Requests", "All upcoming scaling requests that need to be immediately enacted")
-Rel(nonGoogleEnactQueue, nonGoogleRequestEnacter, "PUSH: request", "Calls the scaler to immediately apply scaling request")
-Rel(nonGoogleRequestEnacter, nonGoogleResource, "Apply scaling request", "Applies the specific scaling request to the specific resource")
+Rel(nonGoogleEnactQueue, nonGoogleRequestEnacter, "PUSH: request", "Calls the scaler to immediately enact scaling request")
+Rel(nonGoogleRequestEnacter, nonGoogleResource, "Enact scaling request", "Enacts the specific scaling request to the specific resource")
 
 SHOW_LEGEND()
 @enduml

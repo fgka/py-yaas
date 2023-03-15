@@ -91,7 +91,7 @@ terraform apply ${TMP} && rm -f ${TMP}
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 4.55.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 4.57.0 |
 
 ## Modules
 
@@ -129,7 +129,7 @@ terraform apply ${TMP} && rm -f ${TMP}
 | <a name="input_run_scaler_name"></a> [run\_scaler\_name](#input\_run\_scaler\_name) | YAAS Scaler Cloud Run name. | `string` | `"yaas-scaler"` | no |
 | <a name="input_run_scaler_service_account_name"></a> [run\_scaler\_service\_account\_name](#input\_run\_scaler\_service\_account\_name) | YAAS Cloud Run Service Account identity for Scaler | `string` | `"yaas-run-scaler-sa"` | no |
 | <a name="input_run_scaler_service_account_roles"></a> [run\_scaler\_service\_account\_roles](#input\_run\_scaler\_service\_account\_roles) | All admin roles required to let YAAS manage resources | `list(string)` | <pre>[<br>  "roles/compute.instanceAdmin.v1",<br>  "roles/cloudfunctions.admin",<br>  "roles/cloudsql.admin",<br>  "roles/run.admin",<br>  "roles/iam.serviceAccountUser"<br>]</pre> | no |
-| <a name="input_run_sched_name"></a> [run\_sched\_name](#input\_run\_sched\_name) | YAAS Scheduler Cloud Run name. | `string` | `"yaas-sched"` | no |
+| <a name="input_run_sched_name"></a> [run\_sched\_name](#input\_run\_sched\_name) | YAAS Scheduler Cloud Run name. | `string` | `"yaas-scheduler"` | no |
 | <a name="input_run_sched_service_account_name"></a> [run\_sched\_service\_account\_name](#input\_run\_sched\_service\_account\_name) | YAAS Cloud Run Service Account identity for Scheduler | `string` | `"yaas-run-sched-sa"` | no |
 | <a name="input_run_sched_service_account_roles"></a> [run\_sched\_service\_account\_roles](#input\_run\_sched\_service\_account\_roles) | All roles required by YAAS Scheduler | `list(string)` | <pre>[<br>  "roles/iam.serviceAccountUser"<br>]</pre> | no |
 | <a name="input_scaler_image_name_uri"></a> [scaler\_image\_name\_uri](#input\_scaler\_image\_name\_uri) | YAAS Scaler docker application image URI. E.g.: LOCATION-docker.pkg.dev/PROJECT\_ID/yaas-docker/yaas\_sched:latest | `string` | `"us-docker.pkg.dev/cloudrun/container/hello"` | no |

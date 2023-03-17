@@ -1,5 +1,9 @@
 # Using Terraform to deploy all
 
+---
+:hand: *ALL* commands are assumed to be executed from this folder, `./terraform`
+---
+
 ## Authenticate (only once)
 
 ```bash

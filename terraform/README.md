@@ -245,8 +245,9 @@ Trigger build:
 ```bash
 TMP=$(mktemp)
 gcloud builds triggers run ${CICD_TF_TRIGGER_NAME} \
-  --branch=${GIT_BRANCH} \
+  --project=${PROJECT_ID} \
   --region=${REGION} \
+  --branch=${GIT_BRANCH} \
   --format=json \
   > ${TMP}
 
@@ -259,13 +260,18 @@ rm -f ${TMP}
 Stream logs:
 
 ```bash
-gcloud builds log ${BUILD_ID} --region=${REGION} --stream
+gcloud builds log ${BUILD_ID} \
+  --project=${PROJECT_ID} \
+  --region=${REGION} \
+  --stream
 ```
 
 Status:
 
 ```bash
-gcloud builds describe ${BUILD_ID} --region=${REGION}
+gcloud builds describe ${BUILD_ID} \
+  --project=${PROJECT_ID} \
+  --region=${REGION}
 ```
 
 ## (Only If Manual Deployment Is Required) [YAAS](./yaas/README.md)

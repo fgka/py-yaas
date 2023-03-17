@@ -9,6 +9,13 @@ export PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(p
 
 ## Refresh/Reset Calendar Credentials
 
+
+If you are coming from the [INSTALL.md](../../INSTALL.md#add-proper-calendar-credentials) you only need:
+
+```bash
+export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
+```
+
 Define:
 
 ```bash

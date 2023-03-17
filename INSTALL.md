@@ -278,7 +278,12 @@ For the secret name, use:
 Find secret:
 
 ```bash
-export SECRET_FULL_NAME=$(gcloud secrets list --format=json | jq -c -r ".[].name" | grep yaas)
+export SECRET_FULL_NAME=$(gcloud secrets list \
+  --project=${PROJECT_ID} \
+  --format=json \
+  | jq -c -r ".[].name" \
+  | grep yaas\
+)
 echo "Found secret: <${SECRET_FULL_NAME}>"
 ```
 

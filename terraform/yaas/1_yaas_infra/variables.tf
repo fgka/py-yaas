@@ -44,6 +44,7 @@ variable "run_sched_service_account_roles" {
   type        = list(string)
   default = [
     "roles/iam.serviceAccountUser", // for impersonation
+    "roles/logging.logWriter",
   ]
 }
 
@@ -54,8 +55,9 @@ variable "run_scaler_service_account_roles" {
     "roles/compute.instanceAdmin.v1",
     "roles/cloudfunctions.admin",
     "roles/cloudsql.admin",
-    "roles/run.admin",
     "roles/iam.serviceAccountUser", // for impersonation
+    "roles/logging.logWriter",
+    "roles/run.admin",
   ]
 }
 

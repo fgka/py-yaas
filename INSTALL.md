@@ -164,7 +164,7 @@ You need to enable Cloud Build to access your Github repo.
 1. Select ``Github`` as Source and click ``Continue``;
 1. (In a separate window) You should authenticate with your Github credentials;
 1. Select the appropriate repo;
-1. At ``Create a trigger`` click ``Done``;
+1. When you reach the step ``Create a trigger``, ignored it by clicking ``Done``;
 
 #### Visually
 <details>

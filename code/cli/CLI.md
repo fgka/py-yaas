@@ -38,6 +38,12 @@ echo "Secret: ${SECRET_FULL_NAME}"
 echo "Initial credentials: ${INITIAL_CREDENTIALS_JSON}"
 ```
 
+(If you never done it before) Install cycle:
+
+```bash
+poetry install
+```
+
 Refresh credentials:
 
 ```bash

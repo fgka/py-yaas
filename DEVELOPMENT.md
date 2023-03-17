@@ -175,6 +175,8 @@ poetry build
 
 </details>
 
+## Try Out The [CLI](./code/cli/CLI.md)
+
 # Building Assets
 
 ## Build Docker Image

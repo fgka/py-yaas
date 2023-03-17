@@ -131,9 +131,9 @@ echo "Terraform output in ${OUT_JSON}"
 jq -c -r ".backend_tf.value[]" ${OUT_JSON} \
   | while read FILENAME; \
     do \
-      local ACTUAL_FILENAME="${TF_DIR}/${FILENAME}"
-      local MODULE=${FILENAME##*.}; \
-      local OUTPUT="./${MODULE}/${TARGET_FILENAME}"; \
+      ACTUAL_FILENAME="${TF_DIR}/${FILENAME}"
+      MODULE=${FILENAME##*.}; \
+      OUTPUT="./${MODULE}/${TARGET_FILENAME}"; \
       echo "Copying: <${ACTUAL_FILENAME}> to <${OUTPUT}>"; \
       cp ${ACTUAL_FILENAME} ${OUTPUT}; \
     done

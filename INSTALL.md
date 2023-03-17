@@ -271,7 +271,7 @@ Here we will go through it.
 
 ### Install The Code Locally
 
-You need to go through the instructions in [DEVELOPMENT.md](./DEVELOPMENT.md) but without the deployment section.
+You need to go through the instructions in [DEVELOPMENT.md](./DEVELOPMENT.md) but feel free to skip the [Building Assets](https://github.com/fgka/py-yaas/blob/main/DEVELOPMENT.md#building-assets) section.
 Once you are finished setting up your python environment, you can go to [CLI.md](./code/CLI.md#refreshreset-calendar-credentials), section ``Refresh/Reset Calendar Credentials``.
 For the secret name, use:
 

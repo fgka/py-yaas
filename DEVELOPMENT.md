@@ -65,40 +65,6 @@ pyenv local 3.10.6
 
 </details>
 
-### Virtualenv
-
-Install Virtualenv and update `pip`:
-
-```bash
-pip3 install -U pip virtualenv poetry pre-commit checkov
-```
-
-Create virtualenv:
-
-```bash
-virtualenv -p python3 -q .venv
-```
-
-To activate your python virtualenv:
-
-```bash
-. .venv/bin/activate
-```
-
-Validate with:
-
-```bash
-python --version
-python3 --version
-```
-
-Expected:
-
-```text
-Python 3.10.6
-Python 3.10.6
-```
-
 Install packages:
 
 ```bash

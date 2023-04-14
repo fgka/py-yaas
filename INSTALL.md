@@ -121,10 +121,7 @@ Set scope:
 1. Download the JSON file corresponding to the credentials.
    - It is assumed you saved the file under ``${HOME}/calendar-api-initial.json``
 
-#### Disclaimer On Authorization Token
-
-If you are still using the testing scope be aware that you will need to repeat this procedure every 7 days.
-For more information read the section [Refresh token expiration](https://developers.google.com/identity/protocols/oauth2#expiration) in the [Google Identity](https://developers.google.com/identity) documentation on [OAuth 2.0](https://developers.google.com/identity/protocols/oauth2).
+#### [Disclaimer On Authorization Token](./OAUTH.md)
 
 #### Visually
 

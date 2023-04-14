@@ -23,3 +23,7 @@ Note that this document corresponds to the design in the specific branch.
 
 Here you will have the Terraform code to automatically deploy your infrastructure.
 Just follow the instructions in the [README.md](./terraform/README.md) file.
+
+## [Disclaimer On Authorization Token](./OAUTH.md)
+
+You should read this before you start.

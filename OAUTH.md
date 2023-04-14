@@ -1,7 +1,8 @@
 # Disclaimer On Authorization Token
 
 If you are still using the testing scope be aware that you will need to recreate the Google Calendar authorization token procedure every 7 days.
-This is the procedure in [CLI.md](./code/cli/CLI.md)
+This is the procedure in [CLI.md](./code/cli/CLI.md).
+
 For more information read the section [Refresh token expiration](https://developers.google.com/identity/protocols/oauth2#expiration) in the [Google Identity](https://developers.google.com/identity) documentation on [OAuth 2.0](https://developers.google.com/identity/protocols/oauth2).
 
 ## Check the setup

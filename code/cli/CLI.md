@@ -80,3 +80,9 @@ Confirmation:
 ![confirmation](../doc/calendar/authorize/4-calendar-authorize-confirmation.png)
 
 </details>
+
+## Disclaimer On Authorization Token
+
+If you are still using the testing scope be aware that you will need to repeat this procedure every 7 days.
+For more information read the section [Refresh token expiration](https://developers.google.com/identity/protocols/oauth2#expiration) in the [Google Identity](https://developers.google.com/identity) documentation on [OAuth 2.0](https://developers.google.com/identity/protocols/oauth2).
+

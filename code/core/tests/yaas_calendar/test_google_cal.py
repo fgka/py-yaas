@@ -78,13 +78,16 @@ async def test_list_upcoming_events_ok(
     monkeypatch.setattr(google_cal, google_cal._list_all_events.__name__, mocked_list_all_events)
 
     # When
-    result = await google_cal.list_upcoming_events(
-        calendar_id=calendar_id,
-        credentials_json=credentials_json,
-        amount=amount_arg,
-        start=0,
-        end=end,
-    )
+    result = [
+        item
+        async for item in google_cal.list_upcoming_events(
+            calendar_id=calendar_id,
+            credentials_json=credentials_json,
+            amount=amount_arg,
+            start=0,
+            end=end,
+        )
+    ]
     # Then
     assert result == expected
     assert credentials_json_arg == credentials_json

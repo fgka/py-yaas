@@ -123,6 +123,7 @@ verbose = false
 [tool.poetry.dependencies]
 # https://devguide.python.org/versions/#branchstatus
 python = "^3.10.0"  # End-of-life: 2026-10 (checked on 2022-09-01)
+caldav = "^1.2.1"
 aiofiles = "^23.1.0"
 attrs = "^22.2.0"
 bs4 = "^0.0.1"
@@ -140,6 +141,7 @@ google-cloud-error-reporting = "^1.9.0"
 google-cloud-pubsub = "^2.15.0"
 google-cloud-run = "^0.7.0"
 google-cloud-secret-manager = "^2.16.0"
+icalendar = "^5.0.5"
 pytz = "^2022.7.1"
 
 [tool.poetry.group.dev.dependencies]

@@ -1,6 +1,6 @@
 # YAAS Core library
 
-## [Development](../DEVELOPMENT.md)
+## [Development](../../DEVELOPMENT.md)
 
 ## Install
 

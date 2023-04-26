@@ -12,7 +12,7 @@ import pathlib
 import pickle
 import tempfile
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 import aiofiles
 from google.auth.transport import requests
@@ -37,7 +37,7 @@ async def list_upcoming_events(
     amount: Optional[int] = None,
     start: Optional[Union[datetime, int]] = None,
     end: Optional[Union[datetime, int]] = None,
-) -> Generator[Dict[str, Any], None, None]:
+) -> AsyncGenerator[Dict[str, Any], None]:
     # pylint: disable=line-too-long
     """Wraps the `list API`_.
 
@@ -162,7 +162,7 @@ async def list_upcoming_events(
         amount = None
     # Retrieve entries
     try:
-        async for event in _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list):
+        for event in _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list):
             yield event
     except Exception as err:
         raise RuntimeError(
@@ -187,22 +187,23 @@ async def _list_all_events(
     service: discovery.Resource,
     amount: Optional[int],
     kwargs_for_list: Dict[str, Any],
-) -> Generator[Dict[str, Any], None, None]:
+) -> AsyncGenerator[Dict[str, Any], None]:
     count = 0
     # pagination/while trick
     while amount is None or count < amount:
         await asyncio.sleep(0)
         events_result = service.events().list(**kwargs_for_list).execute()
         for event in events_result.get("items", []):
+            raise RuntimeError(f"event: {event} ({type(event)})")
             yield event
             await asyncio.sleep(0)
             count += 1
             if amount is not None and count >= amount:
-                raise StopAsyncIteration
+                return
         # next page token
         next_page_token = events_result.get("nextPageToken")
         if not next_page_token:
-            raise StopAsyncIteration
+            return
         # update kwargs only AFTER retrieving items AND getting the next page token
         kwargs_for_list["pageToken"] = next_page_token
 

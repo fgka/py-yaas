@@ -132,7 +132,8 @@ class _StubGoogleCalServiceResource:
         return self._events
 
 
-def test__list_all_events_ok_amount_given():
+@pytest.mark.asyncio
+async def test__list_all_events_ok_amount_given():
     # Given
     amount = 10
     list_results = []
@@ -141,7 +142,10 @@ def test__list_all_events_ok_amount_given():
     service = _StubGoogleCalServiceResource(result=list_results)
     kwargs_for_list = dict(arg_1="value_1", arg_2="value_2")
     # When
-    result = google_cal._list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list)
+    result = [
+        item
+        async for item in google_cal._list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list)
+    ]
     # Then
     assert len(result) == amount
     assert service.called.get(_StubGoogleCalServiceResource.events.__name__)

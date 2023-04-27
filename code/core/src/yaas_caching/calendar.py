@@ -5,7 +5,7 @@ import pathlib
 from typing import Any, Dict, Generator, List, Optional
 
 from yaas_caching import base, event
-from yaas_calendar import caldav, google_cal, parser
+from yaas_calendar import dav, google_cal, parser
 from yaas_common import logger, request
 
 _LOGGER = logger.get(__name__)
@@ -134,7 +134,7 @@ class ReadOnlyCalDavStore(ReadOnlyBaseCalendarStore):
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
     ) -> Generator[Any, None, None]:
-        async for item in caldav.list_upcoming_events(
+        async for item in dav.list_upcoming_events(
             url=self._caldav_url,
             username=self._username,
             secret_name=self._secret_name,
@@ -157,5 +157,5 @@ class ReadOnlyGoogleCalDavStore(ReadOnlyCalDavStore):
         secret_name: str,
         **kwargs,
     ):
-        caldav_url = caldav.GOOGLE_DAV_URL_TMPL % calendar_id
+        caldav_url = dav.GOOGLE_DAV_URL_TMPL % calendar_id
         super().__init__(caldav_url=caldav_url, username=username, secret_name=secret_name, **kwargs)

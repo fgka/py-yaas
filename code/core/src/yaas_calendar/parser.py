@@ -89,7 +89,9 @@ def to_request(
     _LOGGER.debug("Extracting '%s' from event '%s'(%s)", request.ScaleRequest.__name__, event, type(event))
     result = []
     # validation
-    if isinstance(event, dict):
+    if isinstance(event, icalendar.Calendar):
+        result = _to_request_from_icalendar_calendar(event)
+    elif isinstance(event, dict):
         result = _to_request_from_google_calendar_event(event)
     else:
         _LOGGER.warning(
@@ -138,11 +140,11 @@ def _to_request_from_icalendar_calendar(
             )
         else:
             start = None
-            start_vddd = value.get(_ICALENDAR_VEVENT_START_FIELD)
+            start_vddd = component.get(_ICALENDAR_VEVENT_START_FIELD)
             if isinstance(start_vddd, icalendar.prop.vDDDTypes):
                 start = start_vddd.dt
             json_event = json.dumps(value.to_ical().decode(const.ENCODING_UTF8))
-            result = _parse_event_description(description, start, json_event)
+            result = _parse_event_description(description.strip(), start, json_event)
     return result
 
 

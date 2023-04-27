@@ -23,6 +23,8 @@ from yaas_scaler import scaling, standard
 
 _TEST_DATA_DIR: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("test_data")
 TEST_DATA_CONFIG_JSON: pathlib.Path = _TEST_DATA_DIR / "config.json"
+TEST_DATA_EVENT_ICAL: pathlib.Path = _TEST_DATA_DIR / "event.ical"
+TEST_DATA_EVENT_ICAL_REQ_JSON: pathlib.Path = _TEST_DATA_DIR / "event.ical.json_line"
 
 ################
 # ScaleRequest #

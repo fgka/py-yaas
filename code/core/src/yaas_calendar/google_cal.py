@@ -12,7 +12,7 @@ import pathlib
 import pickle
 import tempfile
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiofiles
 from google.auth.transport import requests

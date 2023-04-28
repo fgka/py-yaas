@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Callable, Optional, Tuple
 
-from yaas_caching import base, calendar, event, factory, version_control
+from yaas_caching import base, event, factory, version_control
 from yaas_calendar import google_cal
 from yaas_command import pubsub_dispatcher
 from yaas_common import command, logger
@@ -99,8 +99,7 @@ async def update_cache(
         merge_strategy = _merge_strategy_always_a
     # logic: snapshots
     calendar_snapshot = await _calendar_snapshot(
-        calendar_id=configuration.calendar_config.calendar_id,
-        secret_name=configuration.calendar_config.secret_name,
+        calendar_config=configuration.calendar_config,
         start_ts_utc=start_ts_utc,
         end_ts_utc=end_ts_utc,
     )
@@ -143,15 +142,14 @@ def _validate_configuration(value: config.Config) -> None:
 
 
 async def _calendar_snapshot(
-    *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
+    *, calendar_config: config.CalendarCacheConfig, start_ts_utc: int, end_ts_utc: int
 ) -> event.EventSnapshot:
-    result = calendar.ReadOnlyGoogleCalendarStore(calendar_id=calendar_id, secret_name=secret_name)
-    async with result as obj:
+    calendar_store = factory.calendar_store_from_cache_config(calendar_config)
+    async with calendar_store as obj:
         result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     _LOGGER.info(
-        "Got calendar snapshot using id <%s> and secret <%s>. Range <%s> and amount of requests: <%d>",
-        calendar_id,
-        secret_name,
+        "Got calendar snapshot from <%s>. Range <%s> and amount of requests: <%d>",
+        calendar_config,
         result.range(),
         result.amount_requests(),
     )

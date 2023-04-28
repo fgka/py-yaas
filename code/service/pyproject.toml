@@ -125,7 +125,7 @@ verbose = false
 python = "^3.10.0"  # End-of-life: 2026-10 (checked on 2022-09-01)
 flask = {extras = ["async"], version = "^2.2.3"}
 gunicorn = "^20.1.0"
-py-yaas-core = "^1.0"
+py-yaas-core = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"

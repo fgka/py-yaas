@@ -152,7 +152,7 @@ async def _fetch_events(
     try:
         count = 0
         for event in cal.search(start=start, end=end, event=True, expand=True):
-            if count >= amount:
+            if amount is not None and count >= amount:
                 return
             await asyncio.sleep(0)
             yield event

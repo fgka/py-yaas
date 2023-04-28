@@ -2,11 +2,13 @@
 """Store interface for Google Calendar as event source."""
 import abc
 import pathlib
-from typing import Any, AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+
+import icalendar
 
 from yaas_caching import base, event
 from yaas_calendar import dav, google_cal, parser
-from yaas_common import logger, request
+from yaas_common import logger, preprocess, request
 
 _LOGGER = logger.get(__name__)
 
@@ -38,7 +40,7 @@ class ReadOnlyBaseCalendarStore(base.ReadOnlyStoreContextManager):
     @abc.abstractmethod
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> AsyncGenerator[Any, None]:
+    ) -> AsyncGenerator[Union[Dict[str, Any], icalendar.Calendar], None]:
         pass
 
 
@@ -59,17 +61,17 @@ class ReadOnlyGoogleCalendarStore(ReadOnlyBaseCalendarStore):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        if not isinstance(calendar_id, str):
-            raise TypeError(f"Calendar ID must be a string. Got: <{calendar_id}>({type(calendar_id)})")
-        if not isinstance(credentials_json, pathlib.Path) and not isinstance(secret_name, str):
+        if credentials_json is None and secret_name is None:
             raise TypeError(
                 f"Either the secret name or JSON file for credentials be provided. "
                 f"Got: <{credentials_json}>({type(credentials_json)}) "
                 f"and <{secret_name}>({type(secret_name)})"
             )
-        self._calendar_id = calendar_id
-        self._credentials_json = credentials_json
-        self._secret_name = secret_name
+        self._calendar_id = preprocess.string(calendar_id, "calendar_id")
+        self._credentials_json = preprocess.validate_type(
+            credentials_json, "credentials_json", pathlib.Path, is_none_valid=True
+        )
+        self._secret_name = preprocess.string(secret_name, "secret_name", is_none_valid=True)
 
     @property
     def calendar_id(self) -> str:
@@ -91,7 +93,7 @@ class ReadOnlyGoogleCalendarStore(ReadOnlyBaseCalendarStore):
 
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> AsyncGenerator[Any, None]:
+    ) -> AsyncGenerator[Union[Dict[str, Any], icalendar.Calendar], None]:
         async for item in google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,
             credentials_json=self._credentials_json,
@@ -119,15 +121,9 @@ class ReadOnlyCalDavStore(ReadOnlyBaseCalendarStore):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        if not isinstance(caldav_url, str):
-            raise TypeError(f"CalDAV URL must be a string. Got: <{caldav_url}>({type(caldav_url)})")
-        if not isinstance(username, str):
-            raise TypeError(f"Username must be provided. " f"Got <{username}>({type(username)})")
-        if not isinstance(secret_name, str):
-            raise TypeError(f"Secret name must be provided. " f"Got <{secret_name}>({type(secret_name)})")
-        self._caldav_url = caldav_url
-        self._username = username
-        self._secret_name = secret_name
+        self._caldav_url = preprocess.string(caldav_url, "caldav_url")
+        self._username = preprocess.string(username, "username")
+        self._secret_name = preprocess.string(secret_name, "secret_name")
 
     @property
     def caldav_url(self) -> str:
@@ -149,7 +145,7 @@ class ReadOnlyCalDavStore(ReadOnlyBaseCalendarStore):
 
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> AsyncGenerator[Any, None]:
+    ) -> AsyncGenerator[Union[Dict[str, Any], icalendar.Calendar], None]:
         async for item in dav.list_upcoming_events(
             url=self._caldav_url,
             username=self._username,
@@ -173,5 +169,6 @@ class ReadOnlyGoogleCalDavStore(ReadOnlyCalDavStore):
         secret_name: str,
         **kwargs,
     ):
+        calendar_id = preprocess.string(calendar_id, "calendar_id")
         caldav_url = dav.GOOGLE_DAV_URL_TMPL % calendar_id
         super().__init__(caldav_url=caldav_url, username=username, secret_name=secret_name, **kwargs)

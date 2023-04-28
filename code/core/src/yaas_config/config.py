@@ -11,7 +11,9 @@ from yaas_gcp import gcs
 class CacheType(dto_defaults.EnumWithFromStrIgnoreCase):
     """Supported caching."""
 
-    CALENDAR = "calendar"
+    CALENDAR_API = "calendar_api"
+    CALDAV = "caldav"
+    GOOGLE_CALDAV = "google_caldav"
     LOCAL_JSON_LINE = "local_json"
     LOCAL_SQLITE = "local_sqlite"
     GCS_SQLITE = "gcs_sqlite"
@@ -62,8 +64,12 @@ class CacheConfig(dto_defaults.HasFromJsonString):
         # get the type
         base_cfg = factory_fn(CacheConfig, *args, **kwargs)
         # factory logic
-        if base_cfg.type == CacheType.CALENDAR.value:
-            result = factory_fn(CalendarCacheConfig, *args, **kwargs)
+        if base_cfg.type == CacheType.CALENDAR_API.value:
+            result = factory_fn(CalendarApiCacheConfig, *args, **kwargs)
+        elif base_cfg.type == CacheType.CALDAV.value:
+            result = factory_fn(CaldavCacheConfig, *args, **kwargs)
+        elif base_cfg.type == CacheType.GOOGLE_CALDAV.value:
+            result = factory_fn(GoogleCaldavCacheConfig, *args, **kwargs)
         elif base_cfg.type == CacheType.GCS_SQLITE.value:
             result = factory_fn(GcsCacheConfig, *args, **kwargs)
         elif base_cfg.type == CacheType.LOCAL_JSON_LINE.value:
@@ -95,13 +101,50 @@ class CacheConfig(dto_defaults.HasFromJsonString):
 
 @attrs.define(**const.ATTRS_DEFAULTS)
 class CalendarCacheConfig(CacheConfig):
-    """Calendar configurations."""
+    """Common calendar cache configurations."""
 
-    calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
     secret_name: str = attrs.field(validator=attrs.validators.instance_of(str))
 
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class CalendarApiCacheConfig(CalendarCacheConfig):
+    """Google Calendar API configurations."""
+
+    calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
+
     def _is_type_valid_subclass(self, name: str, value: str) -> None:
-        valid_type = CacheType.CALENDAR
+        valid_type = CacheType.CALENDAR_API
+        if CacheType.from_str(value) != valid_type:
+            raise ValueError(f"Value for field {name} must be {valid_type}")
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class BaseCaldavCacheConfig(CalendarCacheConfig):
+    """Base CalDAV configurations."""
+
+    username: str = attrs.field(validator=attrs.validators.instance_of(str))
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class CaldavCacheConfig(BaseCaldavCacheConfig):
+    """CalDAV configurations."""
+
+    caldav_url: str = attrs.field(validator=attrs.validators.instance_of(str))
+
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
+        valid_type = CacheType.CALDAV
+        if CacheType.from_str(value) != valid_type:
+            raise ValueError(f"Value for field {name} must be {valid_type}")
+
+
+@attrs.define(**const.ATTRS_DEFAULTS)
+class GoogleCaldavCacheConfig(BaseCaldavCacheConfig):
+    """Google Calendar CalDAV configurations."""
+
+    calendar_id: str = attrs.field(validator=attrs.validators.instance_of(str))
+
+    def _is_type_valid_subclass(self, name: str, value: str) -> None:
+        valid_type = CacheType.GOOGLE_CALDAV
         if CacheType.from_str(value) != valid_type:
             raise ValueError(f"Value for field {name} must be {valid_type}")
 

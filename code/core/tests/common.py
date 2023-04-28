@@ -22,7 +22,9 @@ from yaas_scaler import scaling, standard
 #############
 
 _TEST_DATA_DIR: pathlib.Path = pathlib.Path(__file__).parent.parent.joinpath("test_data")
-TEST_DATA_CONFIG_JSON: pathlib.Path = _TEST_DATA_DIR / "config.json"
+TEST_DATA_CONFIG_CAL_API_JSON: pathlib.Path = _TEST_DATA_DIR / "config_cal_api.json"
+TEST_DATA_CONFIG_CALDAV_JSON: pathlib.Path = _TEST_DATA_DIR / "config_caldav.json"
+TEST_DATA_CONFIG_GOOGLE_CALDAV_JSON: pathlib.Path = _TEST_DATA_DIR / "config_google_caldav.json"
 TEST_DATA_EVENT_ICAL: pathlib.Path = _TEST_DATA_DIR / "event.ical"
 TEST_DATA_EVENT_ICAL_REQ_JSON: pathlib.Path = _TEST_DATA_DIR / "event.ical.json_line"
 
@@ -375,8 +377,8 @@ _TEST_PUBSUB_TOPIC: str = "test_yaas_pubsub_topic"
 
 # pylint: disable=consider-using-with
 TEST_CONFIG_LOCAL_JSON: config.Config = config.Config(
-    calendar_config=config.CalendarCacheConfig(
-        type=config.CacheType.CALENDAR.value,
+    calendar_config=config.CalendarApiCacheConfig(
+        type=config.CacheType.CALENDAR_API.value,
         calendar_id="test_calendar_id",
         secret_name="test_calendar_secret_name",
     ),

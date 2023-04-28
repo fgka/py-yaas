@@ -10,7 +10,7 @@ from yaas_common import logger
 
 
 class TestOneLineExceptionFormatter:
-    def setup(self):
+    def setup_method(self):
         self.instance = logger.OneLineExceptionFormatter(logger._LOGGER_FORMAT)
 
     def test_ctor_ok_empty_format(self):

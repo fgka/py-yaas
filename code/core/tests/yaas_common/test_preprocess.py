@@ -1,5 +1,5 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
-# pylint: disable=missing-module-docstring,protected-access,too-few-public-methods,invalid-name,missing-class-docstring
+# pylint: disable=missing-module-docstring,broad-exception-caught
 # type: ignore
 from typing import Any
 
@@ -51,8 +51,7 @@ def test_validate_type(value: Any, cls: type, is_none_valid: bool, default_value
     except Exception as err:
         if not exp_error:
             raise err
-        else:
-            assert isinstance(err, exp_error)
+        assert isinstance(err, exp_error)
 
 
 @pytest.mark.parametrize(
@@ -91,8 +90,7 @@ def test_string(
     except Exception as err:
         if not exp_error:
             raise err
-        else:
-            assert isinstance(err, exp_error)
+        assert isinstance(err, exp_error)
 
 
 @pytest.mark.parametrize(
@@ -141,5 +139,4 @@ def test_integer(
     except Exception as err:
         if not exp_error:
             raise err
-        else:
-            assert isinstance(err, exp_error)
+        assert isinstance(err, exp_error)

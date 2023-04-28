@@ -28,7 +28,7 @@ def _create_request(
 
 
 class TestStandardScalingCommandParser:
-    def setup(self):
+    def setup_method(self):
         self.obj = standard.StandardScalingCommandParser()
 
     @pytest.mark.parametrize(

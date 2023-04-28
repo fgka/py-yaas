@@ -37,7 +37,6 @@ line_length = 120
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-strict = true
 testpaths = "tests"
 log_cli = true
 log_cli_level = "ERROR"

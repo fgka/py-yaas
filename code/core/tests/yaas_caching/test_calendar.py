@@ -1,9 +1,10 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,missing-class-docstring,redefined-outer-name,attribute-defined-outside-init
 # type: ignore
+import asyncio
 import pathlib
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 import pytest
 
@@ -19,7 +20,7 @@ _TEST_SCALE_REQUEST: request.ScaleRequest = common.create_scale_request()
 
 
 class TestReadOnlyGoogleCalendarStore:
-    def setup(self):
+    def setup_method(self):
         self.object = calendar.ReadOnlyGoogleCalendarStore(
             calendar_id=_TEST_CALENDAR_ID,
             credentials_json=_TEST_CREDENTIALS_JSON,
@@ -50,12 +51,14 @@ class TestReadOnlyGoogleCalendarStore:
         end_ts_utc = start_ts_utc + 123
         event_lst = [{"key": "value"}]
 
-        async def mocked_list_upcoming_events(**kwargs) -> List[Dict[str, Any]]:
+        async def mocked_list_upcoming_events(**kwargs) -> AsyncGenerator[Dict[str, Any], None]:
             assert kwargs.get("calendar_id") == _TEST_CALENDAR_ID
             assert kwargs.get("credentials_json") == _TEST_CREDENTIALS_JSON
             assert kwargs.get("start") == start_ts_utc
             assert kwargs.get("end") == end_ts_utc
-            return event_lst
+            for event in event_lst:
+                yield event
+                await asyncio.sleep(0)
 
         def mocked_to_request(*, event: Dict[str, Any]) -> List[request.ScaleRequest]:
             assert event == event_lst[0]

@@ -1,12 +1,13 @@
 # vim: ai:sw=4:ts=4:sta:et:fo=croql
 # pylint: disable=missing-module-docstring,protected-access,too-few-public-methods,invalid-name,missing-class-docstring
 # type: ignore
+import asyncio
 import json
 import pathlib
 import pickle
 import tempfile
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import pytest
 from google.auth.transport import requests
@@ -67,12 +68,16 @@ async def test_list_upcoming_events_ok(
         credentials_json_arg = kwargs.get("credentials_json")
         return service_arg
 
-    def mocked_list_all_events(*, service: Any, amount: int, kwargs_for_list: Dict[str, Any]) -> List[Any]:
+    async def mocked_list_all_events(
+        *, service: Any, amount: int, kwargs_for_list: Dict[str, Any]
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         nonlocal amount_used, kwargs_for_list_arg
         amount_used = amount
         kwargs_for_list_arg = kwargs_for_list
         assert service == service_arg
-        return expected
+        for event in expected:
+            yield event
+            await asyncio.sleep(0)
 
     monkeypatch.setattr(google_cal, google_cal._calendar_service.__name__, mocked_calendar_service)
     monkeypatch.setattr(google_cal, google_cal._list_all_events.__name__, mocked_list_all_events)

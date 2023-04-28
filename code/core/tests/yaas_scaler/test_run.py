@@ -93,7 +93,7 @@ class TestCloudRunScalingDefinition:
 
 
 class TestCloudRunScaler:
-    def setup(self):
+    def setup_method(self):
         self.definition = [
             _create_cloud_run_scaling_definition(parameter=param, target=ndx)
             for ndx, param in enumerate(run.CloudRunCommandType)

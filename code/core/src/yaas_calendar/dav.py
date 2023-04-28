@@ -50,7 +50,6 @@ async def list_upcoming_events(
     start: Optional[Union[datetime, int]] = None,
     end: Optional[Union[datetime, int]] = None,
 ) -> AsyncGenerator[icalendar.Calendar, None]:
-    # pylint: disable=line-too-long
     """
 
     Args:
@@ -66,7 +65,6 @@ async def list_upcoming_events(
 
     .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
     """
-    # pylint: enable=line-too-long
     _LOGGER.debug("Listing upcoming events using: <%s>", locals())
     # input validation
     url = preprocess.string(url, "url")

@@ -37,7 +37,7 @@ async def test__fetch_events_ok(monkeypatch):
 
     monkeypatch.setattr(cal, caldav.Calendar.search.__name__, mocked_search)
     # When
-    result = [item async for item in dav._fetch_events(cal, start_time, end_time)]
+    result = [item async for item in dav._fetch_events(cal, start_time, end_time, 100)]
     # Then
     assert result
     assert len(result) == 1
@@ -50,7 +50,9 @@ class _MyCalendar:
         self.called = None
         self.events = events
 
-    def search(self, start: int, end: int, event: bool, expand: bool) -> List[caldav.Event]:
+    def search(  # pylint: disable=unused-argument
+        self, start: int, end: int, event: bool, expand: bool
+    ) -> List[caldav.Event]:
         self.called = locals()
         return self.events
 

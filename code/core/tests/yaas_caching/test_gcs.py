@@ -13,7 +13,7 @@ _TEST_DB_OBJECT_PATH: str = "path/to/sql.db"
 
 
 class TestGcsObjectStoreContextManager:
-    def setup(self):
+    def setup_method(self):
         self.instance = gcs.GcsObjectStoreContextManager(
             bucket_name=_TEST_BUCKET_NAME, db_object_path=_TEST_DB_OBJECT_PATH
         )

@@ -2,7 +2,7 @@
 """Store interface for Google Calendar as event source."""
 import abc
 import pathlib
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, AsyncGenerator, List, Optional
 
 from yaas_caching import base, event
 from yaas_calendar import dav, google_cal, parser
@@ -12,6 +12,16 @@ _LOGGER = logger.get(__name__)
 
 
 class ReadOnlyBaseCalendarStore(base.ReadOnlyStoreContextManager):
+    """
+    Provides a generalization of calendar event fetching.
+    """
+
+    @abc.abstractmethod
+    def calendar_source(self) -> str:
+        """
+        Calendar identifier.
+        """
+
     async def _read_ro(
         self,
         *,
@@ -23,12 +33,12 @@ class ReadOnlyBaseCalendarStore(base.ReadOnlyStoreContextManager):
             for req in parser.to_request(event=item):
                 if start_ts_utc <= req.timestamp_utc <= end_ts_utc:
                     request_lst.append(req)
-        return event.EventSnapshot.from_list_requests(source=self._calendar_id, request_lst=request_lst)
+        return event.EventSnapshot.from_list_requests(source=self.calendar_source(), request_lst=request_lst)
 
     @abc.abstractmethod
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> Generator[Any, None, None]:
+    ) -> AsyncGenerator[Any, None]:
         pass
 
 
@@ -66,6 +76,9 @@ class ReadOnlyGoogleCalendarStore(ReadOnlyBaseCalendarStore):
         """Google Calendar ID."""
         return self._calendar_id
 
+    def calendar_source(self) -> str:
+        return self.calendar_id
+
     @property
     def credentials_json(self) -> pathlib.Path:
         """Google Calendar corresponding credentials JSON file."""
@@ -78,7 +91,7 @@ class ReadOnlyGoogleCalendarStore(ReadOnlyBaseCalendarStore):
 
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> Generator[Any, None, None]:
+    ) -> AsyncGenerator[Any, None]:
         async for item in google_cal.list_upcoming_events(
             calendar_id=self._calendar_id,
             credentials_json=self._credentials_json,
@@ -121,6 +134,9 @@ class ReadOnlyCalDavStore(ReadOnlyBaseCalendarStore):
         """CalDAV URL."""
         return self._caldav_url
 
+    def calendar_source(self) -> str:
+        return self.caldav_url
+
     @property
     def username(self) -> str:
         """CalDAV username."""
@@ -133,7 +149,7 @@ class ReadOnlyCalDavStore(ReadOnlyBaseCalendarStore):
 
     async def _calendar_events(
         self, start_ts_utc: Optional[int] = None, end_ts_utc: Optional[int] = None
-    ) -> Generator[Any, None, None]:
+    ) -> AsyncGenerator[Any, None]:
         async for item in dav.list_upcoming_events(
             url=self._caldav_url,
             username=self._username,

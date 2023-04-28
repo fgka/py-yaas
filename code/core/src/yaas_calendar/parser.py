@@ -103,7 +103,7 @@ def to_request(
     return result
 
 
-def _to_request_from_google_calendar_event(
+def _to_request_from_google_calendar_event(  # pylint: disable=invalid-name
     value: Dict[str, Any],
 ) -> List[request.ScaleRequest]:
     result = []
@@ -122,7 +122,7 @@ def _to_request_from_google_calendar_event(
     return result
 
 
-def _to_request_from_icalendar_calendar(
+def _to_request_from_icalendar_calendar(  # pylint: disable=invalid-name
     value: icalendar.Calendar,
 ) -> List[request.ScaleRequest]:
     """

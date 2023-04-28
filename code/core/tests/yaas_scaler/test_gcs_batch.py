@@ -121,7 +121,7 @@ _TEST_GCS_CONTENT: Dict[str, Any] = {
 
 
 class TestGcsBatchScaler:
-    def setup(self):
+    def setup_method(self):
         self.definition = [
             _create_gcs_batch_scaling_definition(parameter=f"{_TEST_GCS_BATCH_COMMAND_STR}.{ndx}") for ndx in range(11)
         ]
@@ -291,7 +291,7 @@ def _create_request(
 
 
 class TestStandardScalingCommandParser:
-    def setup(self):
+    def setup_method(self):
         self.obj = gcs_batch.GcsBatchCommandParser(topic_to_pubsub=_TEST_TOPIC_TO_PUBSUB)
 
     def test_scaler_ok(self):

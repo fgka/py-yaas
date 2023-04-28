@@ -162,7 +162,7 @@ async def list_upcoming_events(
         amount = None
     # Retrieve entries
     try:
-        for event in _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list):
+        async for event in _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list):
             yield event
     except Exception as err:
         raise RuntimeError(
@@ -194,7 +194,6 @@ async def _list_all_events(
         await asyncio.sleep(0)
         events_result = service.events().list(**kwargs_for_list).execute()
         for event in events_result.get("items", []):
-            raise RuntimeError(f"event: {event} ({type(event)})")
             yield event
             await asyncio.sleep(0)
             count += 1
@@ -365,13 +364,13 @@ async def _secret_credentials(
     if not isinstance(value, str):
         value = os.environ.get(_CREDENTIALS_SECRET_ENV_VAR_NAME, None)
     if value:
-        result = await secrets.get(value)
+        secret_content = await secrets.get(value)
         _LOGGER.info(
             "Retrieved cal credentials from cloud secret name: <%s>(%s)",
             value,
             type(value),
         )
-        await _persist_json_credentials(json.loads(result), credentials_json)
+        await _persist_json_credentials(json.loads(secret_content), credentials_json)
         result = _json_credentials(credentials_json)
     return result
 

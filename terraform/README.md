@@ -176,6 +176,7 @@ ${SED} -i \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
   -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${EMAIL}/g" \
   ${TF_DIR}/terraform.tfvars
 ```
 

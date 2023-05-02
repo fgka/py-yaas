@@ -7,8 +7,19 @@ locals {
   pubsub_sa_member = "serviceAccount:${var.pubsub_sa_email}"
   // config JSON
   terraform_module_root_dir = path.module
-  config_json_tmpl          = "${local.terraform_module_root_dir}/${var.config_json_tmpl}"
+  config_json_api_tmpl      = "${local.terraform_module_root_dir}/${var.config_json_api_tmpl}"
+  config_json_dav_tmpl      = "${local.terraform_module_root_dir}/${var.config_json_dav_tmpl}"
+  config_json_tmpl          = var.gmail_username != "" ? local.config_json_dav_tmpl : local.config_json_api_tmpl
   local_config_json         = "${local.terraform_module_root_dir}/output/config.json.local"
+  config_json_template_base_values = {
+    CALENDAR_ID                 = var.calendar_id,
+    SECRET_NAME                 = var.secrets_calendar_credentials_id,
+    BUCKET_NAME                 = var.bucket_name,
+    SQLITE_OBJECT_PATH          = var.sqlite_cache_path,
+    PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_standard_request_id
+    TOPIC_TO_PUBSUB_PATH        = var.topic_to_pubsub_gcs_path
+  }
+  config_json_template_values = var.gmail_username != "" ? merge(local.config_json_template_base_values, { EMAIL = var.gmail_username }) : local.config_json_template_base_values
   // topic_to_pubsub_gcs
   batch_topic_to_pubsub_path  = "${var.topic_to_pubsub_gcs_path}/gcs"
   local_batch_topic_to_pubsub = "${local.terraform_module_root_dir}/output/topic_gcs.local"
@@ -26,14 +37,7 @@ locals {
 /////////////////
 
 resource "local_file" "config_json" {
-  content = templatefile(local.config_json_tmpl, {
-    CALENDAR_ID                 = var.calendar_id,
-    SECRET_NAME                 = var.secrets_calendar_credentials_id,
-    BUCKET_NAME                 = var.bucket_name,
-    SQLITE_OBJECT_PATH          = var.sqlite_cache_path,
-    PUBSUB_TOPIC_ENACT_STANDARD = var.pubsub_enact_standard_request_id
-    TOPIC_TO_PUBSUB_PATH        = var.topic_to_pubsub_gcs_path
-  })
+  content  = templatefile(local.config_json_tmpl, local.config_json_template_values)
   filename = local.local_config_json
 }
 

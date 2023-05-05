@@ -7,7 +7,9 @@ from yaas_config import config
 _LOGGER = logger.get(__name__)
 
 
-def calendar_store_from_cache_config(value: config.CalendarCacheConfig) -> base.ReadOnlyStoreContextManager:
+def calendar_store_from_cache_config(  # pylint: disable=invalid-name
+    value: config.CalendarCacheConfig,
+) -> base.ReadOnlyStoreContextManager:
     """Based on the configuration will create the proper py:class:`base.ReadOnlyStoreContextManager` instance.
 
     Args:

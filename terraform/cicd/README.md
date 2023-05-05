@@ -178,6 +178,7 @@ No resources.
 | <a name="input_github_branch"></a> [github\_branch](#input\_github\_branch) | GitHub repo branch to track | `string` | `"main"` | no |
 | <a name="input_github_owner"></a> [github\_owner](#input\_github\_owner) | GitHub repo owner | `string` | n/a | yes |
 | <a name="input_github_repo_name"></a> [github\_repo\_name](#input\_github\_repo\_name) | GitHub repo name | `string` | n/a | yes |
+| <a name="input_gmail_username"></a> [gmail\_username](#input\_gmail\_username) | Gmail username (email). If given will assume CalDAV access to Google Calendar. | `string` | `""` | no |
 | <a name="input_monitoring_email_address"></a> [monitoring\_email\_address](#input\_monitoring\_email\_address) | When YAAS fails, it needs to send the alert to a specific email. | `string` | n/a | yes |
 | <a name="input_object_age_in_days"></a> [object\_age\_in\_days](#input\_object\_age\_in\_days) | How long to keep objects, in days, before automatically remove them. | `number` | `7` | no |
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | Project ID where to deploy and source of data. | `string` | n/a | yes |

@@ -10,9 +10,10 @@ locals {
   yaas_py_modules_lst            = [for pkg in var.yaas_py_modules : "\"${pkg}\""]
   // plan args
   common_tf_plan_args = tomap({
-    project_id  = var.project_id,
-    region      = var.region,
-    calendar_id = var.calendar_id
+    project_id     = var.project_id,
+    region         = var.region,
+    calendar_id    = var.calendar_id,
+    gmail_username = var.gmail_username,
   })
   tf_cicd_plan_args = merge(local.common_tf_plan_args, tomap({
     terraform_bucket_name          = var.terraform_bucket_name

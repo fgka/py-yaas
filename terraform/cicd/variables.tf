@@ -190,6 +190,12 @@ variable "calendar_id" {
   type        = string
 }
 
+variable "gmail_username" {
+  description = "Gmail username (email). If given will assume CalDAV access to Google Calendar."
+  type        = string
+  default     = ""
+}
+
 variable "yaas_pip_package" {
   description = "Python package full name with version, e.g.: [\"py-yaas-service>=1.0\", \"py-yaas-core>=1.0\"]"
   type        = list(string)

@@ -284,6 +284,22 @@ gcloud builds describe ${BUILD_ID} \
   --region=${REGION}
 ```
 
+## Check Your YAAS Configuration
+
+```bash
+export TF_DIR="./yaas"
+OUT_JSON=$(mktemp)
+terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+GS_CONFIG_JSON=$(jq -c -r ".yaas_build.value.gcs_config_json" ${OUT_JSON})
+echo "Google storage URI for config JSON: <${GS_CONFIG_JSON}>"
+
+rm -f ${OUT_JSON}
+
+gsutil cat ${GS_CONFIG_JSON}
+```
+
 ## (Only If Manual Deployment Is Required) [YAAS](./yaas/README.md)
 
 **NOTE:** This should not be required at all, use the Cloud Build triggers.

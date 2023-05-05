@@ -188,7 +188,7 @@ export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 ### [Continue Deployment](./terraform/README.md#bootstrap)
 
-First, finishe defining the missing bits in [Definitions](./terraform/README.md#definitions).
+First, finish defining the missing bits in [Definitions](./terraform/README.md#definitions).
 
 Please go to ``terraform`` directory and redo [bootstrap](./terraform/README.md#bootstrap),
 but this time continue until finished.
@@ -205,7 +205,6 @@ Here we will go through it.
 ### Install The Code Locally
 
 You need to go through the instructions in [DEVELOPMENT.md](./DEVELOPMENT.md) but feel free to skip the [Building Assets](./DEVELOPMENT.md#building-assets) section.
-Once you are finished setting up your python environment, you can go to [CLI.md](./code/cli/CLI.md#refreshreset-calendar-credentials), section ``Refresh/Reset Calendar Credentials``.
 For the secret name, use:
 
 Find secret:
@@ -220,14 +219,54 @@ export SECRET_FULL_NAME=$(gcloud secrets list \
 echo "Found secret: <${SECRET_FULL_NAME}>"
 ```
 
+#### Calendar API
+
 If you are using [Calendar API](./GOOGLE_CALENDAR_API.md), check that your set:
 
 ```bash
 export INITIAL_CREDENTIALS_JSON="${HOME}/calendar-api-initial.json"
+
+ls -l ${INITIAL_CREDENTIALS_JSON}
 ```
+
+#### CalDAV
 
 If you are using [CalDAV](./GOOGLE_CALDAV.md), check that you have:
 
 ```bash
 export GMAIL_USERNAME="YOUR_EMAIL@gmail.com"
 ```
+
+### Add Secret Version
+
+You will be furnishing the secret create by Terraform with the proper content.
+
+#### Calendar API
+
+```bash
+gcloud secrets versions add ${SECRET_FULL_NAME} \
+  --project=${PROJECT_ID} \
+  --data-file=${INITIAL_CREDENTIALS_JSON}
+```
+
+#### CalDAV
+
+```bash
+echo -n "YOUR_APP_PASSWORD" | \
+gcloud secrets versions add ${SECRET_FULL_NAME} \
+  --project=${PROJECT_ID} \
+  --data-file=-
+```
+
+### Test Your Access
+
+This is to make sure all is fine with your access to the calendar.
+In case of Calendar API this step is mandatory.
+
+#### Calendar API
+
+Go to [CLI.md](./code/cli/CLI.md#refreshreset-calendar-credentials), section ``Refresh/Reset Calendar Credentials``.
+
+#### CalDAV
+
+Go to [CLI.md](./code/cli/CLI.md#test-caldav-access), section ``Test CalDAV access``.

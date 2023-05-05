@@ -42,6 +42,12 @@ export GITHUB_REPO=$(basename `git rev-parse --show-toplevel`)
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 ```
 
+For CalDAV:
+
+```bash
+export GMAIL_USERNAME="YOUR_USERNAME@gmail.com"
+```
+
 Calendar ID:
 
 ```bash
@@ -52,7 +58,8 @@ Check:
 
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
-echo "Email: ${NOTIFICATION_EMAIL}"
+echo "Notification Email: ${NOTIFICATION_EMAIL}"
+echo "CalDAV Email: ${GMAIL_USERNAME}"
 echo "PIP: ${PIP_PACKAGE}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
@@ -176,8 +183,10 @@ ${SED} -i \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
   -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
-  -e "s/@@GMAIL_USERNAME@@/${EMAIL}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   ${TF_DIR}/terraform.tfvars
+
+ cat ${TF_DIR}/terraform.tfvars
 ```
 
 ### Init

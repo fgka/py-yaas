@@ -62,7 +62,7 @@ ${SED} -i \
   -e "s/@@GITHUB_REPO@@/${GITHUB_REPO}/g" \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
-  -e "s/@@GMAIL_USERNAME@@/${EMAIL}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   terraform.tfvars
 ```
 

@@ -48,7 +48,7 @@ ${SED} -i \
   -e "s/@@REGION@@/${REGION}/g" \
   -e "s/@@NOTIFICATION_EMAIL@@/${NOTIFICATION_EMAIL}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
-  -e "s/@@GMAIL_USERNAME@@/${EMAIL}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   terraform.tfvars
 ```
 

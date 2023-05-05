@@ -191,7 +191,7 @@ async def test_exists_ok_empty(monkeypatch):
 async def test_get_ok(monkeypatch):
     # Given
     expected = "EXPECTED"
-    secret_name = "TEST_SECRET"
+    secret_name = "TEST_SECRET/versions/latest"
     client = _StubSecretClient(data=expected)
     monkeypatch.setattr(secrets, secrets._secret_client.__name__, lambda: client)
     # When

@@ -76,8 +76,9 @@ module "yaas_app" {
   // secrets
   secrets_calendar_credentials_id = local.secrets_calendar_credentials_id
   // code
-  calendar_id = var.calendar_id
-  log_level   = var.log_level
+  calendar_id    = var.calendar_id
+  gmail_username = var.gmail_username
+  log_level      = var.log_level
   // cloud run
   run_container_concurrency = var.run_container_concurrency
   // scheduler

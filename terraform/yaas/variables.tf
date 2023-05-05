@@ -218,6 +218,12 @@ variable "calendar_id" {
   type        = string
 }
 
+variable "gmail_username" {
+  description = "Gmail username (email). If given will assume CalDAV access to Google Calendar."
+  type        = string
+  default     = ""
+}
+
 variable "log_level" {
   description = "YAAS Cloud Run log level."
   type        = string

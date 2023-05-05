@@ -176,7 +176,7 @@ Calendar ID:
 
 ```bash
 export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
-export EMAIL="YOUR_EMAIL@gmail.com"
+export GMAIL_USERNAME="YOUR_EMAIL@gmail.com"
 ```
 
 Github info:
@@ -229,5 +229,5 @@ export INITIAL_CREDENTIALS_JSON="${HOME}/calendar-api-initial.json"
 If you are using [CalDAV](./GOOGLE_CALDAV.md), check that you have:
 
 ```bash
-export EMAIL="YOUR_EMAIL@gmail.com"
+export GMAIL_USERNAME="YOUR_EMAIL@gmail.com"
 ```

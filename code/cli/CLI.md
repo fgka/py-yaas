@@ -13,14 +13,14 @@ If you are coming from the [INSTALL.md](../../INSTALL.md#add-proper-calendar-cre
 
 ```bash
 export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
-export EMAIL="YOUR_USER@gmail.com"
+export GMAIL_USERNAME="YOUR_USER@gmail.com"
 ```
 
 Define:
 
 ```bash
 export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
-export EMAIL="YOUR_USER@gmail.com"
+export GMAIL_USERNAME="YOUR_USER@gmail.com"
 export SECRET_NAME="YOUR_SECRET_NAME"
 ```
 
@@ -34,7 +34,7 @@ Check:
 
 ```bash
 echo "Calendar ID: ${CALENDAR_ID}"
-echo "Email: ${EMAIL}"
+echo "Email: ${GMAIL_USERNAME}"
 echo "Secret: ${SECRET_FULL_NAME}"
 ```
 
@@ -49,7 +49,7 @@ Read calendar entries:
 ```bash
 poetry run cli list-events \
   --calendar-id ${CALENDAR_ID} \
-  --email ${EMAIL} \
+  --email ${GMAIL_USERNAME} \
   --secret-name ${SECRET_FULL_NAME}
 ```
 

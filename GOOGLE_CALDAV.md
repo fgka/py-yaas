@@ -73,5 +73,5 @@ Get the password:
 ### Set your environment variables
 
 ```bash
-export EMAIL="YOUR_EMAIL@gmail.com"
+export GMAIL_USERNAME="YOUR_EMAIL@gmail.com"
 ```

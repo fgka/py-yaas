@@ -41,6 +41,7 @@ def cli() -> None:
 
 @cli.command(help="List upcoming events")
 @click.option("--calendar-id", required=True, type=str, help="Which calendar ID to read")
+@click.option("--email", required=False, type=str, help="If given, indicates that CalDAV should be used")
 @click.option("--secret-name", required=False, type=str, help="Secret name with credentials")
 @click.option("--start-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31")
 @click.option("--end-day", required=False, type=str, help="ISO formatted date, like: 2001-12-31")
@@ -55,6 +56,7 @@ def cli() -> None:
 @coro
 async def list_events(
     calendar_id: str,
+    email: Optional[str] = None,
     secret_name: Optional[str] = None,
     start_day: Optional[str] = None,
     end_day: Optional[str] = None,
@@ -66,6 +68,7 @@ async def list_events(
 
     Args:
         calendar_id: Google calendar ID
+        email: If given, indicates that CalDAV should be used
         secret_name: Google calendar JSON credentials
         start_day: From when to start listing the events
         end_day: Up until when to list events
@@ -80,6 +83,7 @@ async def list_events(
         print(f"Date range: {start_ts_utc} {end_ts_utc}")
         cal_snapshot = await _calendar_snapshot(
             calendar_id=calendar_id,
+            email=email,
             secret_name=secret_name,
             start_ts_utc=start_ts_utc,
             end_ts_utc=end_ts_utc,
@@ -116,9 +120,12 @@ async def _start_end_ts_utc_from_iso_str(
 
 
 async def _calendar_snapshot(
-    *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
+    *, calendar_id: str, email: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
 ) -> event.EventSnapshot:
-    result = calendar.ReadOnlyGoogleCalendarStore(calendar_id=calendar_id, secret_name=secret_name)
+    if email is None:
+        result = calendar.ReadOnlyGoogleCalendarStore(calendar_id=calendar_id, secret_name=secret_name)
+    else:
+        result = calendar.ReadOnlyGoogleCalDavStore(calendar_id=calendar_id, username=email, secret_name=secret_name)
     async with result as obj:
         cal_snapshot = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     return cal_snapshot

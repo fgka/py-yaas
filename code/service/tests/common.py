@@ -369,8 +369,8 @@ _TEST_PUBSUB_TOPIC: str = "test_yaas_pubsub_topic"
 
 # pylint: disable=consider-using-with
 TEST_CONFIG_LOCAL_JSON: config.Config = config.Config(
-    calendar_config=config.CalendarCacheConfig(
-        type=config.CacheType.CALENDAR.value,
+    calendar_config=config.CalendarApiCacheConfig(
+        type=config.CacheType.CALENDAR_API.value,
         calendar_id="test_calendar_id",
         secret_name="test_calendar_secret_name",
     ),

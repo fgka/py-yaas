@@ -5,13 +5,14 @@
 Source: https://developers.google.com/calendar/api/quickstart/python
 Source: https://karenapp.io/articles/how-to-automate-google-calendar-with-python-using-the-calendar-api/
 """
+import asyncio
 import json
 import os
 import pathlib
 import pickle
 import tempfile
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiofiles
 from google.auth.transport import requests
@@ -36,7 +37,7 @@ async def list_upcoming_events(
     amount: Optional[int] = None,
     start: Optional[Union[datetime, int]] = None,
     end: Optional[Union[datetime, int]] = None,
-) -> List[Dict[str, Any]]:
+) -> AsyncGenerator[Dict[str, Any], None]:
     # pylint: disable=line-too-long
     """Wraps the `list API`_.
 
@@ -118,7 +119,8 @@ async def list_upcoming_events(
         calendar_id: which cal to list.
         credentials_json: calendar JSON credentials, if existing.
         credentials_pickle: cached Pickle file with credentials, if existing.
-        secret_name: secret name containing the calendar credentials, if existing.
+        secret_name: secret name containing the calendar credentials, if existing, in the format:
+          `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
         end: up until when to list, if given, will discard ``amount``.
@@ -160,7 +162,8 @@ async def list_upcoming_events(
         amount = None
     # Retrieve entries
     try:
-        result = _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list)
+        async for event in _list_all_events(service=service, amount=amount, kwargs_for_list=kwargs_for_list):
+            yield event
     except Exception as err:
         raise RuntimeError(
             f"Could not list calendar events using arguments: <{kwargs_for_list}>, "
@@ -168,14 +171,6 @@ async def list_upcoming_events(
             f"and service: <{service}>. "
             f"Error: {err}"
         ) from err
-    #
-    _LOGGER.info(
-        "Got the upcoming %s (desired %s) events starting in %s",
-        len(result),
-        amount,
-        start_time,
-    )
-    return result
 
 
 def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
@@ -187,26 +182,29 @@ def _iso_utc_zulu(value: Optional[Union[datetime, int]] = None) -> str:
     return value.isoformat() + "Z"
 
 
-def _list_all_events(
+async def _list_all_events(
     *,
     service: discovery.Resource,
     amount: Optional[int],
     kwargs_for_list: Dict[str, Any],
-) -> List[Dict[str, Any]]:
-    result: List[Dict[str, Any]] = []
+) -> AsyncGenerator[Dict[str, Any], None]:
+    count = 0
     # pagination/while trick
-    while amount is None or len(result) < amount:
+    while amount is None or count < amount:
+        await asyncio.sleep(0)
         events_result = service.events().list(**kwargs_for_list).execute()
-        result.extend(events_result.get("items", []))
+        for event in events_result.get("items", []):
+            yield event
+            await asyncio.sleep(0)
+            count += 1
+            if amount is not None and count >= amount:
+                return
         # next page token
         next_page_token = events_result.get("nextPageToken")
         if not next_page_token:
-            break
+            return
         # update kwargs only AFTER retrieving items AND getting the next page token
         kwargs_for_list["pageToken"] = next_page_token
-    if amount is not None:
-        result = result[:amount]
-    return result
 
 
 async def _calendar_service(
@@ -366,13 +364,13 @@ async def _secret_credentials(
     if not isinstance(value, str):
         value = os.environ.get(_CREDENTIALS_SECRET_ENV_VAR_NAME, None)
     if value:
-        result = await secrets.get(value)
+        secret_content = await secrets.get(value)
         _LOGGER.info(
             "Retrieved cal credentials from cloud secret name: <%s>(%s)",
             value,
             type(value),
         )
-        await _persist_json_credentials(json.loads(result), credentials_json)
+        await _persist_json_credentials(json.loads(secret_content), credentials_json)
         result = _json_credentials(credentials_json)
     return result
 

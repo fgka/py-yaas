@@ -48,6 +48,7 @@ ${SED} -i \
   -e "s/@@REGION@@/${REGION}/g" \
   -e "s/@@NOTIFICATION_EMAIL@@/${NOTIFICATION_EMAIL}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   terraform.tfvars
 ```
 
@@ -113,6 +114,7 @@ terraform apply ${TMP} && rm -f ${TMP}
 | <a name="input_bucket_name_prefix"></a> [bucket\_name\_prefix](#input\_bucket\_name\_prefix) | Prefix to name the YAAS artefacts bucket, the suffix is the project numerical ID. | `string` | `"yaas-app"` | no |
 | <a name="input_cache_refresh_range_in_days"></a> [cache\_refresh\_range\_in\_days](#input\_cache\_refresh\_range\_in\_days) | How many days, in the future, to cache events for. | `number` | `3` | no |
 | <a name="input_calendar_id"></a> [calendar\_id](#input\_calendar\_id) | YAAS Google Calendar ID to use | `string` | n/a | yes |
+| <a name="input_gmail_username"></a> [gmail\_username](#input\_gmail\_username) | Gmail username (email). If given will assume CalDAV access to Google Calendar. | `string` | `""` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | YAAS Cloud Run log level. | `string` | `"INFO"` | no |
 | <a name="input_monitoring_alert_severity"></a> [monitoring\_alert\_severity](#input\_monitoring\_alert\_severity) | Severity, included, above which it should generate an alert. | `string` | `"ERROR"` | no |
 | <a name="input_monitoring_email_address"></a> [monitoring\_email\_address](#input\_monitoring\_email\_address) | When there is a failure, it needs to send the alert to a specific email. | `string` | n/a | yes |

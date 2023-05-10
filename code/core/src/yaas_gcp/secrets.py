@@ -10,7 +10,7 @@ from typing import Callable, List, Optional
 
 from google.cloud import secretmanager
 
-from yaas_common import const, logger
+from yaas_common import const, logger, preprocess
 from yaas_gcp import resource_name, secrets_const
 
 _LOGGER = logger.get(__name__)
@@ -56,7 +56,7 @@ async def list_versions(secret_name: str, *, include_destroyed_versions: bool = 
     """
     _LOGGER.debug("Listing secret versions for <%s>", secret_name)
     # validate input
-    _validate_secret_name(secret_name)
+    secret_name = _validate_secret_name(secret_name)
     # logic
     secret_name = _secret_name_parent(secret_name)
     await asyncio.sleep(0)
@@ -97,7 +97,7 @@ async def exists(secret_name: str) -> bool:
     """
     _LOGGER.debug("Checking existence of secret <%s>", secret_name)
     # input validation
-    _validate_secret_name(secret_name)
+    secret_name = _validate_secret_name(secret_name)
     if secrets_const.VERSION_SUB_STR not in secret_name:
         raise ValueError(
             "Secret name must include versions "
@@ -123,7 +123,7 @@ async def get(secret_name: str) -> str:
 
     .. _API: https://cloud.google.com/secret-manager/docs/access-secret-version
     """
-    _validate_secret_name(secret_name)
+    secret_name = _validate_secret_name(secret_name)
     _LOGGER.debug("Retrieving secret <%s>", secret_name)
     await asyncio.sleep(0)
     try:
@@ -138,9 +138,12 @@ async def get(secret_name: str) -> str:
     return result
 
 
-def _validate_secret_name(value: str) -> None:
-    if not isinstance(value, str) or not value:
-        raise SecretManagerAccessError(f"Secret name must be a non-empty string. Got: <{value}>({type(value)})")
+def _validate_secret_name(value: str, *, if_version_missing_add_latest: bool = True) -> str:
+    result = preprocess.string(value, "value")
+    if if_version_missing_add_latest:
+        if secrets_const.VERSION_SUB_STR not in value:
+            result = value + secrets_const.LATEST_VERSION_SUFFIX
+    return result
 
 
 def _secret_client() -> secretmanager.SecretManagerServiceClient:
@@ -180,7 +183,7 @@ async def put(*, secret_name: str, content: str) -> str:
     """
     _LOGGER.debug("Adding a version to secret <%s>", secret_name)
     # validate input
-    _validate_secret_name(secret_name)
+    secret_name = _validate_secret_name(secret_name, if_version_missing_add_latest=False)
     if not isinstance(content, str):
         raise SecretManagerAccessError(f"Content must be a string. Got: <{content}>({type(content)})")
     # logic
@@ -231,7 +234,7 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
         amount_to_keep,
     )
     # validate input
-    _validate_secret_name(secret_name)
+    secret_name = _validate_secret_name(secret_name, if_version_missing_add_latest=False)
     if not isinstance(amount_to_keep, int):
         amount_to_keep = DEFAULT_AMOUNT_TO_KEEP
     amount_to_keep = max(MIN_AMOUNT_TO_KEEP, amount_to_keep)

@@ -73,12 +73,12 @@ def _create_request_and_definition(
 
 
 class TestScaler:
-    def setup(self):
+    def setup_method(self):
         self.request, self.definition = _create_request_and_definition()
         self.obj = common.MyScaler.from_request(self.request)
         self.obj.__class__.cls_called = {}
 
-    def teardown(self):
+    def teardown_method(self):
         self.obj.__class__.cls_path = ""
         self.obj.__class__.cls_called = {}
 
@@ -120,13 +120,13 @@ _TEST_SCALER_PATH: str = "TEST_PATH"
 
 
 class TestScalerPathBased:
-    def setup(self):
+    def setup_method(self):
         self.request, self.definition = _create_request_and_definition()
         self.obj = common.MyScalerPathBased.from_request(self.request)
         self.obj.__class__.cls_path = _TEST_SCALER_PATH
         self.obj.__class__.cls_called = {}
 
-    def teardown(self):
+    def teardown_method(self):
         self.obj.__class__.cls_path = ""
         self.obj.__class__.cls_called = {}
 
@@ -182,7 +182,7 @@ class TestScalerPathBased:
 
 
 class TestCategoryScaleRequestParser:
-    def setup(self):
+    def setup_method(self):
         self.obj = common.MyCategoryScaleRequestParser()
 
     def test_scaler_ok(self):
@@ -286,7 +286,7 @@ class TestCategoryScaleRequestParser:
 
 
 class TestCategoryScaleRequestParserWithFilter:
-    def setup(self):
+    def setup_method(self):
         self.obj = common.MyCategoryScaleRequestParserWithFilter()
 
     def test__filter_requests_ok(self):
@@ -308,7 +308,7 @@ class TestCategoryScaleRequestParserWithFilter:
 
 
 class TestCategoryScaleRequestParserWithScaler:
-    def setup(self):
+    def setup_method(self):
         self.obj = common.MyCategoryScaleRequestParserWithScaler()
 
     @pytest.mark.parametrize(

@@ -113,6 +113,12 @@ variable "cache_refresh_range_in_days" {
 // Scheduler/Cronjob //
 ///////////////////////
 
+variable "is_credentials_refresh_needed" {
+  description = "If you are using CalDAV this should be set to false."
+  type        = bool
+  default     = true
+}
+
 // By default, uses UTC
 variable "scheduler_cron_timezone" {
   description = "Crontab entry timezone."

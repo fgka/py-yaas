@@ -1,0 +1,39 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:YAAS
+X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+X-LIC-LOCATION:Europe/Berlin
+BEGIN:DAYLIGHT
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
+TZNAME:CEST
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+END:DAYLIGHT
+BEGIN:STANDARD
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
+TZNAME:CET
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+SUMMARY:Test weird
+DTSTART;TZID=Europe/Berlin:20230427T160000
+DTEND;TZID=Europe/Berlin:20230427T170000
+DTSTAMP:20230427T130721Z
+UID:uuid-hash@google.com
+SEQUENCE:0
+CREATED:20230427T130630Z
+DESCRIPTION:<br><br><pre>standard | locations/test-region/namespaces/test-project/services/integ-test | min_instances 10<br>standard | locations/test-region/namespaces/test-project/services/integ-test | max_instances 100<br>standard | locations/test-region/namespaces/test-project/services/integ-test | concurrency 80<br>standard | test-project:test-region:integ-test | instance_type db-custom-2-3840</pre><br><br>yaas |  <span>locations/test-region/namespaces/test-project/services/hello |.  min_instances 10. </span>
+LAST-MODIFIED:20230427T130721Z
+LOCATION:
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

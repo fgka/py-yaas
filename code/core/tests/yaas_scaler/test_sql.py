@@ -100,7 +100,7 @@ class TestCloudRunScalingDefinition:
 
 
 class TestCloudRunScaler:
-    def setup(self):
+    def setup_method(self):
         self.definition = [
             _create_cloud_sql_scaling_definition(parameter=param, target=f"db-custom-1-1{ndx}")
             for ndx, param in enumerate(sql.CloudSqlCommandType)

@@ -1,5 +1,9 @@
 # CLI usage
 
+version: 1.0.1
+
+> :hand: *ALL* commands are assumed to be executed from this folder: `./code/cli`
+
 ## Definitions
 
 ```bash
@@ -7,8 +11,54 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectNumber)")
 ```
 
-## Refresh/Reset Calendar Credentials
+## Test CalDAV access
 
+If you are coming from the [INSTALL.md](../../INSTALL.md#add-proper-calendar-credentials) you only need:
+
+```bash
+export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
+export GMAIL_USERNAME="YOUR_USER@gmail.com"
+```
+
+Define:
+
+```bash
+export CALENDAR_ID="YOUR_GOOGLE_CALENDAR_ID"
+export GMAIL_USERNAME="YOUR_USER@gmail.com"
+export SECRET_NAME="YOUR_SECRET_NAME"
+```
+
+Secret full name:
+
+```bash
+export SECRET_FULL_NAME="projects/${PROJECT_NUMBER}/secrets/${SECRET_NAME}"
+```
+
+Check:
+
+```bash
+echo "Calendar ID: ${CALENDAR_ID}"
+echo "Email: ${GMAIL_USERNAME}"
+echo "Secret: ${SECRET_FULL_NAME}"
+```
+
+(If you have never done it before) Install cycle:
+
+```bash
+poetry install
+```
+
+Read calendar entries:
+
+```bash
+poetry run cli list-events \
+  --calendar-id ${CALENDAR_ID} \
+  --email ${GMAIL_USERNAME} \
+  --secret-name ${SECRET_FULL_NAME}
+```
+
+
+## Refresh/Reset Calendar Credentials
 
 If you are coming from the [INSTALL.md](../../INSTALL.md#add-proper-calendar-credentials) you only need:
 
@@ -38,7 +88,7 @@ echo "Secret: ${SECRET_FULL_NAME}"
 echo "Initial credentials: ${INITIAL_CREDENTIALS_JSON}"
 ```
 
-(If you never done it before) Install cycle:
+(If you have never done it before) Install cycle:
 
 ```bash
 poetry install

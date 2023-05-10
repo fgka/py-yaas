@@ -2,6 +2,7 @@
 # pylint: disable=missing-module-docstring,missing-class-docstring
 # type: ignore
 # pytest: ignore=duplicate-code
+import pathlib
 import tempfile
 
 import pytest
@@ -97,15 +98,27 @@ class TestConfig:
         # Then
         assert result == expected, f"dict: {value}"
 
-    def test_from_json_ok_from_disk(self):
-        with open(common.TEST_DATA_CONFIG_JSON, "r", encoding=const.ENCODING_UTF8) as in_json:
+    @pytest.mark.parametrize(
+        "filepath", [common.TEST_DATA_CONFIG_CAL_API_JSON, common.TEST_DATA_CONFIG_GOOGLE_CALDAV_JSON]
+    )
+    def test_from_json_ok_from_disk_google_calendar(self, filepath: pathlib.Path):
+        with open(filepath, "r", encoding=const.ENCODING_UTF8) as in_json:
             result = config.Config.from_json(in_json.read())
         assert result.calendar_config.calendar_id == "calendar_id"
+        assert result.calendar_config.secret_name == "projects/my-project/secrets/my-secret/versions/latest"
+        assert result.retention_config is not None
+
+    def test_from_json_ok_from_disk_caldav(self):
+        with open(common.TEST_DATA_CONFIG_CALDAV_JSON, "r", encoding=const.ENCODING_UTF8) as in_json:
+            result = config.Config.from_json(in_json.read())
+        assert result.calendar_config.caldav_url == "https://www.example.com/calendar/dav/calendar_id"
+        assert result.calendar_config.username == "test-user@gmail.com"
+        assert result.calendar_config.secret_name == "projects/my-project/secrets/my-secret/versions/latest"
         assert result.retention_config is not None
 
     def test_from_dict_ok_from_disk(self):
         # Given
-        with open(common.TEST_DATA_CONFIG_JSON, "r", encoding=const.ENCODING_UTF8) as in_json:
+        with open(common.TEST_DATA_CONFIG_CAL_API_JSON, "r", encoding=const.ENCODING_UTF8) as in_json:
             obj = config.Config.from_json(in_json.read())
             value = obj.as_dict()
         # When

@@ -71,6 +71,37 @@ Install packages:
 pip3 install -U pip wheel setuptools poetry pre-commit checkov
 ```
 
+Add poetry plugins:
+
+### [Bump version](https://github.com/monim67/poetry-bumpversion)
+
+
+```bash
+poetry self add poetry-bumpversion
+```
+
+#### Example of bumping ``core`` and applying to ``cli`` and ``service``
+
+Bumping ``core``:
+
+```bash
+pushd ./code/core
+poetry version patch
+poetry install
+poetry version --no-ansi | read CORE_NAME CORE_VERSION
+popd
+
+echo "New version of '${CORE_NAME}' = '${CORE_VERSION}'"
+```
+
+Upgrading ``cli``:
+
+```
+pushd ./code/cli
+poetry update ${CORE_NAME}=^${CORE_VERSION}
+popd
+```
+
 ## Install ``pre-commit`` (only once)
 
 <details>
@@ -234,10 +265,43 @@ docker run \
   -it ${WHICH_SERVICE}
 ```
 
-Test the image:
+Test the image access to config file:
 
 ```bash
 curl http://localhost:8080/config
+```
+
+Try updating the cache (``yaas-scheduler`` only):
+
+```bash
+PERIOD_DAYS="3"
+PERIOD_MINUTES=$(expr ${PERIOD_DAYS} \* 24 \* 60)
+DATA="{\"type\": \"UPDATE_CALENDAR_CACHE\", \"range\": {\"period_minutes\":${PERIOD_MINUTES}, \"now_diff_minutes\":10}}"
+DATA_BASE64=$(echo ${DATA} | base64)
+
+curl \
+    -d "{\"data\":\"${DATA_BASE64}\"}" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    http://localhost:8080/command
+```
+
+Try scaling (``yaas-scaler`` only):
+
+```bash
+REGION="europe-west3"
+PROJECT=$(gcloud config get project)
+RESOURCE="projects/${PROJECT}/locations/${REGION}/services/hello"
+COMMAND="min_instances 11"
+TIMESTAMP=$(date -u +%s)
+DATA="{\"collection\": [{\"topic\": \"standard\", \"resource\": \"${RESOURCE}\", \"command\": \"${COMMAND}\", \"timestamp_utc\": ${TIMESTAMP}, \"original_json_event\": null}]}"
+DATA_BASE64=$(echo ${DATA} | base64)
+
+curl \
+    -d "{\"data\":\"${DATA_BASE64}\"}" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    http://localhost:8080/enact-standard-requests
 ```
 
 </details>

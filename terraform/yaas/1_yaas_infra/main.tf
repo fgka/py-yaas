@@ -151,6 +151,7 @@ module "pubsub_notification_topic" {
 ///////////////////////
 
 resource "google_cloud_scheduler_job" "calendar_credentials_refresh" {
+  count       = var.is_credentials_refresh_needed ? 1 : 0
   name        = var.scheduler_calendar_credentials_refresh_name
   description = "Cronjob to trigger YAAS calendar credentials OAuth2 refresh."
   schedule    = local.scheduler_cron_entry_credentials_refresh

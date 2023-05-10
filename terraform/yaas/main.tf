@@ -37,7 +37,8 @@ module "yaas_infra" {
   // caching
   cache_refresh_range_in_days = var.cache_refresh_range_in_days
   // scheduler
-  scheduler_cron_timezone = var.scheduler_cron_timezone
+  is_credentials_refresh_needed = var.gmail_username == ""
+  scheduler_cron_timezone       = var.scheduler_cron_timezone
   // scheduler: calendar
   scheduler_calendar_credentials_refresh_name                         = var.scheduler_calendar_credentials_refresh_name
   scheduler_calendar_credentials_refresh_cron_entry_triggering_minute = var.scheduler_calendar_credentials_refresh_cron_entry_triggering_minute
@@ -76,8 +77,9 @@ module "yaas_app" {
   // secrets
   secrets_calendar_credentials_id = local.secrets_calendar_credentials_id
   // code
-  calendar_id = var.calendar_id
-  log_level   = var.log_level
+  calendar_id    = var.calendar_id
+  gmail_username = var.gmail_username
+  log_level      = var.log_level
   // cloud run
   run_container_concurrency = var.run_container_concurrency
   // scheduler

@@ -23,15 +23,6 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
 
-Code dependant:
-
-```bash
-pushd ../code
-PY_PKG_VERSION=$(poetry version --directory service --ansi)
-export PIP_PACKAGE="${PY_PKG_VERSION%% *}>=${PY_PKG_VERSION##* }"
-popd
-```
-
 Please set them properly:
 
 ```bash
@@ -40,6 +31,29 @@ export GITHUB_OWNER="${USER}"
 
 export GITHUB_REPO=$(basename `git rev-parse --show-toplevel`)
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+```
+
+For CalDAV:
+
+```bash
+export GMAIL_USERNAME="YOUR_USERNAME@gmail.com"
+```
+
+Packages and versions:
+
+```bash
+YAAS_PIP_PACKAGES="["
+unset PKGS
+PKGS=("core" "service")
+for P in ${PKGS[@]}; do
+  pushd ../code/${P}
+  poetry version --no-ansi | read PKG_NAME PKG_VERSION
+  YAAS_PIP_PACKAGES+="\"${PKG_NAME}>=${PKG_VERSION}\","
+  popd
+done
+YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES%%,}
+YAAS_PIP_PACKAGES+="]"
+export YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES}
 ```
 
 Calendar ID:
@@ -52,8 +66,9 @@ Check:
 
 ```bash
 echo "Main project: ${PROJECT_ID}@${REGION}"
-echo "Email: ${NOTIFICATION_EMAIL}"
-echo "PIP: ${PIP_PACKAGE}"
+echo "Notification Email: ${NOTIFICATION_EMAIL}"
+echo "CalDAV Email: ${GMAIL_USERNAME}"
+echo "YAAS python packages: ${YAAS_PIP_PACKAGES}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
@@ -175,8 +190,11 @@ ${SED} -i \
   -e "s/@@GITHUB_REPO@@/${GITHUB_REPO}/g" \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
-  -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
+  -e "s/@@YAAS_PIP_PACKAGE@@/${YAAS_PIP_PACKAGES}/g" \
+  -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   ${TF_DIR}/terraform.tfvars
+
+cat ${TF_DIR}/terraform.tfvars
 ```
 
 ### Init
@@ -272,6 +290,22 @@ Status:
 gcloud builds describe ${BUILD_ID} \
   --project=${PROJECT_ID} \
   --region=${REGION}
+```
+
+## Check Your YAAS Configuration
+
+```bash
+export TF_DIR="./yaas"
+OUT_JSON=$(mktemp)
+terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+GS_CONFIG_JSON=$(jq -c -r ".yaas_build.value.gcs_config_json" ${OUT_JSON})
+echo "Google storage URI for config JSON: <${GS_CONFIG_JSON}>"
+
+rm -f ${OUT_JSON}
+
+gsutil cat ${GS_CONFIG_JSON}
 ```
 
 ## (Only If Manual Deployment Is Required) [YAAS](./yaas/README.md)

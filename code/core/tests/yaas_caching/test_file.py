@@ -61,7 +61,7 @@ class _MyBaseFileStoreContextManager(file.BaseFileStoreContextManager):
 
 
 class TestBaseFileStoreContextManager:
-    def setup(self):
+    def setup_method(self):
         self.instance = _MyBaseFileStoreContextManager()
 
     @pytest.mark.parametrize(
@@ -332,7 +332,7 @@ class TestBaseFileStoreContextManager:
 
 
 class TestJsonLineFileStoreContextManager:
-    def setup(self):
+    def setup_method(self):
         with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
             with tempfile.NamedTemporaryFile(delete=True) as tmp_archive:
                 self.instance = file.JsonLineFileStoreContextManager(
@@ -502,7 +502,7 @@ def test__sqlite_schema_from_dto_ok(dto_class: Type, primary_key: str):
 
 
 class TestSQLiteStoreContextManager:
-    def setup(self):
+    def setup_method(self):
         with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
             self.instance = file.SQLiteStoreContextManager(
                 sqlite_file=pathlib.Path(tmp_file.name),

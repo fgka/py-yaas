@@ -5,12 +5,13 @@ import json
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
+import icalendar
 import pytest
 import pytz
 
 from tests import common
 from yaas_calendar import parser
-from yaas_common import request
+from yaas_common import const, request
 
 _TEST_EVENT_START_TIME: str = "2022-10-18T16:00:00+02:00"
 _TEST_EVENT_DESCRIPTION_TMPL: str = "Description event repeat daily<br>%s<br>"
@@ -197,3 +198,20 @@ def test__extract_text_from_html_ok_tricky_strings(value: str, expected: str):
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0] == expected
+
+
+def test__to_request_from_icalendar_calendar_ok():
+    # Given
+    with open(common.TEST_DATA_EVENT_ICAL, encoding=const.ENCODING_UTF8) as in_ical:
+        value = icalendar.Calendar.from_ical(in_ical.read())
+    expected = set()
+    with open(common.TEST_DATA_EVENT_ICAL_REQ_JSON, encoding=const.ENCODING_UTF8) as in_req:
+        for json_line in in_req.readlines():
+            req = request.ScaleRequest.from_json(json_line)
+            expected.add(req)
+    # When
+    result = parser._to_request_from_icalendar_calendar(value)
+    # Then
+    assert len(result) == len(expected)
+    result_set = set(result)
+    assert result_set == expected

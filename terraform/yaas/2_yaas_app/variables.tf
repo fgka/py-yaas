@@ -90,10 +90,22 @@ variable "calendar_id" {
   type        = string
 }
 
-variable "config_json_tmpl" {
-  description = "Template for config json"
+variable "gmail_username" {
+  description = "Gmail username (email). If given will assume CalDAV access to Google Calendar."
   type        = string
-  default     = "templates/config.json.tmpl"
+  default     = ""
+}
+
+variable "config_json_api_tmpl" {
+  description = "Template for config json for Calendar API"
+  type        = string
+  default     = "templates/config.json.api.tmpl"
+}
+
+variable "config_json_dav_tmpl" {
+  description = "Template for config json for CalDAV"
+  type        = string
+  default     = "templates/config.json.dav.tmpl"
 }
 
 variable "sqlite_cache_path" {

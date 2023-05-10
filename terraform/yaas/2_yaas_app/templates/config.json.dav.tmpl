@@ -1,0 +1,18 @@
+{
+    "calendar_config": {
+        "type": "google_caldav",
+        "calendar_id": "${CALENDAR_ID}",
+        "username": "${EMAIL}",
+        "secret_name": "${SECRET_NAME}"
+    },
+    "cache_config": {
+        "type": "gcs_sqlite",
+        "bucket_name": "${BUCKET_NAME}",
+        "object_path": "${SQLITE_OBJECT_PATH}"
+    },
+    "topic_to_pubsub_gcs": "gs://${BUCKET_NAME}/${TOPIC_TO_PUBSUB_PATH}",
+    "topic_to_pubsub": {
+        "standard": "${PUBSUB_TOPIC_ENACT_STANDARD}",
+        "yaas": "${PUBSUB_TOPIC_ENACT_STANDARD}"
+    }
+}

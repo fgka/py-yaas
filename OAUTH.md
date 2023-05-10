@@ -23,9 +23,30 @@ Check current state:
 
 ## Alternatives
 
+### Using Calendar API
+
 We recommend using [Google Workspace](https://workspace.google.com/) and changing the user type to internal - clicking the button ``MAKE INTERNAL``.
 This will mean that you need to create an account in your organization for the YAAS calendar.
 
-The other option is to publish your YAAS App version. We do **NOT** recommend it for security issues.
+The other option is to publish your YAAS App version.
+We do **NOT** recommend it for security issues.
 We have neither designed nor tested for an adversarial environment, i.e., the Internet as whole.
 You would also need to go the route of getting your application approved by Google.
+
+### Switching to CalDAV
+
+This option presents a security issue.
+Most providers do not distinguish between the user (with full access to the account)
+and an application with limited permissions (just read access to the calendar).
+
+This means that if you opt for CalDAV and your password leaks, most likely, it will give full access to the account.
+Again, not only limited to calendar but also email and what ever other products that are attached to that account.
+For instance, in case of Gmail it includes things like:
+* Email (gmail)
+* Calendar (read and write)
+* Photos
+* Drive
+* Wallet
+* Etc
+
+Be very careful when using this type of access.

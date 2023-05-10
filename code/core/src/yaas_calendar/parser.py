@@ -8,12 +8,13 @@ import json
 import re
 import string
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import bs4
+import icalendar
 import pytz
 
-from yaas_common import logger, request
+from yaas_common import const, logger, request
 
 _LOGGER = logger.get(__name__)
 
@@ -66,10 +67,15 @@ Groups on matching are::
 """
 # pylint: enable=line-too-long
 
+_ICALENDAR_VEVENT_COMPONENT_NAME: str = "VEVENT"
+_ICALENDAR_VEVENT_DESCRIPTION_FIELD: str = "description"
+_ICALENDAR_VEVENT_START_FIELD: str = "dtstart"
+_ICALENDAR_VEVENT_END_FIELD: str = "dtend"
+
 
 def to_request(
     *,
-    event: Optional[Dict[str, Any]] = None,
+    event: Optional[Union[Dict[str, Any], icalendar.Calendar]] = None,
 ) -> List[request.ScaleRequest]:
     """Parses the event for scaling targets. It uses `start` for the start time
     and `description` to get the resources and values to be scaled.
@@ -80,28 +86,65 @@ def to_request(
     Returns:
         List of py:cls:`request.ScaleRequest` parsed from the event.
     """
-    _LOGGER.debug("Extracting %s from event %s", request.ScaleRequest.__name__, event)
+    _LOGGER.debug("Extracting '%s' from event '%s'(%s)", request.ScaleRequest.__name__, event, type(event))
     result = []
     # validation
-    if isinstance(event, dict):
-        description = event.get(_GOOGLE_CALENDAR_EVENT_DESCRIPTION_FIELD)
-        if not isinstance(description, str):
-            _LOGGER.warning(
-                "Could not extract %s from event %s",
-                _GOOGLE_CALENDAR_EVENT_DESCRIPTION_FIELD,
-                event,
-            )
-        else:
-            start = event.get(_GOOGLE_CALENDAR_EVENT_START_FIELD)
-            start_utc = _parse_start_to_utc(start)
-            result = _parse_event_description(description, start_utc, json.dumps(event))
+    if isinstance(event, icalendar.Calendar):
+        result = _to_request_from_icalendar_calendar(event)
+    elif isinstance(event, dict):
+        result = _to_request_from_google_calendar_event(event)
     else:
         _LOGGER.warning(
-            "Event <%s>(%s) cannot be parsed, it needs to be instance of %s",
+            "Event <%s>(%s) cannot be parsed, it needs to be instance of '%s'",
             event,
             type(event),
             dict.__name__,
         )
+    return result
+
+
+def _to_request_from_google_calendar_event(  # pylint: disable=invalid-name
+    value: Dict[str, Any],
+) -> List[request.ScaleRequest]:
+    result = []
+    # validation
+    description = value.get(_GOOGLE_CALENDAR_EVENT_DESCRIPTION_FIELD)
+    if not isinstance(description, str):
+        _LOGGER.warning(
+            "Could not extract '%s' from event '%s'",
+            _GOOGLE_CALENDAR_EVENT_DESCRIPTION_FIELD,
+            value,
+        )
+    else:
+        start = value.get(_GOOGLE_CALENDAR_EVENT_START_FIELD)
+        start_utc = _parse_start_to_utc(start)
+        result = _parse_event_description(description, start_utc, json.dumps(value))
+    return result
+
+
+def _to_request_from_icalendar_calendar(  # pylint: disable=invalid-name
+    value: icalendar.Calendar,
+) -> List[request.ScaleRequest]:
+    """
+    Source: https://icalendar.readthedocs.io/en/latest/usage.html#example
+    """
+    result = []
+    for component in value.walk(_ICALENDAR_VEVENT_COMPONENT_NAME):
+        description = component.get(_ICALENDAR_VEVENT_DESCRIPTION_FIELD)
+        if not isinstance(description, str):
+            _LOGGER.warning(
+                "Could not extract '%s' from component '%s' in '%s'",
+                _ICALENDAR_VEVENT_DESCRIPTION_FIELD,
+                component,
+                value,
+            )
+        else:
+            start = None
+            start_vddd = component.get(_ICALENDAR_VEVENT_START_FIELD)
+            if isinstance(start_vddd, icalendar.prop.vDDDTypes):
+                start = start_vddd.dt
+            json_event = json.dumps(value.to_ical().decode(const.ENCODING_UTF8))
+            result = _parse_event_description(description.strip(), start, json_event)
     return result
 
 

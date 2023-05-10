@@ -157,7 +157,7 @@ def _mock_entry(  # pylint: disable=too-complex
         return cache_store.result_snapshot, cache_store.result_snapshot
 
     async def mocked_calendar_snapshot(  # pylint: disable=unused-argument
-        *, calendar_id: str, secret_name: str, start_ts_utc: int, end_ts_utc: int
+        *, calendar_config: config.CalendarCacheConfig, start_ts_utc: int, end_ts_utc: int
     ) -> event.EventSnapshot:
         nonlocal called, calendar_snapshot
         if calendar_snapshot is None:
@@ -266,8 +266,10 @@ async def _verify_update_cal_cache_called(
 
 def _verify_calendar_snapshot_called(called_calendar_snapshot: Dict[str, Any], kwargs: Dict[str, Any]) -> None:
     assert isinstance(called_calendar_snapshot, dict)
-    assert called_calendar_snapshot.get("calendar_id") == kwargs["configuration"].calendar_config.calendar_id
-    assert called_calendar_snapshot.get("secret_name") == kwargs["configuration"].calendar_config.secret_name
+    calendar_config = called_calendar_snapshot.get("calendar_config")
+    assert isinstance(calendar_config, config.CalendarCacheConfig)
+    assert calendar_config.calendar_id == kwargs["configuration"].calendar_config.calendar_id
+    assert calendar_config.secret_name == kwargs["configuration"].calendar_config.secret_name
     assert called_calendar_snapshot.get("start_ts_utc") == kwargs["start_ts_utc"]
     assert called_calendar_snapshot.get("end_ts_utc") == kwargs["end_ts_utc"]
 

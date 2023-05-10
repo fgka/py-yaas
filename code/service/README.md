@@ -1,5 +1,7 @@
 # YAAS Services
 
+version: 1.0.1
+
 ## [Development](../DEVELOPMENT.md)
 
 ## Install

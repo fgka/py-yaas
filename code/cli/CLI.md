@@ -1,5 +1,7 @@
 # CLI usage
 
+version: 1.0.1
+
 > :hand: *ALL* commands are assumed to be executed from this folder: `./code/cli`
 
 ## Definitions

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "py_yaas_core"
-version = "1.0.1"
+version = "1.0.2"
 description = ""
 license = "Proprietary"
 authors = ["Gustavo Kuhn Andriotti <gkandriotti@google.com>"]
@@ -25,6 +25,17 @@ packages = [
     { include = "yaas_gcp", from = "src" },
     { include = "yaas_scaler", from = "src" },
 ]
+
+# to generate list of files: find ./src -name "__init__.py" | while read P; do echo " \"$P\""; done | tr "\n" ","
+[[tool.poetry_bumpversion.replacements]]
+files = ["./src/yaas_scaler/__init__.py", "./src/yaas_common/__init__.py", "./src/yaas_caching/__init__.py", "./src/yaas_gcp/__init__.py", "./src/yaas_command/__init__.py", "./src/yaas_calendar/__init__.py", "./src/yaas_config/__init__.py"]
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.poetry_bumpversion.replacements]]
+files = ["README.md"]
+search = 'version: {current_version}'
+replace = 'version: {new_version}'
 
 [tool.isort]
 profile = "black"

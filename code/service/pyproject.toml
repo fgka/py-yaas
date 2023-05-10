@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "py_yaas_service"
-version = "1.0"
+version = "1.0.1"
 description = ""
 license = "Proprietary"
 authors = ["Gustavo Kuhn Andriotti <gkandriotti@google.com>"]
@@ -21,6 +21,17 @@ packages = [
     { include = "yaas_scaler_service", from = "src" },
     { include = "yaas_scheduler_service", from = "src" },
 ]
+
+# to generate list of files: find ./src -name "__init__.py" | while read P; do echo " \"$P\""; done | tr "\n" ","
+[[tool.poetry_bumpversion.replacements]]
+files = ["./src/yaas_scaler_service/__init__.py", "./src/yaas_flask/__init__.py", "./src/yaas_scheduler_service/__init__.py"]
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.poetry_bumpversion.replacements]]
+files = ["README.md"]
+search = 'version: {current_version}'
+replace = 'version: {new_version}'
 
 [tool.poetry.scripts]
 scheduler = "yaas_scheduler_service.main:main"

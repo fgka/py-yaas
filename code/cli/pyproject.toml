@@ -20,6 +20,17 @@ packages = [
     { include = "yaas_cli", from = "src" },
 ]
 
+# to generate list of files: find ./src -name "__init__.py" | while read P; do echo " \"$P\""; done | tr "\n" ","
+[[tool.poetry_bumpversion.replacements]]
+files = ["src/yaas_cli/__init__.py"]
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.poetry_bumpversion.replacements]]
+files = ["README.md", "CLI.md"]
+search = 'version: {current_version}'
+replace = 'version: {new_version}'
+
 [tool.poetry.scripts]
 cli = "yaas_cli.main:main"
 

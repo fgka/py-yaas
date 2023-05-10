@@ -197,11 +197,11 @@ variable "gmail_username" {
 }
 
 variable "yaas_pip_package" {
-  description = "Python package full name with version, e.g.: [\"py-yaas-service>=1.0\", \"py-yaas-core>=1.0\"]"
+  description = "Python package full name with version, e.g.: [\"py-yaas-service>=1.0.1\", \"py-yaas-core>=1.0.2\"]"
   type        = list(string)
   default = [
-    "py-yaas-core>=1.0",
-    "py-yaas-service>=1.0",
+    "py-yaas-core>=1.0.2",
+    "py-yaas-service>=1.0.1",
   ]
 }
 

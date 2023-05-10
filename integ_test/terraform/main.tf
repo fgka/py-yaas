@@ -56,12 +56,12 @@ resource "google_cloud_run_service" "main" {
 
 resource "google_compute_network" "private_network" {
   provider = google-beta
-  name     = "private-network"
+  name     = "test-private-network"
 }
 
 resource "google_compute_global_address" "private_ip_address" {
   provider      = google-beta
-  name          = "private-ip-address"
+  name          = "test-private-ip-address"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16

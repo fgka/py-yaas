@@ -23,15 +23,6 @@ export PROJECT_ID=$(gcloud config get-value core/project)
 export REGION="europe-west3"
 ```
 
-Code dependant:
-
-```bash
-pushd ../code
-PY_PKG_VERSION=$(poetry version --directory service --ansi)
-export PIP_PACKAGE="${PY_PKG_VERSION%% *}>=${PY_PKG_VERSION##* }"
-popd
-```
-
 Please set them properly:
 
 ```bash
@@ -48,6 +39,23 @@ For CalDAV:
 export GMAIL_USERNAME="YOUR_USERNAME@gmail.com"
 ```
 
+Packages and versions:
+
+```bash
+YAAS_PIP_PACKAGES="["
+unset PKGS
+PKGS=("core" "service")
+for P in ${PKGS[@]}; do
+  pushd ../code/${P}
+  poetry version --no-ansi | read PKG_NAME PKG_VERSION
+  YAAS_PIP_PACKAGES+="\"${PKG_NAME}>=${PKG_VERSION}\","
+  popd
+done
+YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES%%,}
+YAAS_PIP_PACKAGES+="]"
+export YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES}
+```
+
 Calendar ID:
 
 ```bash
@@ -60,7 +68,7 @@ Check:
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Notification Email: ${NOTIFICATION_EMAIL}"
 echo "CalDAV Email: ${GMAIL_USERNAME}"
-echo "PIP: ${PIP_PACKAGE}"
+echo "YAAS python packages: ${YAAS_PIP_PACKAGES}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
@@ -182,11 +190,11 @@ ${SED} -i \
   -e "s/@@GITHUB_REPO@@/${GITHUB_REPO}/g" \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
-  -e "s/@@PIP_PACKAGE@@/${PIP_PACKAGE}/g" \
+  -e "s/@@YAAS_PIP_PACKAGE@@/${YAAS_PIP_PACKAGES}/g" \
   -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
   ${TF_DIR}/terraform.tfvars
 
- cat ${TF_DIR}/terraform.tfvars
+cat ${TF_DIR}/terraform.tfvars
 ```
 
 ### Init

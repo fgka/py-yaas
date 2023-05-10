@@ -21,6 +21,23 @@ export GITHUB_REPO=$(basename `git rev-parse --show-toplevel`)
 export GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 ```
 
+Packages and versions:
+
+```bash
+YAAS_PIP_PACKAGES="["
+unset PKGS
+PKGS=("core" "service")
+for P in ${PKGS[@]}; do
+  pushd ../../code/${P}
+  poetry version --no-ansi | read PKG_NAME PKG_VERSION
+  YAAS_PIP_PACKAGES+="\"${PKG_NAME}>=${PKG_VERSION}\","
+  popd
+done
+YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES%%,}
+YAAS_PIP_PACKAGES+="]"
+export YAAS_PIP_PACKAGES=${YAAS_PIP_PACKAGES}
+```
+
 Calendar ID:
 
 ```bash
@@ -33,6 +50,7 @@ Check:
 echo "Main project: ${PROJECT_ID}@${REGION}"
 echo "Email: ${NOTIFICATION_EMAIL}"
 echo "Github: ${GITHUB_OWNER}@${GITHUB_REPO}:${GIT_BRANCH}"
+echo "YAAS python packages: ${YAAS_PIP_PACKAGES}"
 echo "Google Calendar ID: ${CALENDAR_ID}"
 ```
 
@@ -63,6 +81,7 @@ ${SED} -i \
   -e "s/@@GIT_BRANCH@@/${GIT_BRANCH}/g" \
   -e "s/@@CALENDAR_ID@@/${CALENDAR_ID}/g" \
   -e "s/@@GMAIL_USERNAME@@/${GMAIL_USERNAME}/g" \
+  -e "s/@@YAAS_PIP_PACKAGE@@/${YAAS_PIP_PACKAGES}/g" \
   terraform.tfvars
 ```
 
@@ -197,7 +216,7 @@ No resources.
 | <a name="input_tf_yaas_trigger_name"></a> [tf\_yaas\_trigger\_name](#input\_tf\_yaas\_trigger\_name) | Cloud Build trigger for YAAS infrastructure Terraform code. | `string` | `"yaas-tf-infra"` | no |
 | <a name="input_yaas_dockerfile"></a> [yaas\_dockerfile](#input\_yaas\_dockerfile) | YAAS application Dockerfile | `string` | `"./docker/Dockerfile"` | no |
 | <a name="input_yaas_image_name"></a> [yaas\_image\_name](#input\_yaas\_image\_name) | YAAS docker application image | `string` | `"yaas"` | no |
-| <a name="input_yaas_pip_package"></a> [yaas\_pip\_package](#input\_yaas\_pip\_package) | Python package full name with version, e.g.: ["py-yaas-service>=1.0", "py-yaas-core>=1.0"] | `list(string)` | <pre>[<br>  "py-yaas-core>=1.0",<br>  "py-yaas-service>=1.0"<br>]</pre> | no |
+| <a name="input_yaas_pip_package"></a> [yaas\_pip\_package](#input\_yaas\_pip\_package) | Python package full name with version, e.g.: ["py-yaas-service>=1.0.1", "py-yaas-core>=1.0.2"] | `list(string)` | <pre>[<br>  "py-yaas-core>=1.0.2",<br>  "py-yaas-service>=1.0.1"<br>]</pre> | no |
 | <a name="input_yaas_py_modules"></a> [yaas\_py\_modules](#input\_yaas\_py\_modules) | Python modules. Dot not change, unless you know what you are doing. | `list(string)` | <pre>[<br>  "core",<br>  "cli",<br>  "service"<br>]</pre> | no |
 | <a name="input_yaas_service_to_package"></a> [yaas\_service\_to\_package](#input\_yaas\_service\_to\_package) | Python package full name where APPLICATION is declared, e.g.: {"scaler" = "yaas\_scaler\_service"} | <pre>object({<br>    scaler    = string<br>    scheduler = string<br>  })</pre> | <pre>{<br>  "scaler": "yaas_scaler_service",<br>  "scheduler": "yaas_scheduler_service"<br>}</pre> | no |
 | <a name="input_yaas_service_to_run_name"></a> [yaas\_service\_to\_run\_name](#input\_yaas\_service\_to\_run\_name) | Application to Cloud Run, e.g.: {"scaler" = "yaas-scaler"} | <pre>object({<br>    scaler    = string<br>    scheduler = string<br>  })</pre> | <pre>{<br>  "scaler": "yaas-scaler",<br>  "scheduler": "yaas-scheduler"<br>}</pre> | no |

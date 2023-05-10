@@ -1,5 +1,7 @@
 # Using Terraform to deploy all
 
+> :hand: *ALL* commands are assumed to be executed from this folder: `./terraform`
+
 ## Authenticate
 
 ```bash
@@ -84,4 +86,36 @@ Get the content:
 
 ```bash
 cat ${REQUEST_FILENAME}
+```
+
+Get destination bucket:
+
+```bash
+OUT_JSON=$(mktemp)
+pushd ../../terraform/yaas
+terraform output -json > ${OUT_JSON}
+echo "Terraform output in ${OUT_JSON}"
+
+BUCKET_URI=$(jq -c -r ".yaas_infra.value.bucket.url" ${OUT_JSON})
+BUCKET_NAME=$(jq -c -r ".yaas_infra.value.bucket.name" ${OUT_JSON})
+echo "Bucket URI: <${BUCKET_URI}>"
+popd
+
+rm -f ${OUT_JSON}
+```
+
+Upload it:
+
+```bash
+OBJ_PATH="yaas/batch/test.deployed"
+GCS_URI="${BUCKET_URI}/${OBJ_PATH}"
+gsutil cp ${REQUEST_FILENAME} ${GCS_URI}
+
+gsutil cat ${GCS_URI}
+```
+
+Create an appointment with:
+
+```bash
+echo "gcs | ${BUCKET_NAME} | ${OBJ_PATH}"
 ```

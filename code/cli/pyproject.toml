@@ -131,7 +131,7 @@ verbose = false
 [tool.poetry.dependencies]
 # https://devguide.python.org/versions/#branchstatus
 python = "^3.10.0"  # End-of-life: 2026-10 (checked on 2022-09-01)
-py-yaas-core = "^1.0.1"
+py-yaas-core = "^1.0.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"

@@ -92,7 +92,7 @@ async def _publish_requests(
             payload = request.ScaleRequestCollection.from_lst(req_lst)
             await pubsub.publish(payload.as_dict(), topic_to_pubsub.get(topic))
         else:
-            _LOGGER.debug("There are no requests for topic '%' to be sent out", topic)
+            _LOGGER.debug("There are no requests for topic '%s' to be sent out", topic)
 
 
 def from_event(

@@ -105,6 +105,7 @@ poetry run cli update-calendar-credentials \
 
 ### Authorization Steps
 
+Login with your Gmail account specified in [using Google Calendar API](../../GOOGLE_CALENDAR_API.md).
 This will open a browser window to authorize YAAS to access the calendar.
 Just accept all.
 

@@ -82,8 +82,17 @@ async def _publish_requests(
     topic_to_request_lst: Dict[str, List[request.ScaleRequest]],
 ) -> None:
     for topic, req_lst in topic_to_request_lst.items():
-        payload = request.ScaleRequestCollection.from_lst(req_lst)
-        await pubsub.publish(payload.as_dict(), topic_to_pubsub.get(topic))
+        if req_lst:
+            _LOGGER.debug(
+                "Sending '%s' with '%d' request into topic '%s'",
+                request.ScaleRequestCollection.__name__,
+                len(req_lst),
+                topic,
+            )
+            payload = request.ScaleRequestCollection.from_lst(req_lst)
+            await pubsub.publish(payload.as_dict(), topic_to_pubsub.get(topic))
+        else:
+            _LOGGER.debug("There are no requests for topic '%s' to be sent out", topic)
 
 
 def from_event(

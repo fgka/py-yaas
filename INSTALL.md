@@ -199,6 +199,8 @@ cd terraform
 
 ## Add Proper Calendar Credentials
 
+> :hand: *ALL* build steps are assumed to be executed successfully.
+
 This is needed because the initial JSON credentials does not have the user (your Gmail account) authorization.
 Here we will go through it.
 

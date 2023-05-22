@@ -8,7 +8,7 @@ readme = "README.md"
 classifiers = [
     # Trove classifiers
     # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    "License :: Other/Proprietary License",
+    "License :: OSI Approved :: Apache Software License",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -163,6 +163,7 @@ diagrams = "^0.23.3"
 sphinx = "^6.2.1"
 isort = "^5.12.0"
 pre-commit = "^3.2.2"
+docformatter = { extras = ["tomli"], version = "^1.7.1" }
 py-yaas-core = {path="../core", develop=true}
 
 [build-system]

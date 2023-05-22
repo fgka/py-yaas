@@ -216,7 +216,7 @@ export SECRET_FULL_NAME=$(gcloud secrets list \
   --project=${PROJECT_ID} \
   --format=json \
   | jq -c -r ".[].name" \
-  | grep yaas\
+  | grep yaas \
 )
 echo "Found secret: '${SECRET_FULL_NAME}'"
 ```

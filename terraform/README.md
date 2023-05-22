@@ -38,7 +38,7 @@ For CalDAV:
 ```bash
 export GMAIL_USERNAME="YOUR_USERNAME@gmail.com"
 ```
-
+e
 Packages and versions:
 
 ```bash

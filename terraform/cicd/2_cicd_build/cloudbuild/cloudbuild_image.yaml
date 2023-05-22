@@ -10,11 +10,11 @@ steps:
     script: |
       #!/usr/bin/env bash
 
-      echo "Downloading packages in <${PIP_PKG_LST}>"
+      echo "Downloading packages in '${PIP_PKG_LST}'"
       read -a PKG_LST <<< ${PIP_PKG_LST//@/ }
       for PKG in ${PKG_LST[@]}
       do
-        echo "Downloading <${PKG}> from <${PIP_EXTRA_INDEX_URL}> into <${DIST_DIR}>"
+        echo "Downloading '${PKG}' from '${PIP_EXTRA_INDEX_URL}' into '${DIST_DIR}'"
         python3 -m pip download \
           --no-deps \
           --dest ${DIST_DIR} \

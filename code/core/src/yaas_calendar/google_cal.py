@@ -120,7 +120,7 @@ async def list_upcoming_events(
         credentials_json: calendar JSON credentials, if existing.
         credentials_pickle: cached Pickle file with credentials, if existing.
         secret_name: secret name containing the calendar credentials, if existing, in the format:
-          `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
+          `projects/<project id>/secrets/<secret id>/versions/<version>`
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
         end: up until when to list, if given, will discard ``amount``.
@@ -130,7 +130,7 @@ async def list_upcoming_events(
     .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Listing upcoming events using: <%s>", locals())
+    _LOGGER.debug("Listing upcoming events using: '%s'", locals())
     # Normalize input
     try:
         service = await _calendar_service(
@@ -140,9 +140,9 @@ async def list_upcoming_events(
         )
     except Exception as err:
         raise RuntimeError(
-            f"Could NOT create calendar client for secret <{secret_name}>, "
-            f"JSON file: <{credentials_json}>, "
-            f"and Pickle file: <{credentials_pickle}>. "
+            f"Could NOT create calendar client for secret '{secret_name}', "
+            f"JSON file: '{credentials_json}', "
+            f"and Pickle file: '{credentials_pickle}'. "
             f"Error: {err}"
         ) from err
     if end is None:
@@ -166,9 +166,9 @@ async def list_upcoming_events(
             yield event
     except Exception as err:
         raise RuntimeError(
-            f"Could not list calendar events using arguments: <{kwargs_for_list}>, "
-            f"amount: <{amount}>, "
-            f"and service: <{service}>. "
+            f"Could not list calendar events using arguments: '{kwargs_for_list}', "
+            f"amount: '{amount}', "
+            f"and service: '{service}'. "
             f"Error: {err}"
         ) from err
 
@@ -221,9 +221,9 @@ async def _calendar_service(
         )
     except Exception as err:
         raise RuntimeError(
-            f"Could not get Google Calendar using secret: <{secret_name}>, "
-            f"JSON: <{credentials_json}>, "
-            f"and Pickle: <{credentials_pickle}>. "
+            f"Could not get Google Calendar using secret: '{secret_name}', "
+            f"JSON: '{credentials_json}', "
+            f"and Pickle: '{credentials_pickle}'. "
             f"Error: {err}"
         ) from err
     _refresh_credentials_if_needed(cal_creds)
@@ -237,7 +237,7 @@ async def _calendar_service(
         _LOGGER.info("Created cal credentials service for client ID %s", cal_creds.client_id)
     else:
         _LOGGER.warning(
-            "No credentials retrieved from either pickle file <%s>, cloud secret <%s>, or JSON file <%s>",
+            "No credentials retrieved from either pickle file '%s', cloud secret '%s', or JSON file '%s'",
             credentials_pickle,
             secret_name,
             credentials_json,
@@ -266,9 +266,9 @@ async def _calendar_credentials(
     if not result:
         raise RuntimeError(
             "Could not find credentials for cal access."
-            f" Tried pickle file <{credentials_pickle}>"
-            f", cloud secrets <{secret_name}>"
-            f", and JSON file <{credentials_json}>"
+            f" Tried pickle file '{credentials_pickle}'"
+            f", cloud secrets '{secret_name}'"
+            f", and JSON file '{credentials_json}'"
         )
     # Cache values on pickle file
     await _persist_credentials_pickle(result, credentials_pickle)
@@ -305,7 +305,7 @@ async def _pickle_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
-    _LOGGER.debug("Retrieving cal credentials from pickle file: <%s>(%s)", value, type(value))
+    _LOGGER.debug("Retrieving cal credentials from pickle file: '%s'(%s)", value, type(value))
     value = _pickle_filepath(value)
     if value.exists():
         async with aiofiles.open(value, "rb") as in_file:
@@ -326,7 +326,7 @@ async def _persist_credentials_pickle(
 ) -> bool:
     result = False
     _LOGGER.debug(
-        "Persisting cal credentials into pickle file: <%s>(%s)",
+        "Persisting cal credentials into pickle file: '%s'(%s)",
         credentials_pickle,
         type(credentials_pickle),
     )
@@ -335,7 +335,7 @@ async def _persist_credentials_pickle(
         if not isinstance(credentials_pickle, pathlib.Path):
             raise TypeError(
                 f"Expecting a {pathlib.Path.__name__} as credentials pickle file path."
-                f" Got <{credentials_pickle}>({type(credentials_pickle)})"
+                f" Got '{credentials_pickle}'({type(credentials_pickle)})"
             )
         content = pickle.dumps(value)
         async with aiofiles.open(credentials_pickle, "wb") as out_file:
@@ -357,7 +357,7 @@ async def _secret_credentials(
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
     _LOGGER.debug(
-        "Retrieving cal credentials from cloud secret name: <%s>(%s)",
+        "Retrieving cal credentials from cloud secret name: '%s'(%s)",
         value,
         type(value),
     )
@@ -366,7 +366,7 @@ async def _secret_credentials(
     if value:
         secret_content = await secrets.get(value)
         _LOGGER.info(
-            "Retrieved cal credentials from cloud secret name: <%s>(%s)",
+            "Retrieved cal credentials from cloud secret name: '%s'(%s)",
             value,
             type(value),
         )
@@ -390,7 +390,7 @@ async def _persist_json_credentials(
     credentials_json: Optional[pathlib.Path] = None,
 ) -> bool:
     _LOGGER.debug(
-        "Persisting cal credentials into JSON file: <%s>(%s)",
+        "Persisting cal credentials into JSON file: '%s'(%s)",
         credentials_json,
         type(credentials_json),
     )
@@ -403,7 +403,7 @@ async def _persist_json_credentials(
         if not isinstance(credentials_json, pathlib.Path):
             raise TypeError(
                 f"Expecting a {pathlib.Path.__name__} as credentials JSON file path."
-                f" Got <{credentials_json}>({type(credentials_json)})"
+                f" Got '{credentials_json}'({type(credentials_json)})"
             )
         async with aiofiles.open(credentials_json, "w") as out_file:
             await out_file.write(json.dumps(value))
@@ -425,7 +425,7 @@ def _json_credentials(
     value: Optional[pathlib.Path] = None,
 ) -> credentials.Credentials:
     result: credentials.Credentials = None
-    _LOGGER.debug("Retrieving cal credentials from JSON file: <%s>(%s)", value, type(value))
+    _LOGGER.debug("Retrieving cal credentials from JSON file: '%s'(%s)", value, type(value))
     value = _json_filepath(value)
     if value.exists():
         if _is_initial_credentials(value):
@@ -449,7 +449,7 @@ def _is_initial_credentials(value: pathlib.Path) -> bool:
         with open(value, "r", encoding=const.ENCODING_UTF8) as in_json:
             content = json.load(in_json)
     except Exception as err:
-        raise RuntimeError(f"Could not decode JSON content from <{value}>. Error: {err}") from err
+        raise RuntimeError(f"Could not decode JSON content from '{value}'. Error: {err}") from err
     if isinstance(content, dict):
         for key in _INITIAL_CREDENTIALS_KEYS:
             if key in content:
@@ -483,16 +483,16 @@ async def update_secret_credentials(
     Returns:
     """
     _LOGGER.debug(
-        "Updating calendar secret credentials in <%s> for calendar ID <%s> and initial JSON credentials <%s>",
+        "Updating calendar secret credentials in '%s' for calendar ID '%s' and initial JSON credentials '%s'",
         secret_name,
         calendar_id,
         initial_credentials_json,
     )
     # validate input
     if not isinstance(calendar_id, str) or not calendar_id:
-        raise ValueError(f"Calendar ID must be a non-empty string. Got: <{calendar_id}>({type(calendar_id)})")
+        raise ValueError(f"Calendar ID must be a non-empty string. Got: '{calendar_id}'({type(calendar_id)})")
     if not isinstance(secret_name, str) or not secret_name:
-        raise ValueError(f"Secret name must be a non-empty string. Got: <{secret_name}>({type(secret_name)})")
+        raise ValueError(f"Secret name must be a non-empty string. Got: '{secret_name}'({type(secret_name)})")
     # secret name
     fqn_secret_name = secret_name
     if secrets_const.VERSION_SUB_STR not in secret_name:
@@ -504,9 +504,9 @@ async def update_secret_credentials(
         secret_exists = await _secret_exists(fqn_secret_name)
         if not secret_exists:
             raise RuntimeError(
-                f"Secret <{fqn_secret_name}> does not exist. "
+                f"Secret '{fqn_secret_name}' does not exist. "
                 "In this case give an initial credentials JSON with content. "
-                f"Got: <{initial_credentials_json}>"
+                f"Got: '{initial_credentials_json}'"
             )
     # to by-pass caching
     # pylint: disable=consider-using-with
@@ -530,14 +530,14 @@ async def update_secret_credentials(
     cal_creds = await _pickle_credentials(credentials_pickle)
     await _persist_json_credentials(cal_creds, credentials_json)
     _LOGGER.info(
-        "Refreshed JSON file <%s> with credentials from pickle cache in <%s>",
+        "Refreshed JSON file '%s' with credentials from pickle cache in '%s'",
         credentials_json,
         credentials_pickle,
     )
     # push credentials with authorization.
     await _put_secret_credentials(secret_name, credentials_json.absolute())
     _LOGGER.info(
-        "Updated calendar secret credentials in <%s> for calendar ID <%s> and initial JSON credentials <%s>",
+        "Updated calendar secret credentials in '%s' for calendar ID '%s' and initial JSON credentials '%s'",
         fqn_secret_name,
         calendar_id,
         initial_credentials_json,
@@ -549,7 +549,7 @@ async def _put_secret_credentials(
     credentials_json: Optional[pathlib.Path] = None,
 ) -> None:
     _LOGGER.info(
-        "Updating secret <%s> with content from JSON file: <%s>",
+        "Updating secret '%s' with content from JSON file: '%s'",
         secret_name,
         credentials_json,
     )
@@ -569,12 +569,12 @@ async def _put_secret_credentials(
                 raise RuntimeError(f"Could not clean up secret {secret_name}. Error: {err}") from err
         else:
             _LOGGER.warning(
-                "Credentials JSON file does not exist. Got: <%s>",
+                "Credentials JSON file does not exist. Got: '%s'",
                 credentials_json.absolute(),
             )
     else:
         _LOGGER.warning(
-            "Credentials JSON is not valid. Ignoring put to secret <%s>. Got file: <%s>(%s)",
+            "Credentials JSON is not valid. Ignoring put to secret '%s'. Got file: '%s'(%s)",
             secret_name,
             credentials_json,
             type(credentials_json),

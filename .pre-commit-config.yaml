@@ -67,6 +67,13 @@ repos:
     entry: bash -c "pushd code/service && poetry run isort src tests; popd"
     pass_filenames: false
     files: ^code/service/
+- repo: https://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.77.1
+  hooks:
+    - id: terraform_fmt
+      files: ^terraform
+    - id: terraform_docs
+      files: ^terraform/
 #- repo: local
 #  hooks:
 #  - id: docformatter
@@ -163,16 +170,12 @@ repos:
 - repo: https://github.com/antonbabenko/pre-commit-terraform
   rev: v1.77.1
   hooks:
-    - id: terraform_fmt
-      files: ^terraform
     - id: terraform_tflint
       args: ["--args=--config __GIT_WORKING_DIR__/terraform/.tflint.hcl"]
       files: ^terraform/
     - id: terraform_tfsec
       files: ^terraform/
     - id: terraform_validate
-      files: ^terraform/
-    - id: terraform_docs
       files: ^terraform/
     - id: terraform_checkov
       args: ["--args=--quiet",

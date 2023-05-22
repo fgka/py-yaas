@@ -44,7 +44,7 @@ async def dispatch(
     if not isinstance(topic_to_pubsub, dict):
         raise TypeError(
             f"The mapping from topic to pubsub must be a {dict.__name__}. "
-            f"Got: <{topic_to_pubsub}>({type(topic_to_pubsub)})"
+            f"Got: '{topic_to_pubsub}'({type(topic_to_pubsub)})"
         )
     # routing
     topic_to_request_lst = _topic_to_request_lst(topic_to_pubsub, value, raise_if_invalid_request)
@@ -61,13 +61,13 @@ def _topic_to_request_lst(
     for ndx, val in enumerate(value):
         # validate value
         if not isinstance(val, request.ScaleRequest):
-            msg = f"Value <{val}>({type(val)})[{ndx}] is not a {request.ScaleRequest.__name__}"
+            msg = f"Value '{val}'({type(val)})[{ndx}] is not a {request.ScaleRequest.__name__}"
             if raise_if_invalid_request:
                 raise DispatchError(msg)
             _LOGGER.warning(msg)
             continue
         if val.topic not in topic_to_pubsub:
-            msg = f"Value <{val}>[{ndx}] has a topic {val.topic} that is not present in {topic_to_pubsub}"
+            msg = f"Value '{val}'[{ndx}] has a topic {val.topic} that is not present in {topic_to_pubsub}"
             if raise_if_invalid_request:
                 raise DispatchError(msg)
             _LOGGER.warning(msg)
@@ -127,8 +127,8 @@ def _dto_from_event(
     # validate input
     if not issubclass(result_type, dto_defaults.HasFromDict):
         raise TypeError(
-            f"Type <{result_type.__name__}>({type(result_type)}) "
-            f"must be a sub-class of <{dto_defaults.HasFromDict.__name__}>"
+            f"Type '{result_type.__name__}'({type(result_type)}) "
+            f"must be a sub-class of '{dto_defaults.HasFromDict.__name__}'"
         )
     # logic
 
@@ -139,7 +139,7 @@ def _dto_from_event(
             result = result_type.from_dict(value)
         except Exception as err_fn:
             raise RuntimeError(
-                f"Could not extract <{result_type.__name__}> from dict <{value}>. Error: {err_fn}"
+                f"Could not extract '{result_type.__name__}' from dict '{value}'. Error: {err_fn}"
             ) from err_fn
         return result
 
@@ -150,11 +150,9 @@ def _dto_from_event(
             iso_str_timestamp=iso_str_timestamp,
         )
     except Exception as err:
-        raise RuntimeError(f"Could extract {result_type.__name__} from event <{event}>. " f"Error: {err}") from err
+        raise RuntimeError(f"Could extract {result_type.__name__} from event '{event}'. Error: {err}") from err
     if not isinstance(result, result_type):
-        raise ValueError(
-            f"Parsed value is not an instance of {result_type.__name__}. " f"Got: <{result}>({type(result)})"
-        )
+        raise ValueError(f"Parsed value is not an instance of {result_type.__name__}. Got: '{result}'({type(result)})")
     return result
 
 
@@ -203,7 +201,7 @@ def command_from_event(
             result = command_parser.to_command(value)
         except Exception as err_fn:
             raise RuntimeError(
-                f"Could not convert dict <{value}> to {command.CommandBase.__name__}. "
+                f"Could not convert dict '{value}' to {command.CommandBase.__name__}. "
                 f"Check {command_parser.__name__}.{command_parser.to_command.__name__}. "
                 f"Error: {err_fn}"
             ) from err_fn
@@ -216,11 +214,9 @@ def command_from_event(
             iso_str_timestamp=iso_str_timestamp,
         )
     except Exception as err:
-        raise RuntimeError(
-            f"Could extract {command.CommandBase.__name__} from event <{event}>. " f"Error: {err}"
-        ) from err
+        raise RuntimeError(f"Could extract {command.CommandBase.__name__} from event '{event}'. Error: {err}") from err
     if not isinstance(result, command.CommandBase):
         raise ValueError(
-            f"Parsed value is not an instance of {command.CommandBase.__name__}. " f"Got: <{result}>({type(result)})"
+            f"Parsed value is not an instance of {command.CommandBase.__name__}. Got: '{result}'({type(result)})"
         )
     return result

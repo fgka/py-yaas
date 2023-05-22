@@ -22,14 +22,14 @@ def to_command(value: Dict[str, Any]) -> command.CommandBase:
 
     """
     _LOGGER.debug(
-        "Converting value into a <%s> instance. Value: <%s>",
+        "Converting value into a '%s' instance. Value: '%s'",
         command.CommandBase.__name__,
         value,
     )
     # validate input
     req_type = _validate_command_dict_and_get_request_type(value)
     if not req_type:
-        raise ValueError(f"Could not parse request type from <{value}>({type(value)})")
+        raise ValueError(f"Could not parse request type from '{value}'({type(value)})")
     # logic
     if req_type == command.CommandType.UPDATE_CALENDAR_CREDENTIALS_SECRET:
         result = command.CommandUpdateCalendarCredentialsSecret.from_dict(value)
@@ -38,7 +38,7 @@ def to_command(value: Dict[str, Any]) -> command.CommandBase:
     elif req_type == command.CommandType.SEND_SCALING_REQUESTS:
         result = command.CommandSendScalingRequests.from_dict(value)
     else:
-        raise ValueError(f"Command type <{req_type}> is not supported. Argument: <{value}>")
+        raise ValueError(f"Command type '{req_type}' is not supported. Argument: '{value}'")
     return result
 
 
@@ -46,5 +46,5 @@ def _validate_command_dict_and_get_request_type(  # pylint: disable=invalid-name
     value: Dict[str, Any]
 ) -> command.CommandType:
     if not isinstance(value, dict):
-        raise TypeError(f"Expecting a {dict.__name__} as argument. Got: <{value}>({type(value)})")
+        raise TypeError(f"Expecting a {dict.__name__} as argument. Got: '{value}'({type(value)})")
     return command.CommandType.from_str(value.get(command.CommandBase.type.__name__))

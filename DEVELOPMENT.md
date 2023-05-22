@@ -189,7 +189,7 @@ mkdir -p ./code/dist
 unset PKGS
 PKGS=("core" "cli" "service")
 for P in ${PKGS[@]}; do
-  echo "Creating wheel for <${P}>"
+  echo "Creating wheel for '${P}'"
   pushd ./code/${P}
   poetry build
   cp ./dist/*.whl ../dist/
@@ -206,7 +206,7 @@ TAG_PY_PKG_LST=("yaas-scheduler yaas_scheduler_service" "yaas-scaler yaas_scaler
 for TAG_PY_PKG in ${TAG_PY_PKG_LST[@]}; do
   TAG=${TAG_PY_PKG%% *}
   PY_PKG=${TAG_PY_PKG##* }
-  echo "Building <${TAG}> using <${PY_PKG}>"
+  echo "Building '${TAG}' using '${PY_PKG}'"
   docker build \
     --build-arg DIST_DIR="./code/dist" \
     --build-arg PY_PACKAGE="${PY_PKG}" \

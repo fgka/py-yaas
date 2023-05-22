@@ -142,7 +142,7 @@ async def _cache_snapshot(
 ) -> event.EventSnapshot:
     result = None
     if bucket_name and db_object:
-        print(f"Events cache: bucket <{bucket_name}> and object <{db_object}>")
+        print(f"Events cache: bucket '{bucket_name}' and object '{db_object}'")
         gcs_store = gcs.GcsObjectStoreContextManager(
             bucket_name=bucket_name,
             db_object_path=db_object,
@@ -162,7 +162,7 @@ async def _compare_snapshots(*, cal_snapshot: event.EventSnapshot, cache_snapsho
     for ts_utc, lst_req in cache_snapshot.timestamp_to_request.items():
         print(f"Timestamp {datetime.fromtimestamp(ts_utc)} has {len(lst_req)} requests")
     comp = cache_snapshot.timestamp_to_request == cal_snapshot.timestamp_to_request
-    print("Comparison between calendar and cache: " f"{comp}")
+    print(f"Comparison between calendar and cache: {comp}")
     if not comp:
         print(f"Calendar: {cal_snapshot.source}")
         for ts_utc, lst_req in cal_snapshot.timestamp_to_request.items():
@@ -233,7 +233,7 @@ async def _enact_request(parser: standard.StandardScalingCommandParser, req: req
         scaler = parser.scaler(req)
         await scaler.enact()
     except Exception as err:  # pylint: disable=broad-except
-        print(f"Could not apply request <{req}>. Error: {err}")
+        print(f"Could not apply request '{req}'. Error: {err}")
 
 
 @cli.command(help="Set Cloud Run scaling")

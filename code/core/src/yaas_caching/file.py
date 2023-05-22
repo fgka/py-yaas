@@ -182,7 +182,7 @@ class BaseFileStoreContextManager(base.StoreContextManager, abc.ABC):
             archived = await self._write_scale_requests_with_lock(to_archive, is_archive=True)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error(
-                "Could not archive snapshot <%s>. Error: %s",
+                "Could not archive snapshot '%s'. Error: %s",
                 to_archive,
                 err,
             )
@@ -222,21 +222,19 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
     ):
         if not isinstance(json_line_file, pathlib.Path):
             raise TypeError(
-                f"JSON line file must be a {pathlib.Path.__name__}. " f"Got: <{json_line_file}>({type(json_line_file)})"
+                f"JSON line file must be a {pathlib.Path.__name__}. Got: '{json_line_file}'({type(json_line_file)})"
             )
         if archive_json_line_file is None:
             archive_json_line_file = json_line_file.with_suffix(".archive")
         if not isinstance(archive_json_line_file, pathlib.Path):
             raise TypeError(
                 f"Archive JSON line file must be a {pathlib.Path.__name__}. "
-                f"Got: <{archive_json_line_file}>({type(archive_json_line_file)})"
+                f"Got: '{archive_json_line_file}'({type(archive_json_line_file)})"
             )
         json_line_file = json_line_file.absolute()
         archive_json_line_file = archive_json_line_file.absolute()
         if json_line_file == archive_json_line_file:
-            raise ValueError(
-                f"JSON line file <{json_line_file}> " f"can *NOT* be the same as <{archive_json_line_file}>"
-            )
+            raise ValueError(f"JSON line file '{json_line_file}' can *NOT* be the same as '{archive_json_line_file}'")
         self._json_line_file = json_line_file
         super().__init__(
             source=self._json_line_file.name,
@@ -293,7 +291,7 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
             tmp_file.rename(json_file)
         except Exception as err:
             raise RuntimeError(
-                f"[DATA LOSS] Could not move content from {tmp_file} into {json_file}. " f"Error: {err}"
+                f"[DATA LOSS] Could not move content from {tmp_file} into {json_file}. Error: {err}"
             ) from err
         return value
 
@@ -331,7 +329,7 @@ def _sqlite_schema_from_dto(dto_class: Type, primary_key: Optional[str] = None) 
     for field in sorted(fields_dict.keys()):
         column_def_list.append(_sqlite_column_definition_from_attr(fields_dict.get(field), field == primary_key))
     columns_stmt = ", ".join(column_def_list)
-    return f"CREATE TABLE IF NOT EXISTS {_SQLITE_SCHEMA_NAME_TOKEN}_{dto_class.__name__} " f"({columns_stmt});"
+    return f"CREATE TABLE IF NOT EXISTS {_SQLITE_SCHEMA_NAME_TOKEN}_{dto_class.__name__} ({columns_stmt});"
 
 
 _SQLITE_TABLE_SCHEMA_TMPL: str = _sqlite_schema_from_dto(request.ScaleRequest)
@@ -352,9 +350,7 @@ class SQLiteStoreContextManager(BaseFileStoreContextManager):
         **kwargs,
     ):
         if not isinstance(sqlite_file, pathlib.Path):
-            raise TypeError(
-                f"SQLite file must be a {pathlib.Path.__name__}. " f"Got: <{sqlite_file}>({type(sqlite_file)})"
-            )
+            raise TypeError(f"SQLite file must be a {pathlib.Path.__name__}. Got: '{sqlite_file}'({type(sqlite_file)})")
         sqlite_file = sqlite_file.absolute()
         self._sqlite_file = sqlite_file
         if "source" not in kwargs:
@@ -544,7 +540,7 @@ def _sqlite_connection(database: Optional[pathlib.Path] = None) -> sqlite3.Conne
         database = ":memory:"
     elif not isinstance(database, pathlib.Path):
         raise TypeError(
-            f"The database argument can be None of {pathlib.Path.__name__}. " f"Got: <{database}>({type(database)})"
+            f"The database argument can be None of {pathlib.Path.__name__}. Got: '{database}'({type(database)})"
         )
     # logic
     if sqlite3.threadsafety == 0:

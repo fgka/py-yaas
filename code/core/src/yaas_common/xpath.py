@@ -54,7 +54,7 @@ def get_parent_node_based_on_path(value: Any, path: str) -> Tuple[Any, str]:
 
 def _validate_path(value: str) -> None:
     if not isinstance(value, str) or not value.strip():
-        raise TypeError(f"Path argument must be a non-empty string. Got: <{value}>({type(value)})")
+        raise TypeError(f"Path argument must be a non-empty string. Got: '{value}'({type(value)})")
 
 
 def _get_parent_node_attribute_based_on_path_object(  # pylint: disable=invalid-name

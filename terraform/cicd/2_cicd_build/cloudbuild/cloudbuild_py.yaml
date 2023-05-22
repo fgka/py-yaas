@@ -64,11 +64,11 @@ steps:
     script: |
       #!/usr/bin/env bash
 
-      echo "Processing triggers in <${DOCKER_BUILD_TRIGGER_LST}>"
+      echo "Processing triggers in '${DOCKER_BUILD_TRIGGER_LST}'"
       read -a DOCKER_TRIGGERS <<< ${DOCKER_BUILD_TRIGGER_LST//@/ }
       for TRIGGER in ${DOCKER_TRIGGERS[@]}
       do
-        echo "Triggering <${TRIGGER}>@<${REGION}> for branch <${BRANCH}>"
+        echo "Triggering '${TRIGGER}'@'${REGION}' for branch '${BRANCH}'"
         gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH}
       done
 logsBucket: "gs://${_BUCKET_NAME}/cloudbuild_logs/${TRIGGER_NAME}"

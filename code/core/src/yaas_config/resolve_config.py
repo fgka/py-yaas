@@ -55,17 +55,17 @@ def consolidate_config(value: config.Config, *, raise_if_failed: Optional[bool] 
 
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Consolidating config for: <%s>", value)
+    _LOGGER.debug("Consolidating config for: '%s'", value)
     # input validation
     if not isinstance(value, config.Config):
-        raise TypeError(f"Value must be an instance of {config.Config.__name__}. " f"Got: <{value}>({type(value)})")
+        raise TypeError(f"Value must be an instance of {config.Config.__name__}. Got: '{value}'({type(value)})")
     # logic
     result = value
     if value.topic_to_pubsub_gcs:
         try:
             result = _consolidate_config_with_topic_to_pubsub_gcs(value)
         except Exception as err:  # pylint: disable=broad-exception-caught
-            msg = f"Could not consolidate Pub/Sub mapping using <{value.topic_to_pubsub_gcs}>." f" Error: {err}"
+            msg = f"Could not consolidate Pub/Sub mapping using '{value.topic_to_pubsub_gcs}'. Error: {err}"
             if raise_if_failed:
                 raise RuntimeError(msg) from err
             _LOGGER.warning(msg)
@@ -85,7 +85,7 @@ def _consolidate_config_with_topic_to_pubsub_gcs(  # pylint: disable=invalid-nam
         # topic_to_pubsub has precedence over GCS
         if topic in topic_to_pubsub:
             _LOGGER.warning(
-                "Topic <%s> is already present in topic_to_pubsub. Ignoring content in%s",
+                "Topic '%s' is already present in topic_to_pubsub. Ignoring content in%s",
                 topic,
                 blob_uri,
             )
@@ -97,7 +97,7 @@ def _consolidate_config_with_topic_to_pubsub_gcs(  # pylint: disable=invalid-nam
             topic_to_pubsub[topic] = topic_id
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
-                "Content of %s is not a valid Pub/Sub topic id. Content: <%s>. Error: %s",
+                "Content of %s is not a valid Pub/Sub topic id. Content: '%s'. Error: %s",
                 blob_uri,
                 topic_id,
                 err,

@@ -94,7 +94,7 @@ class EventSnapshot(dto_defaults.HasFromJsonString):
             for item in request_lst:
                 key = item.timestamp_utc
                 if not key:
-                    msg = f"Item <{item}> from request list does not have a proper timestamp value."
+                    msg = f"Item '{item}' from request list does not have a proper timestamp value."
                     if not discard_invalid:
                         raise ValueError(msg)
                     _LOGGER.warning(msg + " Ignoring")  # pylint: disable=logging-not-lazy

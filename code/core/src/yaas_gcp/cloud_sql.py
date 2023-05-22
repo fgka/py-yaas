@@ -37,7 +37,7 @@ async def get_instance(value: str) -> Dict[str, Any]:
 
     .. DatabaseInstance: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#DatabaseInstance
     """
-    _LOGGER.debug("Getting instance <%s>", value)
+    _LOGGER.debug("Getting instance '%s'", value)
     # validate
     project, _, instance_name = _sql_fqn_components(value)
     # get service definition
@@ -48,7 +48,7 @@ async def get_instance(value: str) -> Dict[str, Any]:
         result = request.execute()
         await asyncio.sleep(0)
     except Exception as err:
-        raise CloudSqlServiceError(f"Could not retrieve service <{value}>. Error: {err}") from err
+        raise CloudSqlServiceError(f"Could not retrieve service '{value}'. Error: {err}") from err
     return result
 
 
@@ -68,8 +68,8 @@ def _sql_fqn_components(value: str) -> Tuple[str, str, str]:
         project, location, instance_name = parsed
     else:
         raise ValueError(
-            f"Instance name <{value}> is not a valid Cloud SQL resource name. "
-            f"Needs to comply with <{resource_regex.CLOUD_SQL_CANONICAL_REGEX}>"
+            f"Instance name '{value}' is not a valid Cloud SQL resource name. "
+            f"Needs to comply with '{resource_regex.CLOUD_SQL_CANONICAL_REGEX}'"
         )
     return project, location, instance_name
 
@@ -82,13 +82,13 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
         value:
 
     Returns:
-        A tuple in the form ``(<can_enact: bool>, <reason for False: str>)``.
+        A tuple in the form ``('can_enact: bool', 'reason for False: str')``.
 
     .. _DatabaseInstance: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#DatabaseInstance
     .. _RUNNABLE: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances#SqlInstanceState
     """
     reason = None
-    _LOGGER.debug("Checking readiness of instance <%s>", value)
+    _LOGGER.debug("Checking readiness of instance '%s'", value)
     try:
         # service
         instance = await get_instance(value)
@@ -96,12 +96,12 @@ async def can_be_deployed(value: str) -> Tuple[bool, str]:
         # checking status
         if status != cloud_sql_const.CLOUD_SQL_STATUS_OK:
             reason = (
-                f"Instance <{value}> {cloud_sql_const.CLOUD_SQL_STATE_KEY} "
-                f"<{status}>({type(status)}) is not {cloud_sql_const.CLOUD_SQL_STATUS_OK}, "
+                f"Instance '{value}' {cloud_sql_const.CLOUD_SQL_STATE_KEY} "
+                f"'{status}'({type(status)}) is not {cloud_sql_const.CLOUD_SQL_STATUS_OK}, "
                 "try again later."
             )
     except Exception as err:  # pylint: disable=broad-except
-        reason = f"Could not retrieve service with name <{value}>. Error: {err}"
+        reason = f"Could not retrieve service with name '{value}'. Error: {err}"
         _LOGGER.exception(reason)
     return reason is None, reason
 
@@ -126,7 +126,7 @@ def validate_cloud_sql_resource_name(  # pylint: disable=invalid-name
     except Exception as err:  # pylint: disable=broad-except
         if raise_if_invalid:
             raise err
-        result.append(f"Could not parse instance name <{value}>. Error: {err}")
+        result.append(f"Could not parse instance name '{value}'. Error: {err}")
     return result
 
 
@@ -163,7 +163,7 @@ async def update_instance(*, name: str, path_value_lst: List[Tuple[str, Optional
     .. _documentation: https://cloud.google.com/sql/docs/postgres/admin-api/rest/v1beta4/instances/patch
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
-    _LOGGER.debug("Updating instance <%s> with <%s>", name, path_value_lst)
+    _LOGGER.debug("Updating instance '%s' with '%s'", name, path_value_lst)
     # validate
     validate_cloud_sql_resource_name(name)
     validation.validate_path_value_lst(path_value_lst)
@@ -179,7 +179,7 @@ async def update_instance(*, name: str, path_value_lst: List[Tuple[str, Optional
         await asyncio.sleep(0)
     except Exception as err:
         raise CloudSqlServiceError(
-            f"Could not update instance <{name}> with <{path_value_lst}>. " f"Request: {request}. " f"Error: {err}"
+            f"Could not update instance '{name}' with '{path_value_lst}'. Request: {request}. Error: {err}"
         ) from err
     _LOGGER.info(
         "Update request for instance %s with %s sent.",

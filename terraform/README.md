@@ -80,7 +80,7 @@ export SED="sed"
 if [[ "Darwin" == $(uname -s) ]]; then
   export SED="gsed"
 fi
-echo "sed = <${SED}>"
+echo "sed = '${SED}'"
 ```
 
 ## [Bootstrap](./bootstrap/README.md)
@@ -131,7 +131,7 @@ terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 export TF_STATE_BUCKET=$(jq -c -r ".tf_state_bucket.value.name" ${OUT_JSON})
-echo "Terraform state bucket name: <${TF_STATE_BUCKET}>"
+echo "Terraform state bucket name: '${TF_STATE_BUCKET}'"
 rm -f ${OUT_JSON}
 ```
 
@@ -149,7 +149,7 @@ jq -c -r ".backend_tf.value[]" ${OUT_JSON} \
       ACTUAL_FILENAME="${TF_DIR}/${FILENAME}"
       MODULE=${FILENAME##*.}; \
       OUTPUT="./${MODULE}/${TARGET_FILENAME}"; \
-      echo "Copying: <${ACTUAL_FILENAME}> to <${OUTPUT}>"; \
+      echo "Copying: '${ACTUAL_FILENAME}' to '${OUTPUT}'"; \
       cp ${ACTUAL_FILENAME} ${OUTPUT}; \
     done
 rm -f ${OUT_JSON}
@@ -164,7 +164,7 @@ terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 SOURCE=${TF_DIR}/$(jq -c -r ".build_pipeline_backend_tf_tmpl.value" ${OUT_JSON})
-echo "Copying: <${SOURCE}> to <${TARGET}>"
+echo "Copying: '${SOURCE}' to '${TARGET}'"
 rm -f ${OUT_JSON}
 ```
 
@@ -230,7 +230,7 @@ terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 BUILD_SA_MEMBER_EMAIL=$(jq -c -r ".cicd_infra.value.tf_build_service_account.member" ${OUT_JSON})
-echo "Build Service Account member email: <${BUILD_SA_MEMBER_EMAIL}>"
+echo "Build Service Account member email: '${BUILD_SA_MEMBER_EMAIL}'"
 
 rm -f ${OUT_JSON}
 ```
@@ -253,7 +253,7 @@ terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 CICD_TF_TRIGGER_NAME=$(jq -c -r ".cicd_build.value.tf_build_trigger.name" ${OUT_JSON})
-echo "CI/CD Terraform trigger name: <${CICD_TF_TRIGGER_NAME}>"
+echo "CI/CD Terraform trigger name: '${CICD_TF_TRIGGER_NAME}'"
 
 rm -f ${OUT_JSON}
 ```
@@ -270,7 +270,7 @@ gcloud builds triggers run ${CICD_TF_TRIGGER_NAME} \
   > ${TMP}
 
 BUILD_ID=$(jq -r -c ".metadata.build.id" ${TMP})
-echo "Build ID: <${BUILD_ID}>"
+echo "Build ID: '${BUILD_ID}'"
 
 rm -f ${TMP}
 ```
@@ -301,7 +301,7 @@ terraform -chdir=${TF_DIR} output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 GS_CONFIG_JSON=$(jq -c -r ".yaas_build.value.gcs_config_json" ${OUT_JSON})
-echo "Google storage URI for config JSON: <${GS_CONFIG_JSON}>"
+echo "Google storage URI for config JSON: '${GS_CONFIG_JSON}'"
 
 rm -f ${OUT_JSON}
 

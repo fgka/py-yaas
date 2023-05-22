@@ -65,20 +65,20 @@ def read_configuration() -> config.Config:
         config_json = gcs.read_object(bucket_name=bucket_name, object_path=object_path, warn_read_failure=True)
     except Exception as err:
         raise RuntimeError(
-            f"Could not read config object in bucket <{bucket_name}> " f"and object <{object_path}>. " f"Error: {err}"
+            f"Could not read config object in bucket '{bucket_name}' and object '{object_path}'. Error: {err}"
         ) from err
     try:
         result = config.Config.from_json(config_json)
     except Exception as err:
         raise RuntimeError(
-            f"Could not extract <{config.Config.__name__}> " f"from JSON content: <{config_json}>. " f"Error: {err}"
+            f"Could not extract '{config.Config.__name__}' from JSON content: '{config_json}'. Error: {err}"
         ) from err
     try:
         result = resolve_config.consolidate_config(result, raise_if_failed=False)
     except Exception as err:
         raise RuntimeError(
-            f"Could not consolidate Pub/Sub topics on <{result}>. "
-            f"Specifically: <{result.topic_to_pubsub_gcs}>. "
+            f"Could not consolidate Pub/Sub topics on '{result}'. "
+            f"Specifically: '{result.topic_to_pubsub_gcs}'. "
             f"Error: {err}"
         ) from err
     return result
@@ -96,7 +96,7 @@ def configuration() -> str:
         def configuration() -> str:
             return cloud_run.configuration()
     """
-    _LOGGER.debug("Request data: <%s>(%s)", flask.request.data, type(flask.request.data))
+    _LOGGER.debug("Request data: '%s'(%s)", flask.request.data, type(flask.request.data))
     _LOGGER.info("Calling %s", configuration.__name__)
     try:
         result = flask.jsonify(read_configuration().as_dict())
@@ -147,8 +147,8 @@ async def _kwargs_from_flask_request(
         kwargs = await async_kwargs_fn(flask.request)
     except Exception as err:  # pylint: disable=broad-except
         err_msg = (
-            f"Could not create kwargs from request <{flask.request}> "
-            f"using <{async_kwargs_fn.__name__}>. "
+            f"Could not create kwargs from request '{flask.request}' "
+            f"using '{async_kwargs_fn.__name__}'. "
             f"Error: {err}"
         )
         _LOGGER.exception(err_msg)
@@ -172,15 +172,13 @@ async def _call_and_respond(
 
     Returns:
     """
-    _LOGGER.debug("Request data: <%s>(%s)", flask.request.data, type(flask.request.data))
+    _LOGGER.debug("Request data: '%s'(%s)", flask.request.data, type(flask.request.data))
     result = None
     err_msg = None
     try:
-        _LOGGER.info("Calling %s through <%s> with <%s>", what, async_fn.__name__, kwargs)
+        _LOGGER.info("Calling %s through '%s' with '%s'", what, async_fn.__name__, kwargs)
         result = await async_fn(**kwargs)
     except Exception as err:  # pylint: disable=broad-except
-        err_msg = (
-            f"Could not process {what} using <{async_fn.__name__}> " f"and arguments: <{kwargs}>. " f"Error: {err}"
-        )
+        err_msg = f"Could not process {what} using '{async_fn.__name__}' and arguments: '{kwargs}'. Error: {err}"
         _LOGGER.exception(err_msg)
     return result, err_msg

@@ -218,7 +218,7 @@ export SECRET_FULL_NAME=$(gcloud secrets list \
   | jq -c -r ".[].name" \
   | grep yaas\
 )
-echo "Found secret: <${SECRET_FULL_NAME}>"
+echo "Found secret: '${SECRET_FULL_NAME}'"
 ```
 
 #### Calendar API

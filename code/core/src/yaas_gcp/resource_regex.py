@@ -26,17 +26,17 @@ class ResourceRegex(dto_defaults.HasFromJsonString):
     @prj_loc_name_order.validator
     def _validate_prj_loc_name_order(self, attribute: attrs.Attribute, value: Any) -> None:
         if not isinstance(value, tuple):
-            raise TypeError(f"Attribute {attribute.name} must be a {tuple.__name__}. " f"Got: <{value}>({type(value)})")
+            raise TypeError(f"Attribute {attribute.name} must be a {tuple.__name__}. Got: '{value}'({type(value)})")
         if len(value) != 3:
             raise ValueError(
                 f"Attribute {attribute.name} must be a {tuple.__name__} with exactly 3 items. "
-                f"Got: <{value}>[{len(value)}]"
+                f"Got: '{value}'[{len(value)}]"
             )
         for ndx, val in enumerate(value):
             if val < 0 or val > 2:
                 raise ValueError(
                     f"Values for attribute {attribute.name} must be a be in the range of [0, 2]. "
-                    f"Got: <{val}>[{ndx}] in <{value}>"
+                    f"Got: '{val}'[{ndx}] in '{value}'"
                 )
 
     def prj_loc_name(self, value: str) -> Optional[Tuple[str, str, str]]:
@@ -51,7 +51,7 @@ class ResourceRegex(dto_defaults.HasFromJsonString):
         """
         # validate input
         if not isinstance(value, str):
-            raise TypeError(f"Argument must be a {str.__name__} instance. " f"Got: <{value}>({type(value)})")
+            raise TypeError(f"Argument must be a {str.__name__} instance. Got: '{value}'({type(value)})")
         # logic
         result = None
         match = self.regex.match(value)

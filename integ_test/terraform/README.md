@@ -77,7 +77,7 @@ terraform output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 REQUEST_FILENAME=$(jq -c -r ".request_body.value" ${OUT_JSON})
-echo "Request body filename: <${REQUEST_FILENAME}>"
+echo "Request body filename: '${REQUEST_FILENAME}'"
 
 rm -f ${OUT_JSON}
 ```
@@ -98,7 +98,7 @@ echo "Terraform output in ${OUT_JSON}"
 
 BUCKET_URI=$(jq -c -r ".yaas_infra.value.bucket.url" ${OUT_JSON})
 BUCKET_NAME=$(jq -c -r ".yaas_infra.value.bucket.name" ${OUT_JSON})
-echo "Bucket URI: <${BUCKET_URI}>"
+echo "Bucket URI: '${BUCKET_URI}'"
 popd
 
 rm -f ${OUT_JSON}

@@ -30,7 +30,7 @@ async def process_command(value: command.CommandBase, *, configuration: config.C
     # validate input
     if not isinstance(value, command.CommandBase):
         raise ValueError(
-            f"Value argument is not an instance <{command.CommandBase.__name__}>. Got: <{value}>({type(value)})"
+            f"Value argument is not an instance '{command.CommandBase.__name__}'. Got: '{value}'({type(value)})"
         )
     # logic
     if value.type == command.CommandType.UPDATE_CALENDAR_CREDENTIALS_SECRET.value:
@@ -52,9 +52,9 @@ async def process_command(value: command.CommandBase, *, configuration: config.C
         )
     else:
         raise ValueError(
-            f"Command type <{value.type}> cannot be processed. "
+            f"Command type '{value.type}' cannot be processed. "
             f"Check implementation: {__name__}.{process_command.__name__}. "
-            f"Got: <{value}>({type(value)})"
+            f"Got: '{value}'({type(value)})"
         )
 
 
@@ -115,7 +115,7 @@ async def update_cache(
         merge_strategy=merge_strategy,
     )
     _LOGGER.info(
-        "Merged snapshots using <%s>. Merge required: %s. Range <%s> and amount of requests: <%s>",
+        "Merged snapshots using '%s'. Merge required: %s. Range '%s' and amount of requests: '%s'",
         merge_strategy,
         is_required,
         str(merged_snapshot.range() if merged_snapshot else None),
@@ -129,7 +129,7 @@ async def update_cache(
         # logic: clean-up
         archived, removed = await obj.clean_up(configuration.retention_config)
         _LOGGER.info(
-            "Clean-up on %s archived <%s> and removed <%s>",
+            "Clean-up on %s archived '%s' and removed '%s'",
             cache_store.source,
             archived,
             removed,
@@ -138,7 +138,7 @@ async def update_cache(
 
 def _validate_configuration(value: config.Config) -> None:
     if not isinstance(value, config.Config):
-        raise TypeError(f"Configuration must be an instance of {config.Config.__name__}. Got: <{value}>({type(value)})")
+        raise TypeError(f"Configuration must be an instance of {config.Config.__name__}. Got: '{value}'({type(value)})")
 
 
 async def _calendar_snapshot(
@@ -148,7 +148,7 @@ async def _calendar_snapshot(
     async with calendar_store as obj:
         result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     _LOGGER.info(
-        "Got calendar snapshot from <%s>. Range <%s> and amount of requests: <%d>",
+        "Got calendar snapshot from '%s'. Range '%s' and amount of requests: '%d'",
         calendar_config,
         result.range(),
         result.amount_requests(),
@@ -163,7 +163,7 @@ async def _cache_store_and_snapshot(
     end_ts_utc: int,
 ) -> Tuple[base.StoreContextManager, event.EventSnapshot]:
     _LOGGER.info(
-        "Reading range [%d, %d] (%s, %s) from cache <%s>",
+        "Reading range [%d, %d] (%s, %s) from cache '%s'",
         start_ts_utc,
         end_ts_utc,
         datetime.fromtimestamp(start_ts_utc),
@@ -174,7 +174,7 @@ async def _cache_store_and_snapshot(
     async with cache_store as obj:
         result = await obj.read(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
     _LOGGER.info(
-        "Got snapshot from <%s>. Retrieved range <%s> and amount of requests retrieved: <%d>",
+        "Got snapshot from '%s'. Retrieved range '%s' and amount of requests retrieved: '%d'",
         cache_config,
         result.range(),
         result.amount_requests(),

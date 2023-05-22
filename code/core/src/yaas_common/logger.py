@@ -58,7 +58,7 @@ class LogFilter(logging.Filter):  # pylint: disable=too-few-public-methods
     def __init__(self, *args, level_range: Tuple[int] = _STD_OUT_LEVELS, **kwargs):
         super().__init__(*args, **kwargs)
         if not isinstance(level_range, tuple) and len(level_range) == 2:
-            raise TypeError(f"Level range must be a pair. Got <{level_range}>({type(level_range)})")
+            raise TypeError(f"Level range must be a pair. Got '{level_range}'({type(level_range)})")
         self._level_min = level_range[0]
         self._level_max = level_range[1]
 
@@ -96,7 +96,7 @@ def get(name: str, *, level: Optional[Union[str, int]] = None) -> logging.Logger
         :py:cls:`logging.Logger` instance.
     """
     if not isinstance(name, str) or not name.strip():
-        raise ValueError(f"Name must be a non-empty string. Got: <{name}>({type(name)})")
+        raise ValueError(f"Name must be a non-empty string. Got: '{name}'({type(name)})")
     name = name.strip()
     level = _log_level(level)
     logging.basicConfig(level=level)

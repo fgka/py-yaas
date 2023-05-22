@@ -68,6 +68,7 @@ Set scope:
 1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard);
 1. Select [Credentials](https://console.cloud.google.com/apis/credentials);
 1. Click on ``Create Credentials``;
+1. Select ``OAuth client ID`` on the drop-down;
 1. The information is:
    - Name: ``yaas-calendar-client`` (you can pick a different one);
    - Type: ``Desktop app``;

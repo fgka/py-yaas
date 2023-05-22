@@ -34,7 +34,7 @@ async def dispatch(
         raise_if_invalid_request:
             Will raise py:class:`DispatchError` if:
               * ``value`` is not :py:class:`request.ScaleRequest`,
-                otherwise logged and ignored;
+                otherwise logged and ignored.
               * ``value`` has a topic not contained in ``topic_to_pubsub``,
                 otherwise logged and ignored.
         *value: what to process

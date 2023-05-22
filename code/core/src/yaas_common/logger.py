@@ -84,8 +84,8 @@ def get(name: str, *, level: Optional[Union[str, int]] = None) -> logging.Logger
     """Creates a :py:class:`logging.Logger` setting the log level based on the
     following priority:
 
-    - argument `level`;
-    - environment variable :py:data:`LOG_LEVEL_ENV_VAR_NAME`;
+    - argument `level`.
+    - environment variable :py:data:`LOG_LEVEL_ENV_VAR_NAME`.
     - default value in: :py:data:`_DEFAULT_LOG_LEVEL`.
 
     Args:

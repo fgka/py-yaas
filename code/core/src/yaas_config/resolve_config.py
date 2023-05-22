@@ -16,10 +16,10 @@ def consolidate_config(value: config.Config, *, raise_if_failed: Optional[bool] 
     This will return a clone of the argument with ``topic_to_pubsub_gcs``
     resolved into ``topic_to_pubsub``.
     What it will do:
-    1. List all objects in ``topic_to_pubsub_gcs``;
+    1. List all objects in ``topic_to_pubsub_gcs``.
     1. For each object:
-        1. The object name is the topic name, e.g., ``on-prem``;
-        1. The content is the Pub/Sub topic id, e.g., ``projects/my-project/topics/my-topic``;
+        1. The object name is the topic name, e.g., ``on-prem``.
+        1. The content is the Pub/Sub topic id, e.g., ``projects/my-project/topics/my-topic``.
     1. Add, without overwriting, these to ``topic_to_pubsub``.
 
     Example::

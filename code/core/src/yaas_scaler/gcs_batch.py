@@ -126,8 +126,8 @@ class GcsBatchScaler(base.Scaler):
     async def _safe_enact(self) -> None:
         """
         Algorithm:
-            1. Reads from bucket;
-            2. Parses the requests;
+            1. Reads from bucket.
+            2. Parses the requests.
             3. Calls pubsub_dispatcher.
         """
         # get unique

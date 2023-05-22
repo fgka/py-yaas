@@ -213,13 +213,13 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     """Will remove all versions, except the latest and the newest in
     `amount_to_keep`. Example:
 
-     - There are 50 versions, including latest;
+     - There are 50 versions, including latest.
      - `amount_to_keep = 2`.
 
     This means that after this there will be 3 versions:
-     - `latest` = enabled;
-     - `latest - 1` = disabled;
-     - `latest - 2` = dsiabled;
+     - `latest` = enabled.
+     - `latest - 1` = disabled.
+     - `latest - 2` = dsiabled.
 
     Args:
         secret_name: a secret name in the format:

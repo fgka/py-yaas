@@ -144,7 +144,7 @@ class Scaler(abc.ABC):
         """Informs if the resource is ready for enacting the scaling. Reasons
         for returning :py:obj:`False` are:
 
-        - It does not exist (has not been deployed yet or no longer exists);
+        - It does not exist (has not been deployed yet or no longer exists).
         - It is in a non-ready or non-healthy state (currently being deployed or destroyed).
 
         Returns:

@@ -32,11 +32,11 @@ def update_event_cache(  # pylint: disable=too-complex
 ) -> bool:
     """This function is the entry-point for updating the current events cache. It needs to do the following:
 
-    * Read upcoming events from the source (Google Calendar);
-    * Parse the events and provide a canonical list of scaling requests;
-    * Compare the overlapping timerange with what is in the cache;
-    * Ignore already cached events;
-    * Add new events, i.e., in the listing from source but outside the overlapping timerange;
+    * Read upcoming events from the source (Google Calendar).
+    * Parse the events and provide a canonical list of scaling requests.
+    * Compare the overlapping timerange with what is in the cache.
+    * Ignore already cached events.
+    * Add new events, i.e., in the listing from source but outside the overlapping timerange.
     * Apply a merging strategy, if necessary, for the overlapping and conflicting events:
         * Remove or keep old cached events not present in new listing?
         * Add or ignore new events not yet cached?

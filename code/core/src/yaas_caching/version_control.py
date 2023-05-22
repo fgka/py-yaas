@@ -74,13 +74,13 @@ def compare(*, snapshot_a: event.EventSnapshot, snapshot_b: event.EventSnapshot)
         +------------- snapshot_a_event_1
 
     This means that:
-        * snapshot A timeline goes from event 1 through 4;
+        * snapshot A timeline goes from event 1 through 4.
         * snapshot B timeline goes from event 2 through 5.
     The resulting object should have:
-        * non_overlapping_a: [snapshot_a_event_1];
-        * non_overlapping_b: [snapshot_b_event_5];
-        * overlapping: [snapshot_a_event_2, snapshot_b_event_2];
-        * only_in_a: [snapshot_a_event_4];
+        * non_overlapping_a: [snapshot_a_event_1].
+        * non_overlapping_b: [snapshot_b_event_5].
+        * overlapping: [snapshot_a_event_2, snapshot_b_event_2].
+        * only_in_a: [snapshot_a_event_4].
         * only_in_b: [snapshot_b_event_3].
 
     Args:

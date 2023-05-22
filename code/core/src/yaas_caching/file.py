@@ -206,8 +206,8 @@ class JsonLineFileStoreContextManager(BaseFileStoreContextManager):
     Lines`_ files.
 
     Ways it can be improved:
-    * Compress the files;
-    * Use Pickle instead;
+    * Compress the files.
+    * Use Pickle instead.
     * Keep it sorted by timestamp and use binary search to find where to insert/find data.
 
     .. _JSON Lines: https://jsonlines.org/

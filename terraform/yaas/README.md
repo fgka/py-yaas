@@ -35,7 +35,7 @@ export SED="sed"
 if [[ "Darwin" == $(uname -s) ]]; then
   export SED="gsed"
 fi
-echo "sed = <${SED}>"
+echo "sed = '${SED}'"
 ```
 
 Create:
@@ -92,7 +92,7 @@ terraform apply ${TMP} && rm -f ${TMP}
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 4.57.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 4.65.2 |
 
 ## Modules
 

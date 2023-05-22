@@ -25,7 +25,7 @@ class CommandBase(dto_defaults.HasFromDict):
     def _is_type_valid(self, attribute: attrs.Attribute, value: Any) -> None:
         if not CommandType.from_str(value):
             raise ValueError(
-                f"Attribute <{attribute.name}> must be one of {[d.value for d in CommandType]}," f" got: <{value}>"
+                f"Attribute '{attribute.name}' must be one of {[d.value for d in CommandType]}," f" got: '{value}'"
             )
 
 

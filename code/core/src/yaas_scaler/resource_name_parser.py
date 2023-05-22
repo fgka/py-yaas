@@ -25,11 +25,11 @@ def canonical_resource_type_and_name(  # pylint: disable=invalid-name
         Canonical resource name.
     """
     res_type, res_canonical = None, None
-    _LOGGER.debug("Finding resource and type for <%s>", resource)
+    _LOGGER.debug("Finding resource and type for '%s'", resource)
     if isinstance(resource, str):
         res_type, res_canonical = _canonical_resource_type_and_name(resource)
     _LOGGER.debug(
-        "Parsed resource <%s> to type <%s> and canonical name <%s>",
+        "Parsed resource '%s' to type '%s' and canonical name '%s'",
         resource,
         res_type,
         res_canonical,

@@ -29,6 +29,6 @@ and used [PlantUML](https://plantuml.com/) for drawing them.
 
 ## References
 
-* [C4 model](https://c4model.com/);
-* [PlantUML](https://plantuml.com/);
+* [C4 model](https://c4model.com/).
+* [PlantUML](https://plantuml.com/).
 * [sequencediagram.org](https://sequencediagram.org/).

@@ -14,7 +14,7 @@ The step-by-step below:
 
 ### Login into your Gmail account
 
-1. Go to [https://mail.google.com/](https://mail.google.com/);
+1. Go to [https://mail.google.com/](https://mail.google.com/).
 2. Put in your credentials (if not yet).
 
 #### Visually
@@ -33,11 +33,11 @@ Password:
 
 ### Consent Screen
 
-1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard);
+1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard).
 1. (If first time) Create an [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent):
-    - User type: ``External``;
-    - Name: ``yaas`` (you can pick a different one);
-    - Scopes: ``calendar.calendars.readonly``;
+    - User type: ``External``.
+    - Name: ``yaas`` (you can pick a different one).
+    - Scopes: ``calendar.calendars.readonly``.
     - Test users: ``<YOUR GMAIL ACCOUNT EMAIL>``.
 
 #### Visually
@@ -65,15 +65,15 @@ Set scope:
 
 ### OAuth Credentials
 
-1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard);
-1. Select [Credentials](https://console.cloud.google.com/apis/credentials);
-1. Click on ``Create Credentials``;
-1. Select ``OAuth client ID`` on the drop-down;
+1. Go to [APIs & Services](https://console.cloud.google.com/apis/dashboard).
+1. Select [Credentials](https://console.cloud.google.com/apis/credentials).
+1. Click on ``Create Credentials``.
+1. Select ``OAuth client ID`` on the drop-down.
 1. The information is:
-   - Name: ``yaas-calendar-client`` (you can pick a different one);
-   - Type: ``Desktop app``;
+   - Name: ``yaas-calendar-client`` (you can pick a different one).
+   - Type: ``Desktop app``.
 1. Download the JSON file corresponding to the credentials.
-   - It is assumed you saved the file under ``${HOME}/calendar-api-initial.json``
+   - It is assumed you saved the file under ``${HOME}/calendar-api-initial.json``.
 
 #### [Disclaimer On Authorization Token](./OAUTH.md)
 

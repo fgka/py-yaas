@@ -89,12 +89,12 @@ def parse_pubsub(
     # validate input
     if not isinstance(actual_event, dict):
         raise TypeError(
-            f"Actual event <{actual_event}>({type(actual_event)}) must be a {dict.__name__} "
-            f"(from <{event}>({type(event)})"
+            f"Actual event '{actual_event}'({type(actual_event)}) must be a {dict.__name__} "
+            f"(from '{event}'({type(event)})"
         )
     if not callable(dict_to_obj_fn):
         raise TypeError(
-            f"The conversion function argument is not callable. " f"Got: <{dict_to_obj_fn}>({type(dict_to_obj_fn)})"
+            f"The conversion function argument is not callable. Got: '{dict_to_obj_fn}'({type(dict_to_obj_fn)})"
         )
     # logic
     message = actual_event.get(_EVENT_MESSAGE_KEY)
@@ -112,8 +112,8 @@ def parse_pubsub(
         result = dict_to_obj_fn(obj_dict, timestamp)
     except Exception as err:
         raise RuntimeError(
-            f"Could not call converter function <{dict_to_obj_fn.__name__}> "
-            f"with: <{obj_dict}> and <{timestamp}>. "
+            f"Could not call converter function '{dict_to_obj_fn.__name__}' "
+            f"with: '{obj_dict}' and '{timestamp}'. "
             f"Error: {err}"
         ) from err
     return result
@@ -126,7 +126,7 @@ def _extract_timestamp_from_iso_str(value: str) -> int:
     try:
         result: int = calendar.timegm(datetime.fromisoformat(plain_iso_dateime).utctimetuple())
     except Exception as err:
-        raise RuntimeError(f"Could not extract timestamp from <{value}>({type(value)}). Error: {err}") from err
+        raise RuntimeError(f"Could not extract timestamp from '{value}'({type(value)}). Error: {err}") from err
     return result
 
 
@@ -146,10 +146,10 @@ def _parse_json_data(value: Union[str, bytes]) -> Any:
         if isinstance(str_data, str):
             result = json.loads(str_data)
         else:
-            raise RuntimeError(f"Could not parse input value <{value}>")
+            raise RuntimeError(f"Could not parse input value '{value}'")
     except Exception as err:
         raise RuntimeError(
-            f"Could not parse PubSub JSON data. Raw data: <{value}>, string data: <{str_data}>. " f"Error: {err}"
+            f"Could not parse PubSub JSON data. Raw data: '{value}', string data: '{str_data}'. Error: {err}"
         ) from err
     return result
 
@@ -166,11 +166,11 @@ def _parse_str_data(value: Union[str, bytes]) -> str:
     """
     # parse PubSub payload
     if not isinstance(value, (bytes, str)):
-        raise TypeError(f"Event data is not a {str.__name__} or {bytes.__name__}. " f"Got: <{value}>({type(value)})")
+        raise TypeError(f"Event data is not a {str.__name__} or {bytes.__name__}. Got: '{value}'({type(value)})")
     try:
         result = base64.b64decode(value).decode(const.ENCODING_UTF8)
     except Exception as err:
-        raise RuntimeError(f"Could not parse PubSub string data. Raw data: <{value}>. Error: {err}") from err
+        raise RuntimeError(f"Could not parse PubSub string data. Raw data: '{value}'. Error: {err}") from err
     return result
 
 
@@ -185,16 +185,16 @@ async def publish(value: Dict[str, Any], topic_id: str) -> None:
     """
     # validate input
     if not isinstance(value, dict):
-        raise TypeError(f"Value must be a {dict.__name__}. Got <{value}>({type(value)})")
+        raise TypeError(f"Value must be a {dict.__name__}. Got '{value}'({type(value)})")
     validate_topic_id(topic_id)
     # logic
-    _LOGGER.debug("Publishing data <%s> into topic <%s>", value, topic_id)
+    _LOGGER.debug("Publishing data '%s' into topic '%s'", value, topic_id)
     json_str = json.dumps(value)
     data = json_str.encode(const.ENCODING_UTF8)
     publish_future = _client().publish(topic_id, data)
     await asyncio.sleep(0)
     futures.wait([publish_future], return_when=futures.ALL_COMPLETED)
-    _LOGGER.debug("Published data <%s> into topic <%s>", value, topic_id)
+    _LOGGER.debug("Published data '%s' into topic '%s'", value, topic_id)
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=1))

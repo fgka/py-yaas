@@ -14,7 +14,7 @@ The step-by-step below:
 
 ### Login into your Gmail account
 
-1. Go to [https://mail.google.com/](https://mail.google.com/);
+1. Go to [https://mail.google.com/](https://mail.google.com/).
 2. Put in your credentials (if not yet).
 
 #### Visually
@@ -33,15 +33,15 @@ Password:
 
 ### Create Application Password
 
-1. Go to [Account Settings](https://myaccount.google.com/);
-1. Select ``Security`` in the ribbon;
-1. Check that you have ``2-Step Verification`` enabled in ``How you sign in to Google``;
-1. If you do (highly recommended), you need to create an ``App Password``;
-   1. Go to [App Passwords](https://myaccount.google.com/apppasswords);
+1. Go to [Account Settings](https://myaccount.google.com/).
+1. Select ``Security`` in the ribbon.
+1. Check that you have ``2-Step Verification`` enabled in ``How you sign in to Google``.
+1. If you do (highly recommended), you need to create an ``App Password``.
+   1. Go to [App Passwords](https://myaccount.google.com/apppasswords).
    1. Select app: ``Other (Custom name)``
    1. Name: ``YAAS``
    1. Click ``GENERATE``
-   1. Save the content of ``Your app password for your device`` in the secret
+   1. Save the content of ``Your app password for your device`` in the secret.
 1. If you do **NOT** have ``2-Step Verification``, the content of the secret is your password.
 
 #### Visually

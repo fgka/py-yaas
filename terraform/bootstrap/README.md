@@ -36,7 +36,7 @@ export SED="sed"
 if [[ "Darwin" == $(uname -s) ]]; then
   export SED="gsed"
 fi
-echo "sed = <${SED}>"
+echo "sed = '${SED}'"
 ```
 
 Create:
@@ -87,7 +87,7 @@ terraform output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 export TF_STATE_BUCKET=$(jq -c -r ".tf_state_bucket.value.name" ${OUT_JSON})
-echo "Terraform state bucket name: <${TF_STATE_BUCKET}>"
+echo "Terraform state bucket name: '${TF_STATE_BUCKET}'"
 rm -f ${OUT_JSON}
 ```
 
@@ -104,7 +104,7 @@ jq -c -r ".backend_tf.value[]" ${OUT_JSON} \
     do \
       MODULE=${FILENAME##*.}; \
       OUTPUT="../${MODULE}/${TARGET_FILENAME}"; \
-      echo "Copying: <${FILENAME}> to <${OUTPUT}>"; \
+      echo "Copying: '${FILENAME}' to '${OUTPUT}'"; \
       cp ${FILENAME} ${OUTPUT}; \
     done
 rm -f ${OUT_JSON}
@@ -119,7 +119,7 @@ terraform output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 SOURCE=$(jq -c -r ".build_pipeline_backend_tf_tmpl.value" ${OUT_JSON})
-echo "Copying: <${SOURCE}> to <${TARGET}>"
+echo "Copying: '${SOURCE}' to '${TARGET}'"
 rm -f ${OUT_JSON}
 ```
 
@@ -139,8 +139,8 @@ rm -f ${OUT_JSON}
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 4.55.0 |
-| <a name="provider_local"></a> [local](#provider\_local) | 2.3.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 4.65.2 |
+| <a name="provider_local"></a> [local](#provider\_local) | 2.4.0 |
 
 ## Modules
 

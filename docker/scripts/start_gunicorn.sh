@@ -15,9 +15,9 @@ APPLICATION=${1:-$FLASK_APP}
 CORES=$(nproc --all)
 (( WORKERS=2 * ${CORES} + 1 ))
 (( THREADS=(${ENV_CR_CONCURRENCY} + ${WORKERS} - 1) / ${WORKERS} ))
-echo "CPU cores <${CORES}>. Concurrency <${ENV_CR_CONCURRENCY}>, workers <${WORKERS}>, and threads <${THREADS}>"
+echo "CPU cores '${CORES}'. Concurrency '${ENV_CR_CONCURRENCY}', workers '${WORKERS}', and threads '${THREADS}'"
 
-echo "Starting Gunicorn application <${APPLICATION}> at port <${PORT}>"
+echo "Starting Gunicorn application '${APPLICATION}' at port '${PORT}'"
 gunicorn \
   --bind ":${PORT}" \
   --workers ${WORKERS} \

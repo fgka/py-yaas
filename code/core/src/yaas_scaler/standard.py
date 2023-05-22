@@ -35,7 +35,7 @@ class StandardScalingCommandParser(base.CategoryScaleRequestParserWithScaler):
             result = sql.CloudSqlScalingDefinition.from_request(value)
         else:
             raise TypeError(
-                f"Request <{value}> of type {res_type} is not supported. "
+                f"Request '{value}' of type {res_type} is not supported. "
                 f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__}"
             )
         return result

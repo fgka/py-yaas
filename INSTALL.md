@@ -6,13 +6,13 @@ Let us get to it.
 ## Before We Start
 
 Below is a list of things you should have **before** you start:
-1. [Google Cloud project to deploy YAAS](https://cloud.google.com/resource-manager/docs/creating-managing-projects);
-1. [A Google account with Calendar that you are going to use with YAAS](https://support.google.com/mail/answer/56256?hl=en);
-1. [Terraform CLI](https://developer.hashicorp.com/terraform/downloads) (tested with `v1.3.7`);
-1. [Google Cloud SDK](https://cloud.google.com/sdk) (tested with `v416.0.0`);
-1. [Python 3](https://www.python.org/downloads/) (tested with `3.10.8`);
-1. [Bash compatible shell](https://www.gnu.org/software/bash/) (tested with `v3.2.57`);
-1. [Git](https://git-scm.com/) (tested with `v2.39.2`);
+1. [Google Cloud project to deploy YAAS](https://cloud.google.com/resource-manager/docs/creating-managing-projects).
+1. [A Google account with Calendar that you are going to use with YAAS](https://support.google.com/mail/answer/56256?hl=en).
+1. [Terraform CLI](https://developer.hashicorp.com/terraform/downloads) (tested with `v1.3.7`).
+1. [Google Cloud SDK](https://cloud.google.com/sdk) (tested with `v416.0.0`).
+1. [Python 3](https://www.python.org/downloads/) (tested with `3.10.8`).
+1. [Bash compatible shell](https://www.gnu.org/software/bash/) (tested with `v3.2.57`).
+1. [Git](https://git-scm.com/) (tested with `v2.39.2`).
 1. [jq](https://stedolan.github.io/jq/) (tested with `v1.6`).
 
 ## Authenticate to Google Cloud
@@ -89,14 +89,14 @@ We recommend you have your own fork so that you can evaluate if you want the cha
 
 You need to enable Cloud Build to access your Github repo.
 
-1. Go to [Cloud Build](https://console.cloud.google.com/cloud-build/builds);
-1. Start creating a trigger (you will not actually do it manually) in [Triggers](https://console.cloud.google.com/cloud-build/triggers);
-1. Select the **correct** region for you;
-1. Click ``Connect Repository``;
-1. Select ``Github`` as Source and click ``Continue``;
-1. (In a separate window) You should authenticate with your Github credentials;
-1. Select the appropriate repo;
-1. When you reach the step ``Create a trigger``, ignored it by clicking ``Done``;
+1. Go to [Cloud Build](https://console.cloud.google.com/cloud-build/builds).
+1. Start creating a trigger (you will not actually do it manually) in [Triggers](https://console.cloud.google.com/cloud-build/triggers).
+1. Select the **correct** region for you.
+1. Click ``Connect Repository``.
+1. Select ``Github`` as Source and click ``Continue``.
+1. (In a separate window) You should authenticate with your Github credentials.
+1. Select the appropriate repo.
+1. When you reach the step ``Create a trigger``, ignored it by clicking ``Done``.
 
 #### Visually
 <details>
@@ -138,11 +138,11 @@ The name is only relevant to make sense of the instructions.
 The relevant part is to get the calendar ID.
 To get it from the [Google Calendar Web UI](https://calendar.google.com/calendar):
 
-1. Hover over your calendar name;
-1. Click the _tripple dot_ menu;
-1. Go to ``Settings and sharing``;
-1. Go to section ``Integrate calendar``;
-1. You should find the ID under ``Calendar ID``;
+1. Hover over your calendar name.
+1. Click the _tripple dot_ menu.
+1. Go to ``Settings and sharing``.
+1. Go to section ``Integrate calendar``.
+1. You should find the ID under ``Calendar ID``.
 
 The ID follows the pattern: ``<some large hexdecimal value>@group.calendar.google.com``
 
@@ -166,8 +166,8 @@ Calendar ID:
 
 At this point you have the following:
 
-- You Calendar ID;
-- The initial credentials to access your Calendar via Google Cloud;
+- You Calendar ID.
+- The initial credentials to access your Calendar via Google Cloud.
 - You have your own Github repo and you have it checked out right here.
 
 To make it easier:
@@ -216,9 +216,9 @@ export SECRET_FULL_NAME=$(gcloud secrets list \
   --project=${PROJECT_ID} \
   --format=json \
   | jq -c -r ".[].name" \
-  | grep yaas\
+  | grep yaas \
 )
-echo "Found secret: <${SECRET_FULL_NAME}>"
+echo "Found secret: '${SECRET_FULL_NAME}'"
 ```
 
 #### Calendar API

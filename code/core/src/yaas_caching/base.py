@@ -65,7 +65,7 @@ class FileBasedLockContextManager(contextlib.AbstractAsyncContextManager):
         if lock_timeout_in_sec <= 0:
             raise ValueError(f"Lock timeout must be an integer > 0. Got: {lock_timeout_in_sec}")
         if not isinstance(lock_file, pathlib.Path):
-            raise TypeError(f"Lock file must be a {pathlib.Path.__name__}. " f"Got: <{lock_file}>({type(lock_file)})")
+            raise TypeError(f"Lock file must be a {pathlib.Path.__name__}. Got: '{lock_file}'({type(lock_file)})")
         self._lock_file = lock_file
         self._lock_timeout_in_sec = lock_timeout_in_sec
         # pylint: disable=consider-using-with
@@ -200,7 +200,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         default_end_ts_utc_fn: Optional[Callable[[], int]] = _default_end_ts_utc,
         max_end_ts_utc_fn: Optional[Callable[[], int]] = _default_max_end_ts_utc,
     ):
-        _LOGGER.debug("New %s with <%s>", self.__class__.__name__, locals())
+        _LOGGER.debug("New %s with '%s'", self.__class__.__name__, locals())
         if not isinstance(source, str):
             source = self.__class__.__name__
         self._source = source
@@ -221,7 +221,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         if isinstance(result, int):
             result = max(0, result)
         if result != value:
-            _LOGGER.info("Original 'start_ts_utc' changed from <%s> to <%s>", value, result)
+            _LOGGER.info("Original 'start_ts_utc' changed from '%s' to '%s'", value, result)
         return result
 
     @staticmethod
@@ -240,7 +240,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         if isinstance(result, int):
             result = max(0, min(result, self._max_end_ts_utc_fn()))
         if result != value:
-            _LOGGER.info("Original 'end_ts_utc' changed from <%s> to <%s>", value, result)
+            _LOGGER.info("Original 'end_ts_utc' changed from '%s' to '%s'", value, result)
         return result
 
     async def __aenter__(self) -> "StoreContextManager":
@@ -305,7 +305,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         end_ts_utc = self._effective_end_ts_utc(end_ts_utc)
         if start_ts_utc > end_ts_utc:
             raise ValueError(
-                f"Start value <{start_ts_utc}> must be greater or equal end value <{end_ts_utc}>. "
+                f"Start value '{start_ts_utc}' must be greater or equal end value '{end_ts_utc}'. "
                 f"Got start - end = {start_ts_utc - end_ts_utc}"
             )
         try:
@@ -319,7 +319,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         if not isinstance(result, event.EventSnapshot):
             raise StoreError(
                 f"Read did not return a valid {event.EventSnapshot.__name__} instance. "
-                f"Got <{result}>({type(result)})"
+                f"Got '{result}'({type(result)})"
             )
         return result
 
@@ -355,7 +355,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         if not isinstance(value, event.EventSnapshot):
             raise TypeError(
                 f"Value argument must be an instance of {event.EventSnapshot.__name__}. "
-                f"Got: <{value}>({type(value)})"
+                f"Got: '{value}'({type(value)})"
             )
         if overwrite_within_range and value.timestamp_to_request:
             start_ts_utc, end_ts_utc = value.range()
@@ -404,12 +404,12 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             result = await self._remove(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc, is_archive=is_archive)
         except Exception as err:
             raise StoreError(
-                f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. " f"Error: {err}"
+                f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. Error: {err}"
             ) from err
         if not isinstance(result, event.EventSnapshot):
             raise StoreError(
                 f"Remove did not return a valid {event.EventSnapshot.__class__.__name__} instance. "
-                f"Got <{result}>({type(result)})"
+                f"Got '{result}'({type(result)})"
             )
         if result.all_requests():
             self._has_changed = True
@@ -453,13 +453,13 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
             result = await self._archive(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
         except Exception as err:
             raise StoreError(
-                f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. " f"Error: {err}"
+                f"Could not remove events for effective range [{start_ts_utc}, {end_ts_utc}]. Error: {err}"
             ) from err
         if not isinstance(result, event.EventSnapshot):
             raise StoreError(
                 f"Archive did not return a valid {event.EventSnapshot.__class__.__name__} "
                 "instance. "
-                f"Got <{result}>({type(result)})"
+                f"Got '{result}'({type(result)})"
             )
         if result.all_requests():
             self._has_changed = True
@@ -487,7 +487,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
         # validate input
         if not isinstance(value, config.DataRetentionConfig):
             raise TypeError(
-                f"Value must be an instance of {config.DataRetentionConfig.__name__}. " f"Got: <{value}>({type(value)})"
+                f"Value must be an instance of {config.DataRetentionConfig.__name__}. Got: '{value}'({type(value)})"
             )
         # logic
         archive_end_ts_utc = self._end_ts_utc_from_days_delta_and_logging(
@@ -520,7 +520,7 @@ class StoreContextManager(contextlib.AbstractAsyncContextManager, abc.ABC):
 
         """
         if not isinstance(value, int) or value < 0:
-            raise ValueError(f"Value must be a positive integer. Got: <{value}>({type(value)})")
+            raise ValueError(f"Value must be a positive integer. Got: '{value}'({type(value)})")
         if now is None:
             now = datetime.utcnow().timestamp()
         current_time = datetime.fromtimestamp(now)
@@ -540,7 +540,7 @@ class ReadOnlyStoreContextManager(StoreContextManager, abc.ABC):
     ) -> event.EventSnapshot:
         if is_archive:
             raise StoreError(
-                f"This is a {self.__class__.__name__} instance which is also read-only. " f"There is no archive."
+                f"This is a {self.__class__.__name__} instance which is also read-only. There is no archive."
             )
         return await self._read_ro(start_ts_utc=start_ts_utc, end_ts_utc=end_ts_utc)
 

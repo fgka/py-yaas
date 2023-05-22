@@ -46,9 +46,9 @@ def get_bucket_and_prefix_from_uri(value: str) -> Tuple[str, Optional[str]]:
     """
     # input validation
     if not isinstance(value, str):
-        raise TypeError(f"Argument must be a string. Got: <{value}>({type(value)})")
+        raise TypeError(f"Argument must be a string. Got: '{value}'({type(value)})")
     if not value.startswith(_GCS_URI_PREFIX):
-        raise ValueError(f"Argument must a GCS URI, as in: 'gs://my-bucket/path/to/object'. Got <{value}>")
+        raise ValueError(f"Argument must a GCS URI, as in: 'gs://my-bucket/path/to/object'. Got '{value}'")
     # logic
     # value = "gs://my-bucket/path/to/object"
     value = value[len(_GCS_URI_PREFIX) :]
@@ -57,7 +57,7 @@ def get_bucket_and_prefix_from_uri(value: str) -> Tuple[str, Optional[str]]:
     # tokens = ["my-bucket", "path, "to", "object"]
     if not tokens:
         raise ValueError(
-            f"Argument does not seem to contain, at least, a bucket name, as in: 'gs://my-bucket'. " f"Got <{value}>"
+            f"Argument does not seem to contain, at least, a bucket name, as in: 'gs://my-bucket'. Got '{value}'"
         )
     # bucket
     bucket_name = validate_and_clean_bucket_name(tokens[0])
@@ -98,16 +98,14 @@ def _list_objects(
     .. _Bucket: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.client.Client
     """
     gcs_uri = f"gs://{bucket_name}/{prefix}"
-    _LOGGER.debug("Listing <%s>", gcs_uri)
+    _LOGGER.debug("Listing '%s'", gcs_uri)
     try:
         client = _client(project=project)
         for blob in client.list_blobs(bucket_name, prefix=prefix):
             yield blob
     except Exception as err:
-        raise CloudStorageError(
-            f"Could not list blobs from <{gcs_uri}> in project <{project}> " f"Error: {err}"
-        ) from err
-    _LOGGER.info("Listed blogs in <%s>", gcs_uri)
+        raise CloudStorageError(f"Could not list blobs from '{gcs_uri}' in project '{project}' Error: {err}") from err
+    _LOGGER.info("Listed blogs in '%s'", gcs_uri)
 
 
 def read_object(
@@ -142,7 +140,7 @@ def read_object(
     if filename is not None and not isinstance(filename, pathlib.Path):
         raise TypeError(
             f"If filename is given, it must an instance of {pathlib.Path.__name__}. "
-            f"Got <{filename}>({type(filename)})"
+            f"Got '{filename}'({type(filename)})"
         )
     # logic
     return _read_object(
@@ -181,9 +179,9 @@ def validate_and_clean_bucket_name(value: str) -> str:
     """
     # validate input
     if not isinstance(value, str) or not value.strip():
-        raise TypeError(f"Bucket name must be a non-empty string. " f"Got: <{value}>({type(value)})")
+        raise TypeError(f"Bucket name must be a non-empty string. Got: '{value}'({type(value)})")
     if not _BUCKET_NAME_REGEX.match(value):
-        raise ValueError(f"Bucket name does not comply with {_BUCKET_NAME_REGEX}. " f"Got: <{value}>")
+        raise ValueError(f"Bucket name does not comply with {_BUCKET_NAME_REGEX}. Got: '{value}'")
     return value.strip()
 
 
@@ -199,12 +197,12 @@ def validate_and_clean_object_path(value: str) -> str:
     """
     # validate input
     if not isinstance(value, str) or not value.strip():
-        raise TypeError(f"Object path must be a non-empty string. " f"Got: <{value}>({type(value)})")
+        raise TypeError(f"Object path must be a non-empty string. Got: '{value}'({type(value)})")
     # cleaning leading '/' from path
     value = value.strip().lstrip(GCS_PATH_SEP).strip()
     for segment in value.split(GCS_PATH_SEP):
         if not _PATH_SEGMENT_REGEX.match(segment):
-            raise ValueError(f"Path part <{segment}> does not comply with {_PATH_SEGMENT_REGEX}. " f"Path: <{value}>")
+            raise ValueError(f"Path part '{segment}' does not comply with {_PATH_SEGMENT_REGEX}. Path: '{value}'")
     return value
 
 
@@ -223,7 +221,7 @@ def _read_object(
     """
     result = None
     gcs_uri = f"gs://{bucket_name}/{object_path}"
-    _LOGGER.debug("Reading <%s>", gcs_uri)
+    _LOGGER.debug("Reading '%s'", gcs_uri)
     try:
         bucket_obj = _bucket(bucket_name, project)
         blob = bucket_obj.blob(object_path)
@@ -233,7 +231,7 @@ def _read_object(
                 result = True
             else:
                 result = blob.download_as_bytes()
-            _LOGGER.debug("Read <%s>", gcs_uri)
+            _LOGGER.debug("Read '%s'", gcs_uri)
         else:
             _LOGGER.log(
                 logging.WARN if warn_read_failure else logging.INFO,
@@ -245,11 +243,11 @@ def _read_object(
                 result = False
     except Exception as err:
         raise CloudStorageError(
-            f"Could not download content from <{gcs_uri}> in project <{project}> "
-            f"into <{filename}>. "
+            f"Could not download content from '{gcs_uri}' in project '{project}' "
+            f"into '{filename}'. "
             f"Error: {err}"
         ) from err
-    _LOGGER.info("Read <%s>", gcs_uri)
+    _LOGGER.info("Read '%s'", gcs_uri)
     return result
 
 
@@ -258,7 +256,7 @@ def _client(project: Optional[str] = None) -> storage.Client:
     try:
         result = storage.Client(project)
     except Exception as err:
-        raise CloudStorageError(f"Could not create storage client for project <{project}>. Error: {err}") from err
+        raise CloudStorageError(f"Could not create storage client for project '{project}'. Error: {err}") from err
     return result
 
 
@@ -267,10 +265,10 @@ def _bucket(bucket_name: str, project: Optional[str] = None) -> storage.Bucket:
         result = _client(project).get_bucket(bucket_name)
     except Exception as err:
         raise CloudStorageError(
-            f"Could not get bucket <{bucket_name}> with client in project <{project}>. " f"Error: {err}"
+            f"Could not get bucket '{bucket_name}' with client in project '{project}'. Error: {err}"
         ) from err
     if not isinstance(result, storage.Bucket) or not result.exists():
-        raise CloudStorageError(f"Bucket <{bucket_name}> in project <{project}> does not exist.")
+        raise CloudStorageError(f"Bucket '{bucket_name}' in project '{project}' does not exist.")
     return result
 
 
@@ -299,7 +297,7 @@ def write_object(
     if not isinstance(content_source, bytes) and not isinstance(content_source, pathlib.Path):
         raise TypeError(
             f"Content must be {bytes.__name__} or {pathlib.Path.__name__}. "
-            f"Got: <{content_source}>({type(content_source)})"
+            f"Got: '{content_source}'({type(content_source)})"
         )
     # logic
     _write_object(
@@ -323,7 +321,7 @@ def _write_object(
     .. _Blob: https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.blob.Blob
     """
     gcs_uri = f"gs://{bucket_name}/{object_path}"
-    _LOGGER.debug("Writing <%s>", gcs_uri)
+    _LOGGER.debug("Writing '%s'", gcs_uri)
     try:
         bucket_obj = _bucket(bucket_name, project)
         blob = bucket_obj.blob(object_path)
@@ -332,12 +330,12 @@ def _write_object(
         else:
             with blob.open("wb") as out_blob:
                 out_blob.write(content_source)
-                _LOGGER.debug("Wrote <%s>", gcs_uri)
+                _LOGGER.debug("Wrote '%s'", gcs_uri)
     except Exception as err:
         raise CloudStorageError(
             "Could not upload content from "
-            f"<{content_source if isinstance(content_source, pathlib.Path) else 'bytes content'}> "
-            f"into <{gcs_uri}> in project <{project}>. "
+            f"'{content_source if isinstance(content_source, pathlib.Path) else 'bytes content'}' "
+            f"into '{gcs_uri}' in project '{project}'. "
             f"Error: {err}"
         ) from err
-    _LOGGER.info("Wrote <%s>", gcs_uri)
+    _LOGGER.info("Wrote '%s'", gcs_uri)

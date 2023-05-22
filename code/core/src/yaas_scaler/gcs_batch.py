@@ -40,7 +40,7 @@ class GcsBatchScalingCommand(scaling.ScalingCommand):
             raise ValueError(
                 f"Attribute {name} should not be given (aka None) for "
                 f"{GcsBatchScalingCommand.__name__}. "
-                f"Got: <{value}>({type(value)})"
+                f"Got: '{value}'({type(value)})"
             )
 
     @classmethod
@@ -59,7 +59,7 @@ class GcsBatchScalingDefinition(scaling.ScalingDefinition):
             result = cleaned_value == value
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
-                "Could not validate resource value for %s <%s>, Error: %s",
+                "Could not validate resource value for %s '%s', Error: %s",
                 self.__class__.__name__,
                 value,
                 err,
@@ -79,8 +79,7 @@ class GcsBatchScalingDefinition(scaling.ScalingDefinition):
 
     def as_gcs_uri(self) -> str:
         """Returns a GCS URI in the format::
-
-        "gs://<resource>/<command.parameter>
+        gs://<resource>/<command.parameter>
         """
         return f"gs://{self.resource}/{self.command.parameter}"
 
@@ -112,7 +111,7 @@ class GcsBatchScaler(base.Scaler):
         if not isinstance(topic_to_pubsub, dict):
             raise TypeError(
                 f"Topic to pubsub argument must be an instance of {dict.__name__}. "
-                f"Got: <{topic_to_pubsub}>({type(topic_to_pubsub)})"
+                f"Got: '{topic_to_pubsub}'({type(topic_to_pubsub)})"
             )
         self._topic_to_pubsub = topic_to_pubsub
 
@@ -127,8 +126,8 @@ class GcsBatchScaler(base.Scaler):
     async def _safe_enact(self) -> None:
         """
         Algorithm:
-            1. Reads from bucket;
-            2. Parses the requests;
+            1. Reads from bucket.
+            2. Parses the requests.
             3. Calls pubsub_dispatcher.
         """
         # get unique
@@ -138,7 +137,7 @@ class GcsBatchScaler(base.Scaler):
             # ignored already read objects
             if obj_path in processed:
                 _LOGGER.warning(
-                    "Path <%s> already read. Ignoring. Full list: %s",
+                    "Path '%s' already read. Ignoring. Full list: %s",
                     obj_path,
                     self.definitions,
                 )
@@ -147,7 +146,7 @@ class GcsBatchScaler(base.Scaler):
             try:
                 await self._process_definition(scale_def)
             except Exception as err:  # pylint: disable=broad-except
-                msg = f"Cloud not process definition in <{scale_def}>[{ndx}]. Error: {err}"
+                msg = f"Cloud not process definition in '{scale_def}'[{ndx}]. Error: {err}"
                 if not self.allow_partial_enact:
                     raise RuntimeError(msg) from err
                 _LOGGER.warning("%s. Ignoring", msg)
@@ -174,7 +173,7 @@ class GcsBatchScaler(base.Scaler):
                 )
         else:
             _LOGGER.warning(
-                "The content of <%s> from definition <%s> is empty. Ignoring.",
+                "The content of '%s' from definition '%s' is empty. Ignoring.",
                 definition.as_gcs_uri(),
                 definition,
             )
@@ -186,8 +185,8 @@ class GcsBatchScaler(base.Scaler):
             if GcsBatchCategoryType.from_str(item.topic) is not None:
                 _LOGGER.warning(
                     "%s does not support recursive requests. "
-                    "Meaning: you cannot specify any of the topics <%s> in your content. "
-                    "Ignoring item: <%s>[%d](%s). "
+                    "Meaning: you cannot specify any of the topics '%s' in your content. "
+                    "Ignoring item: '%s'[%d](%s). "
                     "All items: %s",
                     cls.__name__,
                     list(GcsBatchCategoryType),
@@ -228,7 +227,7 @@ class GcsBatchCommandParser(base.CategoryScaleRequestParserWithScaler):
         if not isinstance(topic_to_pubsub, dict):
             raise TypeError(
                 f"Topic to pubsub argument must be an instance of {dict.__name__}. "
-                f"Got: <{topic_to_pubsub}>({type(topic_to_pubsub)})"
+                f"Got: '{topic_to_pubsub}'({type(topic_to_pubsub)})"
             )
         self._topic_to_pubsub = topic_to_pubsub
 

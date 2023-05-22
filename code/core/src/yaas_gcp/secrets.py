@@ -21,8 +21,8 @@ class SecretManagerAccessError(Exception):
 
 
 def name(project_id: str, secret_id: str, *, version: Optional[str] = None) -> str:
-    """Build a canonical secret path in the format:: projects/<<project
-    id>>/secrets/<<secret id>>/versions/<<version>>
+    """Build a canonical secret path in the format::
+      projects/<project id>/secrets/<secret id>/versions/<version>
 
     Args:
         project_id: project ID
@@ -48,7 +48,7 @@ async def list_versions(secret_name: str, *, include_destroyed_versions: bool = 
 
     Args:
         secret_name: a secret name in the format:
-            `projects/<<project id>>/secrets/<<secret id>>`
+            `projects/<project id>/secrets/<secret id>`
         include_destroyed_versions: include destroyed?
 
     .. _API: https://cloud.google.com/secret-manager/docs/view-secret-version
@@ -76,10 +76,10 @@ async def list_versions(secret_name: str, *, include_destroyed_versions: bool = 
 
 
 def _secret_name_parent(value: str) -> str:
-    # secret_name: projects/<<project id>>/secrets/<<secret id>>/versions/<<version number>>
+    # secret_name: projects/<project id>/secrets/<secret id>/versions/<version number>
     if secrets_const.VERSION_SUB_STR in value:
         value = value.split(secrets_const.VERSION_SUB_STR)[0]
-    # secret_name: projects/<<project id>>/secrets/<<secret id>>
+    # secret_name: projects/<project id>/secrets/<secret id>
     return value
 
 
@@ -91,7 +91,7 @@ async def exists(secret_name: str) -> bool:
 
     Args:
         secret_name: a secret name in the format:
-            `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
+            `projects/<project id>/secrets/<secret id>/versions/<version>`
     Returns:
         If the specific version exists.
     """
@@ -117,7 +117,7 @@ async def get(secret_name: str) -> str:
 
     Args:
         secret_name: a secret name in the format:
-            `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
+            `projects/<project id>/secrets/<secret id>/versions/<version>`
     Returns:
         Secret content
 
@@ -174,7 +174,7 @@ async def put(*, secret_name: str, content: str) -> str:
 
     Args:
         secret_name: a secret name in the format:
-            `projects/<<project id>>/secrets/<<secret id>>`
+            `projects/<project id>/secrets/<secret id>`
         content: secret content.
     Returns:
         The secret full name, with version.
@@ -213,17 +213,17 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     """Will remove all versions, except the latest and the newest in
     `amount_to_keep`. Example:
 
-     - There are 50 versions, including latest;
+     - There are 50 versions, including latest.
      - `amount_to_keep = 2`.
 
     This means that after this there will be 3 versions:
-     - `latest` = enabled;
-     - `latest - 1` = disabled;
-     - `latest - 2` = dsiabled;
+     - `latest` = enabled.
+     - `latest - 1` = disabled.
+     - `latest - 2` = dsiabled.
 
     Args:
         secret_name: a secret name in the format:
-            `projects/<<project id>>/secrets/<<secret id>>`
+            `projects/<project id>/secrets/<secret id>`
         amount_to_keep: how many old versions (besides `latest`) to keep
 
     Source: https://cloud.google.com/secret-manager/docs/view-secret-version
@@ -241,7 +241,7 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     # logic
     secret_name = _secret_name_parent(secret_name)
     version_names = await list_versions(secret_name)
-    # version_numbers: <<version number>>
+    # version_numbers: <version number>
     version_numbers = sorted(
         [int(version_name.split("/")[-1]) for version_name in version_names],
         reverse=True,
@@ -255,7 +255,7 @@ async def clean_up(*, secret_name: str, amount_to_keep: Optional[int] = None) ->
     to_remove = version_numbers[(amount_to_keep + 1) :]
     await _remove_versions(secret_name, to_remove)
     _LOGGER.info(
-        "Cleaned up secret <%s>, removing <%d> versions and disabling <%d>",
+        "Cleaned up secret '%s', removing '%d' versions and disabling '%d'",
         secret_name,
         len(to_remove),
         len(to_keep),
@@ -268,24 +268,24 @@ async def _disable_versions(secret_name: str, version_numbers: List[int]) -> Non
     """
 
     def disable_version(value: str) -> None:
-        _LOGGER.debug("Disabling secret version: <%s>", value)
+        _LOGGER.debug("Disabling secret version: '%s'", value)
         response = _secret_client().disable_secret_version(request={"name": value})
-        _LOGGER.debug("Disabled secret version: <%s>", response.name)
+        _LOGGER.debug("Disabled secret version: '%s'", response.name)
 
     _LOGGER.debug(
-        "Disabling secret versions from <%s>. Versions to disable: <%s>",
+        "Disabling secret versions from '%s'. Versions to disable: '%s'",
         secret_name,
         version_numbers,
     )
     errors = await _apply_operation_on_versions(secret_name, version_numbers, disable_version)
     if errors:
         raise SecretManagerAccessError(
-            f"Could not disable versions of secret <{secret_name}>. "
-            f"Argument: <{version_numbers}>. "
+            f"Could not disable versions of secret '{secret_name}'. "
+            f"Argument: '{version_numbers}'. "
             f"Error: {errors}"
         )
     _LOGGER.info(
-        "Disabled secret versions from <%s>. Versions to disable: <%s>",
+        "Disabled secret versions from '%s'. Versions to disable: '%s'",
         secret_name,
         version_numbers,
     )
@@ -303,8 +303,8 @@ async def _apply_operation_on_versions(
             operation(fqn_secret_name)
         except Exception as err:  # pylint: disable=broad-except
             errors.append(
-                f"Could not execute operation on secret <{fqn_secret_name}>. "
-                f"Operation: <{operation}>. "
+                f"Could not execute operation on secret '{fqn_secret_name}'. "
+                f"Operation: '{operation}'. "
                 f"Error: {err}",
             )
     return errors
@@ -316,24 +316,24 @@ async def _remove_versions(secret_name: str, version_numbers: List[int]) -> None
     """
 
     def remove_version(value: str) -> None:
-        _LOGGER.debug("Removing secret version: <%s>", value)
+        _LOGGER.debug("Removing secret version: '%s'", value)
         response = _secret_client().destroy_secret_version(request={"name": value})
-        _LOGGER.debug("Removed secret version: <%s>", response.name)
+        _LOGGER.debug("Removed secret version: '%s'", response.name)
 
     _LOGGER.debug(
-        "Removing secret versions from <%s>. Versions to disable: <%s>",
+        "Removing secret versions from '%s'. Versions to disable: '%s'",
         secret_name,
         version_numbers,
     )
     errors = await _apply_operation_on_versions(secret_name, version_numbers, remove_version)
     if errors:
         raise SecretManagerAccessError(
-            f"Could not remove versions of secret <{secret_name}>. "
-            f"Argument: <{version_numbers}>. "
+            f"Could not remove versions of secret '{secret_name}'. "
+            f"Argument: '{version_numbers}'. "
             f"Error: {errors}"
         )
     _LOGGER.info(
-        "Removed secret versions from <%s>. Versions disabled: <%s>",
+        "Removed secret versions from '%s'. Versions disabled: '%s'",
         secret_name,
         version_numbers,
     )

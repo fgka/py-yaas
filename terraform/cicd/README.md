@@ -63,7 +63,7 @@ export SED="sed"
 if [[ "Darwin" == $(uname -s) ]]; then
   export SED="gsed"
 fi
-echo "sed = <${SED}>"
+echo "sed = '${SED}'"
 ```
 
 Create:
@@ -122,7 +122,7 @@ terraform output -json > ${OUT_JSON}
 echo "Terraform output in ${OUT_JSON}"
 
 CICD_TF_TRIGGER_NAME=$(jq -c -r ".cicd_build.value.tf_build_trigger.name" ${OUT_JSON})
-echo "CI/CD Terraform trigger name: <${CICD_TF_TRIGGER_NAME}>"
+echo "CI/CD Terraform trigger name: '${CICD_TF_TRIGGER_NAME}'"
 
 rm -f ${OUT_JSON}
 ```
@@ -138,7 +138,7 @@ gcloud builds triggers run ${CICD_TF_TRIGGER_NAME} \
   > ${TMP}
 
 BUILD_ID=$(jq -r -c ".metadata.build.id" ${TMP})
-echo "Build ID: <${BUILD_ID}>"
+echo "Build ID: '${BUILD_ID}'"
 
 rm -f ${TMP}
 ```

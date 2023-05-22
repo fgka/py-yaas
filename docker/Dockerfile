@@ -34,7 +34,7 @@ WORKDIR /
 ## Transfer the wheel
 ARG DIST_DIR
 ENV ENV_DIST_DIR ${DIST_DIR}
-RUN echo "Dest dir <${ENV_DIST_DIR}>"
+RUN echo "Dest dir '${ENV_DIST_DIR}'"
 COPY ${DIST_DIR}/*.whl ./
 
 ## Install the target package

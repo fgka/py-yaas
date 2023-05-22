@@ -95,7 +95,7 @@ def to_request(
         result = _to_request_from_google_calendar_event(event)
     else:
         _LOGGER.warning(
-            "Event <%s>(%s) cannot be parsed, it needs to be instance of '%s'",
+            "Event '%s'(%s) cannot be parsed, it needs to be instance of '%s'",
             event,
             type(event),
             dict.__name__,
@@ -164,12 +164,10 @@ def _parse_start_to_utc(value: Dict[str, str]) -> datetime:
     """
     # validate
     if not isinstance(value, dict):
-        raise TypeError(f"Event start entry must be a {dict.__name__}, got: <{value}>({type(value)})")
+        raise TypeError(f"Event start entry must be a {dict.__name__}, got: '{value}'({type(value)})")
     value_datetime = value.get(_GOOGLE_CALENDAR_EVENT_START_DATE_TIME_FIELD)
     if not value_datetime:
-        raise ValueError(
-            f"Could find field {_GOOGLE_CALENDAR_EVENT_START_DATE_TIME_FIELD} " f"in event start: <{value}>"
-        )
+        raise ValueError(f"Could find field {_GOOGLE_CALENDAR_EVENT_START_DATE_TIME_FIELD} in event start: '{value}'")
     # convert
     return datetime.fromisoformat(value_datetime).astimezone(pytz.UTC)
 
@@ -235,11 +233,9 @@ def parse_lines(
     """
     # input validation
     if not isinstance(lines, Iterable):
-        raise TypeError(f"Argument lines is not iterable. Got: <{lines}>({type(lines)})")
+        raise TypeError(f"Argument lines is not iterable. Got: '{lines}'({type(lines)})")
     if not isinstance(timestamp_utc, int) or timestamp_utc < 0:
-        raise ValueError(
-            "Timestamp must be an integer greater than 0. " f"Got: <{timestamp_utc}>({type(timestamp_utc)})"
-        )
+        raise ValueError(f"Timestamp must be an integer greater than 0. Got: '{timestamp_utc}'({type(timestamp_utc)})")
     # logic
     result = []
     for ndx, line in enumerate(lines):
@@ -249,7 +245,7 @@ def parse_lines(
                 result.append(req)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning(
-                "Could not parse line: <%s>[%s](%s). Full content: %s. Error: %s. Ignoring",
+                "Could not parse line: '%s'[%s](%s). Full content: %s. Error: %s. Ignoring",
                 line,
                 ndx,
                 type(line),

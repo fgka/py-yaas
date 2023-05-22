@@ -72,15 +72,15 @@ class HasPatchWith(HasIsEmpty):
         except Exception as err:
             raise ValueError(
                 "Could not create merge kwargs."
-                f" Current object: <{self}> ({self.__class__.__name__})."
-                f" Value: <{value}>."
+                f" Current object: '{self}' ({self.__class__.__name__})."
+                f" Value: '{value}'."
                 f" Error: {err}"
             ) from err
         try:
             result = self.__class__(**kwargs)
         except Exception as err:
             raise ValueError(
-                f"Could not instantiate <{self.__class__.__name__}>" f" from kwargs <{kwargs}>." f" Error: {err}"
+                f"Could not instantiate '{self.__class__.__name__}' from kwargs '{kwargs}'. Error: {err}"
             ) from err
         return result
 
@@ -92,7 +92,7 @@ class HasPatchWith(HasIsEmpty):
                 result[field.name] = result_field
             except Exception as err:  # pylint: disable=broad-except
                 _LOGGER.warning(
-                    "Could not retrieve field <%s> from <%s> for type <%s>. Ignoring. Error: <%s>",
+                    "Could not retrieve field '%s' from '%s' for type '%s'. Ignoring. Error: '%s'",
                     field.name,
                     value,
                     self.__class__.__name__,
@@ -114,7 +114,7 @@ class HasPatchWith(HasIsEmpty):
             except Exception as err:  # pylint: disable=broad-except
                 value_field = None
                 _LOGGER.warning(
-                    "Could create field <%s> patching <%s> with <%s> for type <%s>. Ignoring. Error: %s",
+                    "Could create field '%s' patching '%s' with '%s' for type '%s'. Ignoring. Error: %s",
                     field.name,
                     self_field,
                     value_field,
@@ -166,7 +166,7 @@ class HasFromDict(HasPatchWith):
                 kwargs = cls._create_kwargs(value)
             except Exception as err:  # pylint: disable=broad-except
                 _LOGGER.warning(
-                    "Could not parse %s from dictionary <%s>. Error: %s",
+                    "Could not parse %s from dictionary '%s'. Error: %s",
                     cls.__name__,
                     value,
                     err,
@@ -174,7 +174,7 @@ class HasFromDict(HasPatchWith):
         try:
             result = cls(**kwargs)
         except Exception as err:
-            raise ValueError(f"Could not instantiate <{cls.__name__}> from kwargs <{kwargs}>. Error: {err}") from err
+            raise ValueError(f"Could not instantiate '{cls.__name__}' from kwargs '{kwargs}'. Error: {err}") from err
         return result
 
     @classmethod
@@ -204,7 +204,7 @@ class HasFromDict(HasPatchWith):
                 except Exception as err:  # pylint: disable=broad-except
                     field_value = None
                     _LOGGER.warning(
-                        "Could create field <%s> from dict for type <%s>. Ignoring. Error: %s",
+                        "Could create field '%s' from dict for type '%s'. Ignoring. Error: %s",
                         field.name,
                         cls.__name__,
                         err,
@@ -235,7 +235,7 @@ class HasFromJsonString(HasFromDict):
             if context:
                 error_context = f". Context: {context}"
             _LOGGER.warning(
-                "Could not parse JSON string <%s> for type <%s>%s. Ignoring. Error: %s",
+                "Could not parse JSON string '%s' for type '%s'%s. Ignoring. Error: %s",
                 json_string,
                 cls.__name__,
                 error_context,
@@ -253,14 +253,14 @@ class HasFromJsonString(HasFromDict):
             value_dict = attrs.asdict(self)
         except Exception as err:
             raise ValueError(
-                f"Could not convert <{self}> to a dictionary for type {self.__class__.__name__}." f" Error: {err}"
+                f"Could not convert '{self}' to a dictionary for type {self.__class__.__name__}. Error: {err}"
             ) from err
         # now to a JSON string from the dict
         try:
             result = json.dumps(value_dict)
         except Exception as err:
             raise ValueError(
-                f"Could not convert <{value_dict}>, from <{self}>, to a JSON string. Error: {err}"
+                f"Could not convert '{value_dict}', from '{self}', to a JSON string. Error: {err}"
             ) from err
         return result
 

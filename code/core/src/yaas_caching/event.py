@@ -94,7 +94,7 @@ class EventSnapshot(dto_defaults.HasFromJsonString):
             for item in request_lst:
                 key = item.timestamp_utc
                 if not key:
-                    msg = f"Item <{item}> from request list does not have a proper timestamp value."
+                    msg = f"Item '{item}' from request list does not have a proper timestamp value."
                     if not discard_invalid:
                         raise ValueError(msg)
                     _LOGGER.warning(msg + " Ignoring")  # pylint: disable=logging-not-lazy
@@ -124,11 +124,11 @@ class EventSnapshotComparison(dto_defaults.HasFromJsonString):
         +------------- snapshot_a_event_1
 
     This means that:
-        * snapshot A timeline goes from event 1 through 4;
+        * snapshot A timeline goes from event 1 through 4.
         * snapshot B timeline goes from event 2 through 5.
     The resulting object should have:
-        * overlapping: [snapshot_a_event_2, snapshot_b_event_2];
-        * only_in_a: [snapshot_a_event_1, snapshot_a_event_4];
+        * overlapping: [snapshot_a_event_2, snapshot_b_event_2].
+        * only_in_a: [snapshot_a_event_1, snapshot_a_event_4].
         * only_in_b: [snapshot_b_event_3, snapshot_b_event_5].
 
     """

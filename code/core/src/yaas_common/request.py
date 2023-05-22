@@ -63,7 +63,7 @@ def _convert_list_dict(value: List[Union[ScaleRequest, Dict[str, Any]]]) -> List
     """To be used when converting back from full dictionary."""
     # validate input
     if not isinstance(value, abc.Iterable):
-        raise TypeError(f"Argument is not {Iterable.__name__}. Got: <{value}>({type(value)})")
+        raise TypeError(f"Argument is not {Iterable.__name__}. Got: '{value}'({type(value)})")
     # convert
     result = []
     for ndx, val in enumerate(value):
@@ -74,7 +74,7 @@ def _convert_list_dict(value: List[Union[ScaleRequest, Dict[str, Any]]]) -> List
                 obj = ScaleRequest.from_dict(val)
             except Exception as err:
                 raise ValueError(
-                    f"Could not convert item <{val}>[{ndx}]({type(val)}) to {ScaleRequest.__name__}. "
+                    f"Could not convert item '{val}'[{ndx}]({type(val)}) to {ScaleRequest.__name__}. "
                     f"Error: {err}. "
                     f"Values: {value}"
                 ) from err
@@ -118,15 +118,13 @@ class ScaleRequestCollection(dto_defaults.HasFromJsonString):
         """
         # validate input
         if not isinstance(value, abc.Iterable):
-            raise TypeError(
-                f"The value must be an instance of {abc.Iterable.__name__}. " f"Got: <{value}>({type(value)})"
-            )
+            raise TypeError(f"The value must be an instance of {abc.Iterable.__name__}. Got: '{value}'({type(value)})")
         # logic
         collection = []
         for ndx, val in enumerate(value):
             if not isinstance(val, ScaleRequest):
                 raise TypeError(
-                    f"Value <{val}>({type(val)})[{ndx}] is not a {ScaleRequest.__name__}. " f"All values: {value}"
+                    f"Value '{val}'({type(val)})[{ndx}] is not a {ScaleRequest.__name__}. All values: {value}"
                 )
             if remove_original_json_event:
                 val = val.clone(original_json_event=None)

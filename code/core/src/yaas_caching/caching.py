@@ -32,11 +32,11 @@ def update_event_cache(  # pylint: disable=too-complex
 ) -> bool:
     """This function is the entry-point for updating the current events cache. It needs to do the following:
 
-    * Read upcoming events from the source (Google Calendar);
-    * Parse the events and provide a canonical list of scaling requests;
-    * Compare the overlapping timerange with what is in the cache;
-    * Ignore already cached events;
-    * Add new events, i.e., in the listing from source but outside the overlapping timerange;
+    * Read upcoming events from the source (Google Calendar).
+    * Parse the events and provide a canonical list of scaling requests.
+    * Compare the overlapping timerange with what is in the cache.
+    * Ignore already cached events.
+    * Add new events, i.e., in the listing from source but outside the overlapping timerange.
     * Apply a merging strategy, if necessary, for the overlapping and conflicting events:
         * Remove or keep old cached events not present in new listing?
         * Add or ignore new events not yet cached?
@@ -47,13 +47,13 @@ def update_event_cache(  # pylint: disable=too-complex
     """
     # validate
     if not isinstance(start_utc, int):
-        raise TypeError(f"The argument start_utc must be an {int.__name__}. Got: <{start_utc}>({type(start_utc)})")
+        raise TypeError(f"The argument start_utc must be an {int.__name__}. Got: '{start_utc}'({type(start_utc)})")
     if not isinstance(end_utc, int):
-        raise TypeError(f"The argument end_utc must be an {int.__name__}. Got: <{end_utc}>({type(end_utc)})")
+        raise TypeError(f"The argument end_utc must be an {int.__name__}. Got: '{end_utc}'({type(end_utc)})")
     if start_utc < 0 or end_utc < 0 or start_utc >= end_utc:
         raise ValueError(
-            f"The arguments start_utc <{start_utc}> and end_utc <{end_utc}> must be non-negative "
-            f"as end - start, which must be greater than 0 too: <{end_utc - start_utc}>"
+            f"The arguments start_utc '{start_utc}' and end_utc '{end_utc}' must be non-negative "
+            f"as end - start, which must be greater than 0 too: '{end_utc - start_utc}'"
         )
     _validate_callable("calendar_reader", calendar_reader)
     _validate_callable("cache_reader", cache_reader)
@@ -79,9 +79,9 @@ def update_event_cache(  # pylint: disable=too-complex
         )
     except Exception as err:
         raise RuntimeError(
-            f"Could not merge snapshots using <{merge_strategy}> "
-            f"on calendar snapshot <{calendar_snapshot}> "
-            f"and cached snapshot <{cached_snapshot}>. "
+            f"Could not merge snapshots using '{merge_strategy}' "
+            f"on calendar snapshot '{calendar_snapshot}' "
+            f"and cached snapshot '{cached_snapshot}'. "
             f"Got: {err}"
         ) from err
     # write cache
@@ -91,14 +91,14 @@ def update_event_cache(  # pylint: disable=too-complex
             result = cache_writer(merged_snapshot)
         except Exception as err:
             raise RuntimeError(
-                f"Could not write snapshot <{merged_snapshot}> to cache using <{cache_writer}>. Got: {err}"
+                f"Could not write snapshot '{merged_snapshot}' to cache using '{cache_writer}'. Got: {err}"
             ) from err
     return result
 
 
 def _validate_callable(name: str, value: Any) -> None:
     if not callable(value):
-        raise TypeError(f"The argument {name} must be callable. Got: <{value}>({type(value)})")
+        raise TypeError(f"The argument {name} must be callable. Got: '{value}'({type(value)})")
 
 
 async def update_cache(
@@ -131,21 +131,21 @@ async def update_cache(
     # input validation
     if not isinstance(source, base.StoreContextManager):
         raise TypeError(
-            f"Source must be an instance of {base.StoreContextManager.__name__}. Got: <{cache}>({type(cache)})"
+            f"Source must be an instance of {base.StoreContextManager.__name__}. Got: '{cache}'({type(cache)})"
         )
     if not isinstance(cache, base.StoreContextManager):
         raise TypeError(
-            f"Cache must be an instance of {base.StoreContextManager.__name__}. Got: <{cache}>({type(cache)})"
+            f"Cache must be an instance of {base.StoreContextManager.__name__}. Got: '{cache}'({type(cache)})"
         )
     if not callable(merge_strategy):
-        raise TypeError(f"Merge strategy must be callable. Got: <{merge_strategy}>({type(merge_strategy)})")
+        raise TypeError(f"Merge strategy must be callable. Got: '{merge_strategy}'({type(merge_strategy)})")
     if start is None:
         start = datetime.utcnow()
     if not isinstance(start, datetime):
-        raise TypeError(f"Start must be an instance of {datetime.__name__}. Got: <{start}>({type(start)})")
+        raise TypeError(f"Start must be an instance of {datetime.__name__}. Got: '{start}'({type(start)})")
     if not isinstance(time_span_in_days, int) or time_span_in_days <= 0:
         raise TypeError(
-            f"Time span must be integer greater than 0. Got: <{time_span_in_days}>({type(time_span_in_days)})"
+            f"Time span must be integer greater than 0. Got: '{time_span_in_days}'({type(time_span_in_days)})"
         )
     # logic
     await _update_cache(
@@ -191,9 +191,9 @@ async def _update_cache(
         )
     except Exception as err:
         raise CachingError(
-            f"Could not merge snapshots using <{merge_strategy}> "
-            f"on source snapshot <{source_snapshot}> "
-            f"and cached snapshot <{cached_snapshot}>. "
+            f"Could not merge snapshots using '{merge_strategy}' "
+            f"on source snapshot '{source_snapshot}' "
+            f"and cached snapshot '{cached_snapshot}'. "
             f"Got: {err}"
         ) from err
     # write cache
@@ -201,5 +201,5 @@ async def _update_cache(
         await cache.write(merged_snapshot, overwrite_within_range=True)
     except Exception as err:
         raise CachingError(
-            f"Could not write snapshot <{merged_snapshot}> to cache using <{cache}>. Got: {err}"
+            f"Could not write snapshot '{merged_snapshot}' to cache using '{cache}'. Got: {err}"
         ) from err

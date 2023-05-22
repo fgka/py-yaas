@@ -21,7 +21,7 @@ class ScalingCommand(dto_defaults.HasFromJsonString):
     @parameter.validator
     def _validate_attribute(self, attribute: attrs.Attribute, value: Any) -> None:
         if not self._is_parameter_value_valid(value):
-            raise TypeError(f"Attribute {attribute.name} cannot accept value <{value}>({type(value)})")
+            raise TypeError(f"Attribute {attribute.name} cannot accept value '{value}'({type(value)})")
 
     @target.validator
     def _validate_target(self, attribute: attrs.Attribute, value: Any) -> None:
@@ -35,12 +35,12 @@ class ScalingCommand(dto_defaults.HasFromJsonString):
         expected_type = self._target_type()
         # pylint: disable=isinstance-second-argument-not-valid-type
         if expected_type is not None and not isinstance(value, expected_type):
-            raise TypeError(f"Attribute {name} must be an {expected_type.__name__}. " f"Got: <{value}>({type(value)})")
+            raise TypeError(f"Attribute {name} must be an {expected_type.__name__}. Got: '{value}'({type(value)})")
         if not self._is_target_value_valid(value):
             raise ValueError(
                 f"Attribute {name} value is not valid. Check implementation of "
                 f"{self.__class__.__name__}.{ScalingCommand._is_target_valid.__name__}. "
-                f"Got <{value}>({type(value)})"
+                f"Got '{value}'({type(value)})"
             )
 
     @staticmethod
@@ -76,13 +76,13 @@ class ScalingCommand(dto_defaults.HasFromJsonString):
                 target = cls._convert_target_value_string(target)
             except Exception as err:
                 raise ValueError(
-                    f"Could not convert target value string <{target}> to expected type using "
+                    f"Could not convert target value string '{target}' to expected type using "
                     f"{cls.__name__}.{cls._convert_target_value_string.__name__}(). "
                     f"Error: {err}"
                 ) from err
             result = cls(parameter=parameter, target=target)
         else:
-            raise ValueError(f"Command value must comply with {regex}. " f"Got: <{value}>({type(value)})")
+            raise ValueError(f"Command value must comply with {regex}. Got: '{value}'({type(value)})")
         return result
 
     @classmethod
@@ -111,9 +111,9 @@ class ScalingDefinition(dto_defaults.HasFromJsonString):
     @resource.validator
     def _is_resource_valid_call(self, attribute: attrs.Attribute, value: str) -> None:
         err_msg = (
-            f"Attribute <{attribute.name}> "
-            f"is not a valid resource ID for <{self.__class__.__name__}>. "
-            f"Got: <{value}>({type(value)})"
+            f"Attribute '{attribute.name}' "
+            f"is not a valid resource ID for '{self.__class__.__name__}'. "
+            f"Got: '{value}'({type(value)})"
         )
         try:
             result = self._is_resource_valid(value)

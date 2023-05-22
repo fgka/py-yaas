@@ -64,8 +64,8 @@ class ReadOnlyGoogleCalendarStore(ReadOnlyBaseCalendarStore):
         if credentials_json is None and secret_name is None:
             raise TypeError(
                 f"Either the secret name or JSON file for credentials be provided. "
-                f"Got: <{credentials_json}>({type(credentials_json)}) "
-                f"and <{secret_name}>({type(secret_name)})"
+                f"Got: '{credentials_json}'({type(credentials_json)}) "
+                f"and '{secret_name}'({type(secret_name)})"
             )
         self._calendar_id = preprocess.string(calendar_id, "calendar_id")
         self._credentials_json = preprocess.validate_type(

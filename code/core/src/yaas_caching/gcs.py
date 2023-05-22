@@ -68,7 +68,7 @@ class GcsObjectStoreContextManager(file.SQLiteStoreContextManager):
         # To force creation of the file remotely
         if not exists:
             _LOGGER.warning(
-                "Remote GCS object <%s> does not exist, marking this %s instance as changed to force upload.",
+                "Remote GCS object '%s' does not exist, marking this %s instance as changed to force upload.",
                 self.gcs_uri,
                 self.__class__.__name__,
             )

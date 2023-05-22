@@ -20,11 +20,11 @@ steps:
     script: |
       #!/usr/bin/env bash
 
-      echo "Processing triggers in <${PYTHON_BUILD_TRIGGER_LST}>"
+      echo "Processing triggers in '${PYTHON_BUILD_TRIGGER_LST}'"
       read -a PY_TRIGGERS <<< ${PYTHON_BUILD_TRIGGER_LST//@/ }
       for TRIGGER in ${PY_TRIGGERS[@]}
       do
-        echo "Triggering <${TRIGGER}>@<${REGION}> for branch <${BRANCH}>"
+        echo "Triggering '${TRIGGER}'@'${REGION}' for branch '${BRANCH}'"
         gcloud builds triggers run ${TRIGGER} --region ${REGION} --branch ${BRANCH}
       done
     waitFor:

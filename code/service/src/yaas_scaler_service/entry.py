@@ -31,16 +31,16 @@ async def enact_requests(
     if not isinstance(parser, base.CategoryScaleRequestParser):
         raise TypeError(
             f"Parser must be an instance of {base.CategoryScaleRequestParser.__name__}. "
-            f"Got: <{parser}>({type(parser)})"
+            f"Got: '{parser}'({type(parser)})"
         )
     # logic
     req_lst = pubsub_dispatcher.from_event(event=pubsub_event, iso_str_timestamp=iso_str_timestamp)
     if not isinstance(req_lst, list):
         raise TypeError(
-            f"Expecting a list of requests from event. Got: <{req_lst}>({type(req_lst)}). Event: {pubsub_event}"
+            f"Expecting a list of requests from event. Got: '{req_lst}'({type(req_lst)}). Event: {pubsub_event}"
         )
     result: List[Tuple[bool, base.Scaler]] = await parser.enact(*req_lst, singulate_if_only_one=False)
     for success_scaler in result:
         success, scaler = success_scaler
         if not success:
-            _LOGGER.error("Could not enact request <%s>. Check logs", scaler.definitions)
+            _LOGGER.error("Could not enact request '%s'. Check logs", scaler.definitions)

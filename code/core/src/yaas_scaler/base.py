@@ -52,16 +52,16 @@ class Scaler(abc.ABC):
             if not isinstance(item, expected_type):
                 raise TypeError(
                     f"Definition must be an instance of {expected_type.__name__}. "
-                    f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definitions}>"
+                    f"Got'{item}'[{ndx}]({type(item)}). "
+                    f"All definitions: '{definitions}'"
                 )
             if resource is None:
                 resource = item.resource
             elif item.resource != resource:
                 raise ValueError(
-                    f"All definitions must have the same resource <{resource}>."
-                    f"Got<{item}>[{ndx}]({type(item)}). "
-                    f"All definitions: <{definitions}>"
+                    f"All definitions must have the same resource '{resource}'."
+                    f"Got'{item}'[{ndx}]({type(item)}). "
+                    f"All definitions: '{definitions}'"
                 )
         return definitions, resource
 
@@ -110,7 +110,7 @@ class Scaler(abc.ABC):
             :py:obj:`True` if successfully enacted.
         """
         _LOGGER.debug(
-            "Enacting definitions for resource <%s>. Definitions: <%s>",
+            "Enacting definitions for resource '%s'. Definitions: '%s'",
             self.resource,
             self.definitions,
         )
@@ -121,15 +121,15 @@ class Scaler(abc.ABC):
             result = True
         else:
             _LOGGER.warning(
-                "[%s] Resource is not ready to enact scaling specified in <%s>. "
-                "Reason: <%s>. "
+                "[%s] Resource is not ready to enact scaling specified in '%s'. "
+                "Reason: '%s'. "
                 "Check logs for details.",
                 self.__class__.__name__,
                 self._definitions,
                 reason,
             )
         _LOGGER.info(
-            "Enacted definitions for resource <%s>. Definitions: <%s>",
+            "Enacted definitions for resource '%s'. Definitions: '%s'",
             self.resource,
             self.definitions,
         )
@@ -144,11 +144,11 @@ class Scaler(abc.ABC):
         """Informs if the resource is ready for enacting the scaling. Reasons
         for returning :py:obj:`False` are:
 
-        - It does not exist (has not been deployed yet or no longer exists);
+        - It does not exist (has not been deployed yet or no longer exists).
         - It is in a non-ready or non-healthy state (currently being deployed or destroyed).
 
         Returns:
-            A tuple in the form ``(<can_enact: bool>, <reason for False: str>)``.
+            A tuple in the form ``('can_enact: bool', 'reason for False: str')``.
         """
 
 
@@ -181,7 +181,7 @@ class ScalerPathBased(Scaler, abc.ABC):
                     raise RuntimeError(msg) from err
                 _LOGGER.warning("%s. Ignoring", msg)
         # Scale path_value_lst
-        _LOGGER.debug("Scaling resource <%s> with <%s>", self.resource, path_value_lst)
+        _LOGGER.debug("Scaling resource '%s' with '%s'", self.resource, path_value_lst)
         try:
             await self._enact_by_path_value_lst(resource=self.resource, path_value_lst=path_value_lst)
         except Exception as err:
@@ -190,7 +190,7 @@ class ScalerPathBased(Scaler, abc.ABC):
                 f"path_value_lst={path_value_lst}. "
                 f"Error: {err}"
             ) from err
-        _LOGGER.info("Scaled resource <%s> with <%s>", self.resource, path_value_lst)
+        _LOGGER.info("Scaled resource '%s' with '%s'", self.resource, path_value_lst)
 
     @classmethod
     def _get_enact_path_value(cls, *, resource: str, field: str, target: Any) -> str:
@@ -232,7 +232,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Used :py:class:`Scaler`
         """
-        _LOGGER.debug("Enacting requests: <%s>", list(value))
+        _LOGGER.debug("Enacting requests: '%s'", list(value))
         # validate input
         if raise_if_invalid_request is None:
             raise_if_invalid_request = self._strict_mode
@@ -246,7 +246,7 @@ class CategoryScaleRequestParser(abc.ABC):
         if item_lst:
             item_res_lst = await asyncio.gather(*[item.enact() for item in item_lst])
             result = list(zip(item_res_lst, item_lst))
-            _LOGGER.info("Enacted requests: <%s>", list(value))
+            _LOGGER.info("Enacted requests: '%s'", list(value))
         else:
             _LOGGER.info("Nothing to enact from requests: %s", list(value))
         return result[0] if len(result) == 1 and singulate_if_only_one else result
@@ -268,7 +268,7 @@ class CategoryScaleRequestParser(abc.ABC):
         Returns:
             Instance of :py:cls:`Scaler`.
         """
-        _LOGGER.debug("Creating scaler(s) for requests: <%s>", list(value))
+        _LOGGER.debug("Creating scaler(s) for requests: '%s'", list(value))
         # validate input
         self._validate_request(*value)
         if raise_if_invalid_request is None:
@@ -284,7 +284,7 @@ class CategoryScaleRequestParser(abc.ABC):
             try:
                 items = self._scaler(scale_def_lst, raise_if_invalid_request=raise_if_invalid_request)
                 _LOGGER.info(
-                    "Created <%d> scaler(s) for definitions: <%s>",
+                    "Created '%d' scaler(s) for definitions: '%s'",
                     len(items),
                     scale_def_lst,
                 )
@@ -347,7 +347,7 @@ class CategoryScaleRequestParser(abc.ABC):
             if not isinstance(val, request.ScaleRequest):
                 raise TypeError(
                     f"The argument must be an instance of {request.ScaleRequest.__name__} "
-                    f"Got: <{val}>[{ndx}]({type(val)}). "
+                    f"Got: '{val}'[{ndx}]({type(val)}). "
                     f"Values: {value}"
                 )
             if not self.is_supported(val.topic):
@@ -433,7 +433,7 @@ class CategoryScaleRequestParserWithFilter(CategoryScaleRequestParser, abc.ABC):
             if not isinstance(scaling_def, scaling.ScalingDefinition):
                 msg = (
                     f"Item [{ndx}] is not a {scaling.ScalingDefinition.__name__} instance. "
-                    f"Got: <{scaling_def}>({type(scaling_def)}). Values: {value}"
+                    f"Got: '{scaling_def}'({type(scaling_def)}). Values: {value}"
                 )
                 if raise_if_invalid_request:
                     raise TypeError(msg)
@@ -445,8 +445,8 @@ class CategoryScaleRequestParserWithFilter(CategoryScaleRequestParser, abc.ABC):
             previous = result.get(key)
             if previous is not None:
                 _LOGGER.warning(
-                    "Discarding <%s>[%d] because there is an already a scaling definition "
-                    "at the same, or later, timestamp (timestamp diff: %d): <%s>. "
+                    "Discarding '%s'[%d] because there is an already a scaling definition "
+                    "at the same, or later, timestamp (timestamp diff: %d): '%s'. "
                     "All elements: %s",
                     scaling_def,
                     ndx,
@@ -479,7 +479,7 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
             except Exception as err:  # pylint: disable=broad-except
                 # pylint: disable=line-too-long
                 msg = (
-                    f"Cloud not create scaling definition for <{val}>[{ndx}]). "
+                    f"Cloud not create scaling definition for '{val}'[{ndx}]). "
                     f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
                     f"Error: {err}. "
                     f"Values: {value}"
@@ -491,8 +491,8 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
             if not isinstance(scaling_def, scaling.ScalingDefinition):
                 # pylint: disable=line-too-long
                 msg = (
-                    f"Request <{val}>[{ndx}]) is not supported. "
-                    f"Got scaling definition: <{scaling_def}>({type(scaling_def)}). "
+                    f"Request '{val}'[{ndx}]) is not supported. "
+                    f"Got scaling definition: '{scaling_def}'({type(scaling_def)}). "
                     f"Check implementation of {self.__class__.__name__}.{self._scaling_definition_from_request.__name__} "
                     f"Values: {value}"
                 )
@@ -521,7 +521,7 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
             except Exception as err:  # pylint: disable=broad-except
                 # pylint: disable=line-too-long
                 msg = (
-                    f"Could not find a scaler type for definition class <{cls}>. "
+                    f"Could not find a scaler type for definition class '{cls}'. "
                     f"Check implementation of {self.__class__.__name__}.{self._scaler_class_for_definition_class.__name__}. "
                     f"Error: {err}"
                 )
@@ -535,7 +535,7 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
                     result.append(scaler)
                 except Exception as err:  # pylint: disable=broad-except
                     msg = (
-                        f"Scaler for definition class <{scaler_type.__name__}> "
+                        f"Scaler for definition class '{scaler_type.__name__}' "
                         f"could not be instantiate with scaling definitions {scaling_def_lst}. "
                         f"Check implementation of {self.__class__.__name__}.{self._instantiate_scaler.__name__}. "
                         f"Error: {err}"
@@ -546,7 +546,7 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
             else:
                 # pylint: disable=line-too-long
                 msg = (
-                    f"Could not find a scaler for definition <{cls.__name__}> "
+                    f"Could not find a scaler for definition '{cls.__name__}' "
                     f"Check implementation of {self.__class__.__name__}.{self._scaler_class_for_definition_class.__name__}"
                 )
                 # pylint: enable=line-too-long
@@ -583,7 +583,7 @@ class CategoryScaleRequestParserWithScaler(CategoryScaleRequestParserWithFilter,
                 result[key].append(val)
             else:
                 msg = (
-                    f"Scaler for definition <{val}> "
+                    f"Scaler for definition '{val}' "
                     f"is not supported by {cls.__name__}. "
                     "Check implementation of "
                     f"{cls._scaling_definition_by_type.__name__} in {cls.__name__}."

@@ -27,28 +27,28 @@ def validate_resource_name(*, value: str, tokens: List[str], raise_if_invalid: b
     result = []
     # validate input
     if not isinstance(value, str):
-        result.append(f"Name <{value}>({type(str)}) must be an instance of {str.__name__}")
+        result.append(f"Name '{value}'({type(str)}) must be an instance of {str.__name__}")
     if not isinstance(tokens, list):
-        result.append(f"Tokens <{tokens}>({type(str)}) must be an instance of {list.__name__}")
+        result.append(f"Tokens '{tokens}'({type(str)}) must be an instance of {list.__name__}")
     if not result:
         token_validation = []
         for tkn in tokens:
             token_validation.extend(_validate_token(tkn))
         if token_validation:
-            result.append(f"Could not validate tokens <{tokens}>. Error(s): {token_validation}")
+            result.append(f"Could not validate tokens '{tokens}'. Error(s): {token_validation}")
         else:
             result.extend(_validate_resource_name(value, tokens))
     if result and raise_if_invalid:
-        raise ValueError(f"Could not validate Secret name <{value}>. Error(s): {result}")
+        raise ValueError(f"Could not validate Secret name '{value}'. Error(s): {result}")
     return result
 
 
 def _validate_token(token: str) -> List[str]:
     result = []
     if not isinstance(token, str):
-        result.append(f"Token <{token}>({type(token)}) must be an instance of {str.__name__}")
+        result.append(f"Token '{token}'({type(token)}) must be an instance of {str.__name__}")
     elif not _TOKEN_REGEX.match(token):
-        result.append(f"Token must comply with regular expression: {_TOKEN_REGEX.pattern}. Got <{token}>")
+        result.append(f"Token must comply with regular expression: {_TOKEN_REGEX.pattern}. Got '{token}'")
     return result
 
 
@@ -58,7 +58,7 @@ def _validate_resource_name(value: str, tokens: List[str]) -> List[str]:
     error_msg_pattern = _create_error_msg_pattern(tokens)
     matched = resource_name_regex.match(value)
     if matched is None:
-        result.append(f"Name must obey the format: '{error_msg_pattern}'. " f"Got <{value}>")
+        result.append(f"Name must obey the format: '{error_msg_pattern}'. Got '{value}'")
     else:
         # validate individual tokens
         token_values = list(matched.groups())
@@ -70,7 +70,7 @@ def _validate_resource_name(value: str, tokens: List[str]) -> List[str]:
             )
         for tkn, tkn_val in zip(tokens, token_values):
             if not tkn_val:
-                result.append(f"Could not find value for '{tkn}' in <{value}> " f"assuming pattern {error_msg_pattern}")
+                result.append(f"Could not find value for '{tkn}' in '{value}' assuming pattern {error_msg_pattern}")
     return result
 
 

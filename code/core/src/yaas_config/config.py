@@ -34,7 +34,7 @@ class CacheConfig(dto_defaults.HasFromJsonString):
     def _is_type_valid(self, attribute: attrs.Attribute, value: str) -> None:
         if not CacheType.from_str(value):
             raise ValueError(
-                f"Attribute {attribute.name} does not accept <{value}>. " f"Valid values are: {list(CacheType)}"
+                f"Attribute {attribute.name} does not accept '{value}'. Valid values are: {list(CacheType)}"
             )
         self._is_type_valid_subclass(attribute.name, value)
 
@@ -78,10 +78,10 @@ class CacheConfig(dto_defaults.HasFromJsonString):
             result = factory_fn(LocalSqliteCacheConfig, *args, **kwargs)
         else:
             raise TypeError(
-                f"Cache type <{base_cfg.type}> is not a supported type. "
+                f"Cache type '{base_cfg.type}' is not a supported type. "
                 f"Check implementation of {factory_fn.__name__} in {cls.__name__}. "
-                f"Args: <{args}>. "
-                f"Kwargs: <{kwargs}>"
+                f"Args: '{args}'. "
+                f"Kwargs: '{kwargs}'"
             )
         return result
 
@@ -254,7 +254,5 @@ class Config(dto_defaults.HasFromJsonString):
     def _is_topic_to_pubsub_gcs_valid(self, attribute: attrs.Attribute, value: Optional[str]) -> None:
         if value is not None:
             if not isinstance(value, str):
-                raise TypeError(
-                    f"Value for {attribute.name} can be None or a string. " f"Got: <{value}>({type(value)})"
-                )
+                raise TypeError(f"Value for {attribute.name} can be None or a string. Got: '{value}'({type(value)})")
             gcs.get_bucket_and_prefix_from_uri(value)

@@ -56,7 +56,7 @@ async def list_upcoming_events(
         url: CalDAV URL.
         username: calendar username, usually your email.
         secret_name: Secret Manager secret name that holds the password, in the format:
-          `projects/<<project id>>/secrets/<<secret id>>/versions/<<version>>`
+          `projects/<project id>/secrets/<secret id>/versions/<version>`
         amount: how many events to list, default: py:data:`DEFAULT_LIST_EVENTS_AMOUNT`.
         start: from when to start listing, default: current date/time.
         end: up until when to list, if given, will discard ``amount``.
@@ -65,7 +65,7 @@ async def list_upcoming_events(
 
     .. _list API: https://developers.google.com/calendar/api/v3/reference/events/list
     """
-    _LOGGER.debug("Listing upcoming events using: <%s>", locals())
+    _LOGGER.debug("Listing upcoming events using: '%s'", locals())
     # input validation
     url = preprocess.string(url, "url")
     username = preprocess.string(username, "username")
@@ -95,7 +95,7 @@ async def _password(value: str) -> str:
     try:
         result = await secrets.get(value)
         _LOGGER.info(
-            "Retrieved cal credentials from cloud secret name: <%s>(%s)",
+            "Retrieved cal credentials from cloud secret name: '%s'(%s)",
             value,
             type(value),
         )
@@ -114,7 +114,7 @@ async def _calendar(url: str, username: str, password: str) -> caldav.Calendar:
         await asyncio.sleep(0)
     except Exception as err:
         raise RuntimeError(
-            f"Could not get calendar in URL '{url}' with username '{username}' and password <omitted>. Error: {err}"
+            f"Could not get calendar in URL '{url}' with username '{username}' and password 'omitted'. Error: {err}"
         ) from err
     _LOGGER.info("Retrieved calendar from '%s' using username '%s'", url, username)
     return result

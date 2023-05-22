@@ -39,7 +39,7 @@ async def get_service(name: str) -> run_v2.Service:
     .. _documentation: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.services.services.ServicesClient#google_cloud_run_v2_services_services_ServicesClient_get_service
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Getting service <%s>", name)
+    _LOGGER.debug("Getting service '%s'", name)
     # validate
     validate_cloud_run_resource_name(name)
     # get service definition
@@ -48,7 +48,7 @@ async def get_service(name: str) -> run_v2.Service:
         result = _run_client().get_service(request={"name": name})
         await asyncio.sleep(0)
     except Exception as err:
-        raise CloudRunServiceError(f"Could not retrieve service <{name}>. Error: {err}") from err
+        raise CloudRunServiceError(f"Could not retrieve service '{name}'. Error: {err}") from err
     return result
 
 
@@ -60,20 +60,20 @@ async def can_be_deployed(name: str) -> Tuple[bool, str]:
         name:
 
     Returns:
-        A tuple in the form ``(<can_enact: bool>, <reason for False: str>)``.
+        A tuple in the form ``('can_enact: bool', 'reason for False: str')``.
 
     .. _Service: https://cloud.google.com/python/docs/reference/run/latest/google.cloud.run_v2.types.Service
     """
     reason = None
-    _LOGGER.debug("Checking readiness of service <%s>", name)
+    _LOGGER.debug("Checking readiness of service '%s'", name)
     try:
         # service
         service = await get_service(name)
         # checking reconciling
         if service.reconciling:
-            reason = f"Service <{name}> is reconciling, try again later."
+            reason = f"Service '{name}' is reconciling, try again later."
     except Exception as err:  # pylint: disable=broad-except
-        reason = f"Could not retrieve service with name <{name}>. Error: {err}"
+        reason = f"Could not retrieve service with name '{name}'. Error: {err}"
         _LOGGER.exception(reason)
     return reason is None, reason
 
@@ -126,7 +126,7 @@ async def update_service(*, name: str, path_value_lst: List[Tuple[str, Optional[
     .. _x-path: https://en.wikipedia.org/wiki/XPath
     """
     # pylint: enable=line-too-long
-    _LOGGER.debug("Updating service <%s> with <%s>", name, path_value_lst)
+    _LOGGER.debug("Updating service '%s' with '%s'", name, path_value_lst)
     # validate
     validate_cloud_run_resource_name(name)
     validation.validate_path_value_lst(path_value_lst)
@@ -147,11 +147,11 @@ async def update_service(*, name: str, path_value_lst: List[Tuple[str, Optional[
         result = operation.result()
     except Exception as err:
         raise CloudRunServiceError(
-            f"Could not update service <{name}> with <{path_value_lst}>. " f"Request: {request}. " f"Error: {err}"
+            f"Could not update service '{name}' with '{path_value_lst}'. Request: {request}. Error: {err}"
         ) from err
     # done
     _LOGGER.info(
-        "Update request for service %s with <%s>.",
+        "Update request for service %s with '%s'.",
         name,
         path_value_lst,
     )
@@ -207,7 +207,7 @@ def _validate_service(service: Any, path: str, value: Any, raise_if_invalid: boo
     node, attr_name = xpath.get_parent_node_based_on_path(service, path)
     current = getattr(node, attr_name)
     if current != value:
-        msg = f"Current value <{current}> is not desired value <{value}> " f"for path <{path}> in <{service.name}>"
+        msg = f"Current value '{current}' is not desired value '{value}' for path '{path}' in '{service.name}'"
         if raise_if_invalid:
             raise RuntimeError(msg)
         _LOGGER.error(msg)
